@@ -23,6 +23,9 @@ export function FeedbackModal({
   onNext,
   onFinish,
 }: FeedbackModalProps) {
+  // Obtener la explicación correspondiente a la opción elegida
+  const explicacion = item.explicaciones?.[selectedAnswer];
+  
   return (
     <Modal
       open={open}
@@ -61,8 +64,8 @@ export function FeedbackModal({
 
         <div className="bg-muted/50 rounded-lg p-4 border border-border">
           <h4 className="text-sm font-semibold text-foreground mb-2">Explicación</h4>
-          <p className="text-sm leading-relaxed text-muted-foreground">
-            {item.justificacion}
+          <p className="text-sm leading-relaxed text-muted-foreground whitespace-pre-wrap">
+            {explicacion || item.justificacion}
           </p>
         </div>
       </div>

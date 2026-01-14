@@ -158,6 +158,48 @@ export default function Results() {
           </CardContent>
         </Card>
 
+        {/* Question-by-question Review with Explanations */}
+        <Card className="mb-8 animate-slide-up" style={{ animationDelay: '0.55s' }}>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <BookOpen className="h-5 w-5 text-primary" />
+              Revisión detallada
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {results.answersHistory.map((answer, idx) => {
+                const question = questions[answer.questionIndex];
+                if (!question) return null;
+                const selectedKey = answer.selectedAnswer;
+                const selectedText = question.opciones[selectedKey];
+                const correctKey = question.respuesta_correcta;
+                const explanation = question.explicaciones?.[selectedKey] || question.justificacion;
+
+                return (
+                  <div key={idx} className="p-4 rounded-lg border border-border bg-card">
+                    <div className="flex items-start gap-3">
+                      <div className={cn('font-bold text-sm w-8 h-8 flex items-center justify-center rounded-full', answer.isCorrect ? 'bg-success/10 text-success' : 'bg-destructive/10 text-destructive')}>
+                        {answer.questionIndex + 1}
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-foreground">{question.pregunta}</p>
+                        <p className="text-xs text-muted-foreground mt-2">Tu respuesta: <strong>{selectedKey} — {selectedText}</strong></p>
+                        {!answer.isCorrect && (
+                          <p className="text-xs text-muted-foreground">Correcta: <strong>{correctKey}</strong></p>
+                        )}
+                        <div className="mt-3 bg-muted/50 rounded-md p-3 text-sm text-muted-foreground whitespace-pre-wrap">
+                          {explanation}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Future AI Feedback Placeholder */}
         <Card className="mb-8 bg-muted/30 border-dashed animate-slide-up" style={{ animationDelay: '0.6s' }}>
           <CardContent className="pt-6">

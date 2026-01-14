@@ -3,6 +3,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { BookOpen, BarChart3 } from 'lucide-react';
+import { useState } from 'react';
 
 interface QuestionCardProps {
   item: IcfesItem;
@@ -11,6 +12,7 @@ interface QuestionCardProps {
 }
 
 export function QuestionCard({ item, questionNumber, totalQuestions }: QuestionCardProps) {
+  const [expanded, setExpanded] = useState(false);
   return (
     <Card className="shadow-md animate-fade-in">
       <CardHeader className="pb-4">
@@ -36,11 +38,23 @@ export function QuestionCard({ item, questionNumber, totalQuestions }: QuestionC
             <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
               Contexto
             </h4>
-            <ScrollArea className="max-h-48">
-              <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">
-                {item.contexto}
-              </p>
-            </ScrollArea>
+            <div>
+              <ScrollArea className={expanded ? 'max-h-96' : 'max-h-32'}>
+                <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">
+                  {item.contexto}
+                </p>
+              </ScrollArea>
+              {item.contexto.length > 300 && (
+                <div className="mt-2 text-right">
+                  <button
+                    className="text-xs text-primary hover:underline"
+                    onClick={() => setExpanded((s) => !s)}
+                  >
+                    {expanded ? 'Mostrar menos' : 'Ver más'}
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         )}
         <div>

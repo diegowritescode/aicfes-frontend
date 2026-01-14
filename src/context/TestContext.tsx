@@ -29,6 +29,8 @@ interface TestContextValue extends TestState {
   };
 }
 
+const STORAGE_KEY = 'aicfes_test_state_v1';
+
 const initialState: TestState = {
   questions: [],
   currentQuestionIndex: 0,
@@ -39,13 +41,40 @@ const initialState: TestState = {
   testStartTime: null,
 };
 
+function loadStateFromSession(): TestState {
+  try {
+    const raw = sessionStorage.getItem(STORAGE_KEY);
+    if (!raw) return initialState;
+    const parsed = JSON.parse(raw) as TestState & { testStartTime?: string };
+    return {
+      ...parsed,
+      testStartTime: parsed.testStartTime ? new Date(parsed.testStartTime) : null,
+    };
+  } catch (e) {
+    console.warn('Failed to load test state from sessionStorage', e);
+    return initialState;
+  }
+}
+
+function saveStateToSession(state: TestState) {
+  try {
+    const toStore = {
+      ...state,
+      testStartTime: state.testStartTime ? state.testStartTime.toISOString() : undefined,
+    };
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(toStore));
+  } catch (e) {
+    console.warn('Failed to save test state to sessionStorage', e);
+  }
+}
+
 const TestContext = createContext<TestContextValue | undefined>(undefined);
 
 export function TestProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<TestState>(initialState);
+  const [state, setState] = useState<TestState>(() => loadStateFromSession());
 
   const startTest = useCallback((questions: IcfesItem[], area: Area) => {
-    setState({
+    const newState: TestState = {
       questions,
       currentQuestionIndex: 0,
       selectedAnswer: null,
@@ -53,11 +82,17 @@ export function TestProvider({ children }: { children: ReactNode }) {
       isTestActive: true,
       testArea: area,
       testStartTime: new Date(),
-    });
+    };
+    setState(newState);
+    saveStateToSession(newState);
   }, []);
 
   const selectAnswer = useCallback((answer: AnswerKey) => {
-    setState((prev) => ({ ...prev, selectedAnswer: answer }));
+    setState((prev) => {
+      const next = { ...prev, selectedAnswer: answer };
+      saveStateToSession(next);
+      return next;
+    });
   }, []);
 
   const confirmAnswer = useCallback(() => {
@@ -66,31 +101,45 @@ export function TestProvider({ children }: { children: ReactNode }) {
 
       const currentQuestion = prev.questions[prev.currentQuestionIndex];
       const isCorrect = prev.selectedAnswer === currentQuestion.respuesta_correcta;
+      const explanation = currentQuestion.explicaciones?.[prev.selectedAnswer] || currentQuestion.justificacion;
 
       const record: AnswerRecord = {
         questionIndex: prev.currentQuestionIndex,
         selectedAnswer: prev.selectedAnswer,
         correctAnswer: currentQuestion.respuesta_correcta,
         isCorrect,
+        explanation,
+        answeredAt: new Date().toISOString(),
       };
 
-      return {
+      const next = {
         ...prev,
         answersHistory: [...prev.answersHistory, record],
       };
+      saveStateToSession(next);
+      return next;
     });
   }, []);
 
   const nextQuestion = useCallback(() => {
-    setState((prev) => ({
-      ...prev,
-      currentQuestionIndex: prev.currentQuestionIndex + 1,
-      selectedAnswer: null,
-    }));
+    setState((prev) => {
+      const next = {
+        ...prev,
+        currentQuestionIndex: prev.currentQuestionIndex + 1,
+        selectedAnswer: null,
+      };
+      saveStateToSession(next);
+      return next;
+    });
   }, []);
 
   const resetTest = useCallback(() => {
     setState(initialState);
+    try {
+      sessionStorage.removeItem(STORAGE_KEY);
+    } catch (e) {
+      /* ignore */
+    }
   }, []);
 
   const getCurrentQuestion = useCallback(() => {

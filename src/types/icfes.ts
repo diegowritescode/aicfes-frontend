@@ -14,6 +14,8 @@ export interface IcfesItem {
   respuesta_correcta: AnswerKey;
   justificacion: string;
   tags: string[];
+  distractores?: Record<AnswerKey, string>;
+  explicaciones?: Record<AnswerKey, string>;
 }
 
 export type Area = 'MAT' | 'LC' | 'CN' | 'SOC' | 'ING';
@@ -45,6 +47,8 @@ export interface AnswerRecord {
   selectedAnswer: AnswerKey;
   correctAnswer: AnswerKey;
   isCorrect: boolean;
+  explanation?: string;
+  answeredAt?: string; // ISO timestamp
 }
 
 export const AREA_LABELS: Record<Area, string> = {

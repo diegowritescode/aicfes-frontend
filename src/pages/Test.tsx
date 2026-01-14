@@ -4,7 +4,6 @@ import { useTest } from '@/context/TestContext';
 import { AnswerKey } from '@/types/icfes';
 import { QuestionCard } from '@/components/QuestionCard';
 import { AnswerOption } from '@/components/AnswerOption';
-import { ConfirmModal } from '@/components/ConfirmModal';
 import { FeedbackModal } from '@/components/FeedbackModal';
 import { QuestionSkeleton } from '@/components/LoadingSkeleton';
 import { Button } from '@/components/ui/button';
@@ -27,7 +26,6 @@ export default function Test() {
     isLastQuestion,
   } = useTest();
 
-  const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [isAnswerRevealed, setIsAnswerRevealed] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(0);
@@ -51,6 +49,27 @@ export default function Test() {
     return () => clearInterval(timer);
   }, [isTestActive]);
 
+  // Keyboard shortcuts: A/B/C/D to select, Enter to submit
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (!currentQuestion) return;
+      if (isAnswerRevealed) return;
+      const key = e.key.toLowerCase();
+      if (['a', 'b', 'c', 'd'].includes(key)) {
+        const mapped = key.toUpperCase() as AnswerKey;
+        selectAnswer(mapped);
+      }
+      if (e.key === 'Enter') {
+        if (selectedAnswer) {
+          e.preventDefault();
+          handleSubmitAnswer();
+        }
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [currentQuestion, isAnswerRevealed, selectedAnswer, selectAnswer]);
+
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -62,13 +81,8 @@ export default function Test() {
     selectAnswer(key);
   };
 
-  const handleConfirmClick = () => {
+  const handleSubmitAnswer = () => {
     if (!selectedAnswer) return;
-    setShowConfirmModal(true);
-  };
-
-  const handleConfirmAnswer = () => {
-    setShowConfirmModal(false);
     confirmAnswer();
     setIsAnswerRevealed(true);
     // Show feedback after a brief delay
@@ -160,24 +174,15 @@ export default function Test() {
             <div className="flex justify-end pt-4">
               <Button
                 size="lg"
-                onClick={handleConfirmClick}
+                onClick={handleSubmitAnswer}
                 disabled={!selectedAnswer}
               >
-                Confirmar Respuesta
+                Enviar Respuesta
               </Button>
             </div>
           )}
         </div>
       </main>
-
-      {/* Confirm Modal */}
-      <ConfirmModal
-        open={showConfirmModal}
-        onOpenChange={setShowConfirmModal}
-        selectedAnswer={selectedAnswer}
-        answerText={selectedAnswer ? currentQuestion.opciones[selectedAnswer] : ''}
-        onConfirm={handleConfirmAnswer}
-      />
 
       {/* Feedback Modal */}
       {isAnswerRevealed && selectedAnswer && (
