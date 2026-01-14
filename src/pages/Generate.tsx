@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTest } from '@/context/TestContext';
 import { cancelRequest, generateItems, getRequestItems, getRequestStatus } from '@/services/api';
 import { Area, Dificultad, IcfesItem, AREA_LABELS, DIFICULTAD_LABELS } from '@/types/icfes';
@@ -18,14 +18,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Sparkles, BookOpen, GraduationCap, Brain, Loader2, ArrowRight, Zap, TrendingUp, Clock } from 'lucide-react';
+import { GraduationCap, Brain, Loader2, ArrowRight, Zap, Gauge, Flame } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
+import { Badge } from '@/components/ui/badge';
 
 const AREAS: Area[] = ['MAT', 'LC', 'CN', 'SOC', 'ING'];
 const DIFICULTADES: Dificultad[] = ['facil', 'media', 'alta'];
 
 export default function Generate() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { startTest } = useTest();
 
   const [area, setArea] = useState<Area | ''>('');
@@ -58,6 +60,29 @@ export default function Generate() {
       }
     };
   }, []);
+
+  useEffect(() => {
+    const areaParam = searchParams.get('area');
+    const dificultadParam = searchParams.get('dificultad');
+    const temaParam = searchParams.get('tema');
+    const nParam = searchParams.get('n');
+
+    if (areaParam && AREAS.includes(areaParam as Area)) {
+      setArea(areaParam as Area);
+    }
+    if (dificultadParam && DIFICULTADES.includes(dificultadParam as Dificultad)) {
+      setDificultad(dificultadParam as Dificultad);
+    }
+    if (temaParam) {
+      setTema(temaParam);
+    }
+    if (nParam) {
+      const parsed = parseInt(nParam, 10);
+      if (!Number.isNaN(parsed)) {
+        setCantidad(Math.min(20, Math.max(1, parsed)));
+      }
+    }
+  }, [searchParams]);
 
   const clearProgressInterval = () => {
     if (progressIntervalRef.current) {
@@ -134,7 +159,11 @@ export default function Generate() {
           setPreviewItem(itemsResult.items[0]);
           setShowPreview(true);
         } else {
-          startTest(itemsResult.items, area as Area);
+          startTest(itemsResult.items, area as Area, {
+            dificultad: (dificultad || null) as Dificultad | null,
+            tema: tema.trim() || null,
+            mode: 'generacion_libre',
+          });
           navigate('/test');
         }
         return;
@@ -214,7 +243,11 @@ export default function Generate() {
           setShowPreview(true);
         } else {
           // Start test with multiple questions
-          startTest(result.items, area);
+          startTest(result.items, area, {
+            dificultad: (dificultad || null) as Dificultad | null,
+            tema: tema.trim() || null,
+            mode: 'generacion_libre',
+          });
           navigate('/test');
         }
         return;
@@ -268,23 +301,23 @@ export default function Generate() {
   return (
     <Layout>
       <div className="container mx-auto px-4 py-6 lg:py-10">
-        {/* Hero Section - Compact */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center p-2 bg-primary/10 rounded-full mb-3">
-            <GraduationCap className="h-6 w-6 text-primary" />
-          </div>
-          <h1 className="text-3xl lg:text-4xl font-bold text-foreground mb-2">
-            Generador de Preguntas ICFES
+        {/* Hero */}
+        <div className="mb-8 flex flex-col gap-4">
+          <Badge className="w-fit bg-primary/10 text-primary hover:bg-primary/20" variant="secondary">
+            Generación libre
+          </Badge>
+          <h1 className="text-3xl font-bold text-foreground lg:text-4xl">
+            Crea tu sesión personalizada
           </h1>
-          <p className="text-base text-muted-foreground max-w-2xl mx-auto">
-            Prepárate con preguntas tipo Saber 11 generadas por IA. Retroalimentación inmediata y explicaciones detalladas.
+          <p className="text-sm text-muted-foreground lg:text-base max-w-2xl">
+            Elige área, dificultad y tema para practicar lo que necesitas sin ruido adicional.
           </p>
         </div>
 
-        {/* Main Content - Improved Grid */}
-        <div className="grid lg:grid-cols-3 gap-6 mb-12">
-          {/* Generator Form - Compact */}
-          <Card className="shadow-lg lg:col-span-1">
+        {/* Main Content */}
+        <div className="grid gap-6 lg:grid-cols-3 mb-12">
+          {/* Generator Form */}
+          <Card className="shadow-lg lg:col-span-2">
             <CardHeader className="pb-3">
               <CardTitle className="text-lg flex items-center gap-2">
                 <Zap className="h-4 w-4 text-primary" />
@@ -431,8 +464,8 @@ export default function Generate() {
             </CardContent>
           </Card>
 
-          {/* Areas Grid + Info */}
-          <div className="lg:col-span-2 space-y-6">
+          {/* Side Info */}
+          <div className="space-y-4">
             {showPreview && previewItem ? (
               <div className="space-y-3 animate-slide-up col-span-full lg:col-span-2">
                 <QuestionCard item={previewItem} questionNumber={1} totalQuestions={1} />
@@ -459,116 +492,33 @@ export default function Generate() {
               </div>
             ) : (
               <>
-                {/* Areas Cards Grid */}
-                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-                  {[
-                    { id: 'MAT', label: 'Matemáticas', color: 'from-blue-500 to-blue-600', icon: '📐' },
-                    { id: 'LC', label: 'Lectura', color: 'from-purple-500 to-purple-600', icon: '📖' },
-                    { id: 'CN', label: 'Ciencias', color: 'from-green-500 to-green-600', icon: '🧪' },
-                    { id: 'SOC', label: 'Sociales', color: 'from-amber-500 to-amber-600', icon: '🌍' },
-                    { id: 'ING', label: 'Inglés', color: 'from-red-500 to-red-600', icon: '🗣️' },
-                  ].map((a) => (
-                    <div
-                      key={a.id}
-                      onClick={() => setArea(a.id as Area)}
-                      className={`p-3 rounded-lg cursor-pointer transition-all ${
-                        area === a.id
-                          ? `bg-gradient-to-br ${a.color} text-white shadow-lg scale-105`
-                          : 'bg-card border border-border hover:border-primary/50 hover:shadow-md'
-                      }`}
-                    >
-                      <div className="text-2xl mb-1">{a.icon}</div>
-                      <p className="text-xs font-semibold">{a.label}</p>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Features Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <Card className="bg-gradient-to-br from-blue-500/10 to-blue-600/10 border-blue-200/30">
-                    <CardContent className="p-3">
-                      <div className="flex items-start gap-2">
-                        <Brain className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                        <div>
-                          <h4 className="font-semibold text-sm mb-1">IA Avanzada</h4>
-                          <p className="text-xs text-muted-foreground">Preguntas con GPT-5 modelo ICFES</p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  <Card className="bg-gradient-to-br from-green-500/10 to-green-600/10 border-green-200/30">
-                    <CardContent className="p-3">
-                      <div className="flex items-start gap-2">
-                        <TrendingUp className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
-                        <div>
-                          <h4 className="font-semibold text-sm mb-1">Análisis Real</h4>
-                          <p className="text-xs text-muted-foreground">Explica cada error al instante</p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  <Card className="bg-gradient-to-br from-amber-500/10 to-amber-600/10 border-amber-200/30">
-                    <CardContent className="p-3">
-                      <div className="flex items-start gap-2">
-                        <Clock className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
-                        <div>
-                          <h4 className="font-semibold text-sm mb-1">Flexible</h4>
-                          <p className="text-xs text-muted-foreground">Practica a tu propio ritmo</p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-
-                {/* Quick Stats */}
-                <div className="grid grid-cols-3 gap-2">
-                  <Card className="bg-muted/40">
-                    <CardContent className="p-2 text-center">
-                      <p className="text-2xl font-bold text-primary">5</p>
-                      <p className="text-xs text-muted-foreground">Áreas</p>
-                    </CardContent>
-                  </Card>
-                  <Card className="bg-muted/40">
-                    <CardContent className="p-2 text-center">
-                      <p className="text-2xl font-bold text-success">∞</p>
-                      <p className="text-xs text-muted-foreground">Preguntas</p>
-                    </CardContent>
-                  </Card>
-                  <Card className="bg-muted/40">
-                    <CardContent className="p-2 text-center">
-                      <p className="text-2xl font-bold text-blue-600">🎯</p>
-                      <p className="text-xs text-muted-foreground">Precisión</p>
-                    </CardContent>
-                  </Card>
-                </div>
-
-                {/* Tips Section */}
-                <Card className="bg-gradient-to-br from-indigo-500/5 to-purple-500/5 border-indigo-200/20">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm flex items-center gap-2">
-                      <Sparkles className="h-4 w-4 text-indigo-600" />
-                      Maximiza tu Preparación
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Gauge className="h-5 w-5 text-primary" />
+                      Beneficios
                     </CardTitle>
+                    <CardDescription>Sesiones rápidas y enfocadas.</CardDescription>
                   </CardHeader>
-                  <CardContent className="text-xs space-y-2">
-                    <div className="flex gap-2">
-                      <span className="font-bold text-indigo-600">1.</span>
-                      <p className="text-muted-foreground">Comienza con dificultad fácil para ganar confianza</p>
-                    </div>
-                    <div className="flex gap-2">
-                      <span className="font-bold text-indigo-600">2.</span>
-                      <p className="text-muted-foreground">Estudia las explicaciones detalladas de cada error</p>
-                    </div>
-                    <div className="flex gap-2">
-                      <span className="font-bold text-indigo-600">3.</span>
-                      <p className="text-muted-foreground">Practica 5-10 preguntas diarias para mejor retención</p>
-                    </div>
-                    <div className="flex gap-2">
-                      <span className="font-bold text-indigo-600">4.</span>
-                      <p className="text-muted-foreground">Repite áreas débiles hasta dominarlas</p>
-                    </div>
+                  <CardContent className="space-y-3 text-sm text-muted-foreground">
+                    <p>Genera preguntas sin distracciones.</p>
+                    <p>Enfoque por tema y dificultad.</p>
+                    <p>Retroalimentación al instante.</p>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-primary/20 bg-primary/5">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Flame className="h-5 w-5 text-primary" />
+                      Reto sugerido
+                    </CardTitle>
+                    <CardDescription>Completa 3 sesiones hoy.</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground">
+                      Gana +80 XP y sube tu racha semanal.
+                    </p>
                   </CardContent>
                 </Card>
               </>

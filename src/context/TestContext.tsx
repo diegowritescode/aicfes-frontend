@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
-import { IcfesItem, AnswerKey, AnswerRecord, Area } from '@/types/icfes';
+import { IcfesItem, AnswerKey, AnswerRecord, Area, Dificultad } from '@/types/icfes';
 
 interface TestState {
   questions: IcfesItem[];
@@ -8,17 +8,26 @@ interface TestState {
   answersHistory: AnswerRecord[];
   isTestActive: boolean;
   testArea: Area | null;
+  testDifficulty: Dificultad | null;
+  testTopic: string | null;
+  testMode: 'generacion_libre' | 'contrarreloj' | 'test' | null;
+  studySessionId: string | null;
   testStartTime: Date | null;
 }
 
 interface TestContextValue extends TestState {
-  startTest: (questions: IcfesItem[], area: Area) => void;
+  startTest: (
+    questions: IcfesItem[],
+    area: Area,
+    options?: { dificultad?: Dificultad | null; tema?: string | null; mode?: 'generacion_libre' | 'contrarreloj' | 'test' }
+  ) => void;
   selectAnswer: (answer: AnswerKey) => void;
   confirmAnswer: () => void;
   nextQuestion: () => void;
   resetTest: () => void;
   getCurrentQuestion: () => IcfesItem | null;
   isLastQuestion: () => boolean;
+  setStudySessionId: (sessionId: string | null) => void;
   getResults: () => {
     total: number;
     correct: number;
@@ -38,6 +47,10 @@ const initialState: TestState = {
   answersHistory: [],
   isTestActive: false,
   testArea: null,
+  testDifficulty: null,
+  testTopic: null,
+  testMode: null,
+  studySessionId: null,
   testStartTime: null,
 };
 
@@ -73,7 +86,11 @@ const TestContext = createContext<TestContextValue | undefined>(undefined);
 export function TestProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<TestState>(() => loadStateFromSession());
 
-  const startTest = useCallback((questions: IcfesItem[], area: Area) => {
+  const startTest = useCallback((
+    questions: IcfesItem[],
+    area: Area,
+    options?: { dificultad?: Dificultad | null; tema?: string | null; mode?: 'generacion_libre' | 'contrarreloj' | 'test' }
+  ) => {
     const newState: TestState = {
       questions,
       currentQuestionIndex: 0,
@@ -81,6 +98,10 @@ export function TestProvider({ children }: { children: ReactNode }) {
       answersHistory: [],
       isTestActive: true,
       testArea: area,
+      testDifficulty: options?.dificultad ?? null,
+      testTopic: options?.tema ?? null,
+      testMode: options?.mode ?? 'test',
+      studySessionId: null,
       testStartTime: new Date(),
     };
     setState(newState);
@@ -133,6 +154,14 @@ export function TestProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const setStudySessionId = useCallback((sessionId: string | null) => {
+    setState((prev) => {
+      const next = { ...prev, studySessionId: sessionId };
+      saveStateToSession(next);
+      return next;
+    });
+  }, []);
+
   const resetTest = useCallback(() => {
     setState(initialState);
     try {
@@ -177,6 +206,7 @@ export function TestProvider({ children }: { children: ReactNode }) {
         resetTest,
         getCurrentQuestion,
         isLastQuestion,
+        setStudySessionId,
         getResults,
       }}
     >

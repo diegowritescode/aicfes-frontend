@@ -1,5 +1,5 @@
 import axios, { AxiosError } from 'axios';
-import { ApiResponse, GenerateRequest, IcfesItem } from '@/types/icfes';
+import { ApiResponse, GenerateRequest, IcfesItem, Area, Dificultad } from '@/types/icfes';
 
 // Configurable base URL via environment variable
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
@@ -11,6 +11,243 @@ const apiClient = axios.create({
   },
   timeout: 300000, // 5 minutes timeout for AI generation (puede tardar bastante)
 });
+
+const AUTH_STORAGE_KEY = 'aicfes_auth_v1';
+
+export interface AuthPayload {
+  userId: string;
+  email: string;
+  timezone: string;
+  token: string;
+  tokenType: string;
+  expiresIn: string;
+}
+
+export interface AuthResult {
+  success: boolean;
+  data?: AuthPayload;
+  error?: {
+    code: string;
+    message: string;
+  };
+}
+
+export interface AuthUser {
+  userId: string;
+  email: string;
+  timezone: string;
+}
+
+export interface StoredAuth {
+  token: string;
+  user: AuthUser;
+}
+
+export interface DashboardStreak {
+  currentDays: number;
+  longestDays: number;
+  nextMilestoneDays: number;
+  lastStudyDate: string;
+}
+
+export interface DashboardLevel {
+  level: number;
+  totalXp: number;
+  currentXp: number;
+  nextLevelXp: number;
+}
+
+export interface DashboardTimeStudied {
+  weekMinutes: number;
+  lastSessionAt: string;
+}
+
+export interface DashboardMission {
+  id: string;
+  title: string;
+  status: 'done' | 'pending';
+  progress: number;
+  target: number;
+  xpReward: number;
+}
+
+export interface DashboardMissions {
+  total: number;
+  completed: number;
+  items: DashboardMission[];
+}
+
+export interface DashboardAreaProgress {
+  area: string;
+  accuracy: number;
+  questions: number;
+}
+
+export interface DashboardChallenge {
+  title: string;
+  description: string;
+  xpReward: number;
+}
+
+export interface DashboardModeCard {
+  status: 'active' | 'recommended';
+  lastSessionAt: string;
+  recommendation: string;
+  sessionsThisWeek: number;
+}
+
+export interface DashboardData {
+  streak: DashboardStreak;
+  level: DashboardLevel;
+  timeStudied: DashboardTimeStudied;
+  missions: DashboardMissions;
+  areaProgress: DashboardAreaProgress[];
+  suggestedChallenge: DashboardChallenge;
+  modeCards: {
+    generacion_libre: DashboardModeCard;
+    contrarreloj: DashboardModeCard;
+  };
+}
+
+export interface DashboardResult {
+  success: boolean;
+  data?: DashboardData;
+  error?: {
+    code: string;
+    message: string;
+  };
+}
+
+export interface AnswerPayload {
+  sessionId: string;
+  questionIndex: number;
+  selectedAnswer: string;
+  isCorrect: boolean;
+  area: Area;
+  dificultad: Dificultad;
+}
+
+export interface StudySessionPayload {
+  mode: 'generacion_libre' | 'contrarreloj' | 'test';
+  area?: Area;
+  dificultad?: Dificultad;
+  tema?: string;
+  startedAt: string;
+  endedAt: string;
+  durationSeconds: number;
+  totalQuestions: number;
+  correctQuestions: number;
+}
+
+export interface StudySessionStartPayload {
+  mode: 'generacion_libre' | 'contrarreloj' | 'test';
+  area?: Area;
+  dificultad?: Dificultad;
+  tema?: string;
+  startedAt: string;
+}
+
+export interface StudySessionStartResult {
+  success: boolean;
+  data?: {
+    sessionId: string;
+    startedAt: string;
+  };
+  error?: {
+    code: string;
+    message: string;
+  };
+}
+
+export interface StudySessionHeartbeatResult {
+  success: boolean;
+  data?: {
+    id: string;
+    durationSeconds: number;
+    endedAt?: string;
+    lastHeartbeatAt?: string;
+  };
+  error?: {
+    code: string;
+    message: string;
+  };
+}
+
+export interface StudySessionResult {
+  success: boolean;
+  data?: {
+    sessionId: string;
+    xpAwarded: number;
+  };
+  error?: {
+    code: string;
+    message: string;
+  };
+}
+
+export function getStoredAuth(): StoredAuth | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = window.localStorage.getItem(AUTH_STORAGE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw) as StoredAuth;
+  } catch {
+    return null;
+  }
+}
+
+export function setStoredAuth(auth: StoredAuth | null) {
+  if (typeof window === 'undefined') return;
+  try {
+    if (!auth) {
+      window.localStorage.removeItem(AUTH_STORAGE_KEY);
+      return;
+    }
+    window.localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(auth));
+  } catch {
+    // ignore storage errors
+  }
+}
+
+export function setAuthToken(token: string | null) {
+  if (token) {
+    apiClient.defaults.headers.common.Authorization = `Bearer ${token}`;
+    return;
+  }
+  delete apiClient.defaults.headers.common.Authorization;
+}
+
+apiClient.interceptors.request.use((config) => {
+  if (config.headers?.Authorization) return config;
+  const stored = getStoredAuth();
+  if (stored?.token) {
+    config.headers = config.headers || {};
+    config.headers.Authorization = `Bearer ${stored.token}`;
+  }
+  return config;
+});
+
+apiClient.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalConfig = error?.config as { _retry?: boolean; headers?: Record<string, string>; url?: string } | undefined;
+    if (
+      error?.response?.status === 401 &&
+      originalConfig &&
+      !originalConfig._retry &&
+      !originalConfig.url?.includes('/api/auth/refresh')
+    ) {
+      originalConfig._retry = true;
+      const refreshed = await refreshAuthToken();
+      if (refreshed.success && refreshed.token) {
+        originalConfig.headers = originalConfig.headers || {};
+        originalConfig.headers.Authorization = `Bearer ${refreshed.token}`;
+        return apiClient(originalConfig);
+      }
+    }
+    return Promise.reject(error);
+  }
+);
 
 export interface GenerateItemsResult {
   success: boolean;
@@ -43,6 +280,249 @@ export interface CancelRequestResult {
     code: string;
     message: string;
   };
+}
+
+export async function registerUser(params: {
+  email: string;
+  password: string;
+  timezone: string;
+}): Promise<AuthResult> {
+  try {
+    const response = await apiClient.post('/api/auth/register', params, { withCredentials: true });
+    const data = response.data as { ok?: boolean; data?: AuthPayload; error?: { code: string; message: string } };
+    if (!data.ok || !data.data) {
+      return {
+        success: false,
+        error: data.error || { code: 'REGISTER_ERROR', message: 'No se pudo registrar.' },
+      };
+    }
+    return { success: true, data: data.data };
+  } catch (error) {
+    const lastError = error as AxiosError<{ error?: { code: string; message: string } }>;
+    return {
+      success: false,
+      error: lastError.response?.data?.error || {
+        code: 'REGISTER_ERROR',
+        message: lastError.message || 'No se pudo registrar.',
+      },
+    };
+  }
+}
+
+export async function loginUser(params: {
+  email: string;
+  password: string;
+}): Promise<AuthResult> {
+  try {
+    const response = await apiClient.post('/api/auth/login', params, { withCredentials: true });
+    const data = response.data as { ok?: boolean; data?: AuthPayload; error?: { code: string; message: string } };
+    if (!data.ok || !data.data) {
+      return {
+        success: false,
+        error: data.error || { code: 'LOGIN_ERROR', message: 'No se pudo iniciar sesión.' },
+      };
+    }
+    return { success: true, data: data.data };
+  } catch (error) {
+    const lastError = error as AxiosError<{ error?: { code: string; message: string } }>;
+    return {
+      success: false,
+      error: lastError.response?.data?.error || {
+        code: 'LOGIN_ERROR',
+        message: lastError.message || 'No se pudo iniciar sesión.',
+      },
+    };
+  }
+}
+
+export async function refreshAuthToken(): Promise<{ success: boolean; token?: string }> {
+  try {
+    const response = await apiClient.post('/api/auth/refresh', undefined, { withCredentials: true });
+    const data = response.data as { ok?: boolean; data?: { token?: string }; token?: string };
+    const token = data.data?.token || data.token;
+    if (!token) {
+      setStoredAuth(null);
+      setAuthToken(null);
+      return { success: false };
+    }
+    const stored = getStoredAuth();
+    if (stored) {
+      setStoredAuth({ token, user: stored.user });
+    }
+    setAuthToken(token);
+    return { success: true, token };
+  } catch {
+    setStoredAuth(null);
+    setAuthToken(null);
+    return { success: false };
+  }
+}
+
+export async function getDashboard(): Promise<DashboardResult> {
+  try {
+    const response = await apiClient.get('/api/dashboard');
+    const data = response.data as { ok?: boolean; data?: DashboardData; error?: { code: string; message: string } };
+    if (!data.ok || !data.data) {
+      return {
+        success: false,
+        error: data.error || { code: 'DASHBOARD_ERROR', message: 'No se pudo cargar el dashboard.' },
+      };
+    }
+    return { success: true, data: data.data };
+  } catch (error) {
+    const lastError = error as AxiosError<{ error?: { code: string; message: string } }>;
+    return {
+      success: false,
+      error: lastError.response?.data?.error || {
+        code: 'DASHBOARD_ERROR',
+        message: lastError.message || 'No se pudo cargar el dashboard.',
+      },
+    };
+  }
+}
+
+export async function postAnswers(
+  payload: AnswerPayload[]
+): Promise<{ success: boolean; error?: { code: string; message: string } }> {
+  try {
+    const response = await apiClient.post('/api/answers', payload);
+    const data = response.data as { ok?: boolean; error?: { code: string; message: string } };
+    if (!data.ok) {
+      return {
+        success: false,
+        error: data.error || { code: 'ANSWERS_ERROR', message: 'No se pudo enviar respuestas.' },
+      };
+    }
+    return { success: true };
+  } catch (error) {
+    const lastError = error as AxiosError<{ error?: { code: string; message: string } }>;
+    return {
+      success: false,
+      error: lastError.response?.data?.error || {
+        code: 'ANSWERS_ERROR',
+        message: lastError.message || 'No se pudo enviar respuestas.',
+      },
+    };
+  }
+}
+
+export async function createStudySession(payload: StudySessionPayload): Promise<StudySessionResult> {
+  try {
+    const response = await apiClient.post('/api/study-sessions', payload);
+    const data = response.data as {
+      ok?: boolean;
+      data?: { sessionId: string; xpAwarded: number };
+      error?: { code: string; message: string };
+    };
+    if (!data.ok || !data.data) {
+      return {
+        success: false,
+        error: data.error || { code: 'STUDY_SESSION_ERROR', message: 'No se pudo registrar la sesión.' },
+      };
+    }
+    return { success: true, data: data.data };
+  } catch (error) {
+    const lastError = error as AxiosError<{ error?: { code: string; message: string } }>;
+    return {
+      success: false,
+      error: lastError.response?.data?.error || {
+        code: 'STUDY_SESSION_ERROR',
+        message: lastError.message || 'No se pudo registrar la sesión.',
+      },
+    };
+  }
+}
+
+export async function startStudySession(payload: StudySessionStartPayload): Promise<StudySessionStartResult> {
+  try {
+    const response = await apiClient.post('/api/study-sessions/start', payload);
+    const data = response.data as {
+      ok?: boolean;
+      data?: { sessionId: string; startedAt: string };
+      error?: { code: string; message: string };
+    };
+    if (!data.ok || !data.data) {
+      return {
+        success: false,
+        error: data.error || { code: 'STUDY_SESSION_START_ERROR', message: 'No se pudo iniciar la sesión.' },
+      };
+    }
+    return { success: true, data: data.data };
+  } catch (error) {
+    const lastError = error as AxiosError<{ error?: { code: string; message: string } }>;
+    return {
+      success: false,
+      error: lastError.response?.data?.error || {
+        code: 'STUDY_SESSION_START_ERROR',
+        message: lastError.message || 'No se pudo iniciar la sesión.',
+      },
+    };
+  }
+}
+
+export async function heartbeatStudySession(
+  sessionId: string,
+  payload: { elapsedSeconds: number; endedAt?: string }
+): Promise<StudySessionHeartbeatResult> {
+  try {
+    const response = await apiClient.post(`/api/study-sessions/${sessionId}/heartbeat`, payload);
+    const data = response.data as {
+      ok?: boolean;
+      data?: { id: string; durationSeconds: number; endedAt?: string; lastHeartbeatAt?: string };
+      error?: { code: string; message: string };
+    };
+    if (!data.ok || !data.data) {
+      return {
+        success: false,
+        error: data.error || { code: 'STUDY_SESSION_HEARTBEAT_ERROR', message: 'No se pudo enviar heartbeat.' },
+      };
+    }
+    return { success: true, data: data.data };
+  } catch (error) {
+    const lastError = error as AxiosError<{ error?: { code: string; message: string } }>;
+    return {
+      success: false,
+      error: lastError.response?.data?.error || {
+        code: 'STUDY_SESSION_HEARTBEAT_ERROR',
+        message: lastError.message || 'No se pudo enviar heartbeat.',
+      },
+    };
+  }
+}
+
+export async function completeStudySession(
+  sessionId: string,
+  payload: {
+    endedAt: string;
+    durationSeconds: number;
+    totalQuestions: number;
+    correctQuestions: number;
+  }
+): Promise<StudySessionResult> {
+  try {
+    const response = await apiClient.post(`/api/study-sessions/${sessionId}/complete`, payload);
+    const data = response.data as {
+      ok?: boolean;
+      data?: { sessionId: string; xpAwarded: number; xpDelta?: number };
+      error?: { code: string; message: string };
+    };
+    if (!data.ok || !data.data) {
+      return {
+        success: false,
+        error: data.error || { code: 'STUDY_SESSION_COMPLETE_ERROR', message: 'No se pudo completar la sesión.' },
+      };
+    }
+    return { success: true, data: data.data };
+  } catch (error) {
+    const lastError = error as AxiosError<{ error?: { code: string; message: string } }>;
+    return {
+      success: false,
+      error: lastError.response?.data?.error || {
+        code: 'STUDY_SESSION_COMPLETE_ERROR',
+        message: lastError.message || 'No se pudo completar la sesión.',
+      },
+    };
+  }
 }
 
 export async function generateItems(

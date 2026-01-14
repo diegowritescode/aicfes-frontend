@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useTest } from '@/context/TestContext';
 import { AREA_LABELS } from '@/types/icfes';
@@ -6,6 +6,13 @@ import { Layout } from '@/components/Layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+} from '@/components/ui/pagination';
+import { AnswerPayload, completeStudySession, createStudySession, postAnswers } from '@/services/api';
 import {
   Trophy,
   Target,
@@ -20,20 +27,120 @@ import { cn } from '@/lib/utils';
 
 export default function Results() {
   const navigate = useNavigate();
-  const { getResults, resetTest, isTestActive, questions } = useTest();
+  const {
+    getResults,
+    resetTest,
+    questions,
+    testStartTime,
+    testArea,
+    testDifficulty,
+    testTopic,
+    testMode,
+    studySessionId,
+    setStudySessionId,
+  } = useTest();
 
   const results = getResults();
+  const sessionPostedRef = useRef(false);
+  const reviewPageSize = 4;
+  const [reviewPage, setReviewPage] = useState(1);
 
   // Redirect if no results
   useEffect(() => {
     if (results.total === 0) {
-      navigate('/');
+      navigate('/generacion-libre');
     }
   }, [results.total, navigate]);
 
+  useEffect(() => {
+    if (sessionPostedRef.current) return;
+    if (results.total === 0 || !testStartTime) return;
+
+    const endedAt = new Date();
+    const durationSeconds = Math.max(0, Math.floor((endedAt.getTime() - testStartTime.getTime()) / 1000));
+    sessionPostedRef.current = true;
+
+    const finalize = async () => {
+      let sessionId = studySessionId || null;
+      if (sessionId) {
+        const completed = await completeStudySession(sessionId, {
+          endedAt: endedAt.toISOString(),
+          durationSeconds,
+          totalQuestions: results.total,
+          correctQuestions: results.correct,
+        });
+        if (!completed.success) {
+          sessionPostedRef.current = false;
+          return;
+        }
+      } else {
+        const created = await createStudySession({
+          mode: testMode || 'test',
+          area: testArea || undefined,
+          dificultad: testDifficulty || undefined,
+          tema: testTopic || undefined,
+          startedAt: testStartTime.toISOString(),
+          endedAt: endedAt.toISOString(),
+          durationSeconds,
+          totalQuestions: results.total,
+          correctQuestions: results.correct,
+        });
+        if (!created.success || !created.data?.sessionId) {
+          sessionPostedRef.current = false;
+          return;
+        }
+        sessionId = created.data.sessionId;
+        setStudySessionId(sessionId);
+      }
+
+      const answersPayload: AnswerPayload[] = results.answersHistory
+        .map((answer) => {
+          const question = questions[answer.questionIndex];
+          if (!question || !sessionId) return null;
+          return {
+            sessionId,
+            questionIndex: answer.questionIndex,
+            selectedAnswer: answer.selectedAnswer,
+            isCorrect: answer.isCorrect,
+            area: question.area,
+            dificultad: question.dificultad,
+          };
+        })
+        .filter(Boolean) as AnswerPayload[];
+
+      if (answersPayload.length === results.answersHistory.length) {
+        await postAnswers(answersPayload);
+      }
+    };
+
+    finalize()
+      .catch(() => {
+        sessionPostedRef.current = false;
+      });
+  }, [
+    results.total,
+    results.correct,
+    testStartTime,
+    testArea,
+    testDifficulty,
+    testTopic,
+    testMode,
+    studySessionId,
+    setStudySessionId,
+    results.answersHistory.length,
+    questions.length,
+  ]);
+
+  useEffect(() => {
+    const totalPages = Math.max(1, Math.ceil(results.answersHistory.length / reviewPageSize));
+    if (reviewPage > totalPages) {
+      setReviewPage(totalPages);
+    }
+  }, [results.answersHistory.length, reviewPage, reviewPageSize]);
+
   const handleNewTest = () => {
     resetTest();
-    navigate('/');
+    navigate('/generacion-libre');
   };
 
   const getPerformanceLevel = (accuracy: number) => {
@@ -45,6 +152,9 @@ export default function Results() {
 
   const performance = getPerformanceLevel(results.accuracy);
   const PerformanceIcon = performance.icon;
+  const totalReviewPages = Math.max(1, Math.ceil(results.answersHistory.length / reviewPageSize));
+  const reviewStart = (reviewPage - 1) * reviewPageSize;
+  const reviewAnswers = results.answersHistory.slice(reviewStart, reviewStart + reviewPageSize);
 
   if (results.total === 0) {
     return null;
@@ -168,7 +278,7 @@ export default function Results() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {results.answersHistory.map((answer, idx) => {
+              {reviewAnswers.map((answer) => {
                 const question = questions[answer.questionIndex];
                 if (!question) return null;
                 const selectedKey = answer.selectedAnswer;
@@ -177,7 +287,7 @@ export default function Results() {
                 const explanation = question.explicaciones?.[selectedKey] || question.justificacion;
 
                 return (
-                  <div key={idx} className="p-4 rounded-lg border border-border bg-card">
+                  <div key={answer.questionIndex} className="p-4 rounded-lg border border-border bg-card">
                     <div className="flex items-start gap-3">
                       <div className={cn('font-bold text-sm w-8 h-8 flex items-center justify-center rounded-full', answer.isCorrect ? 'bg-success/10 text-success' : 'bg-destructive/10 text-destructive')}>
                         {answer.questionIndex + 1}
@@ -197,6 +307,31 @@ export default function Results() {
                 );
               })}
             </div>
+            {totalReviewPages > 1 && (
+              <div className="mt-6">
+                <Pagination>
+                  <PaginationContent>
+                    {Array.from({ length: totalReviewPages }).map((_, index) => {
+                      const page = index + 1;
+                      return (
+                        <PaginationItem key={page}>
+                          <PaginationLink
+                            href="#"
+                            isActive={reviewPage === page}
+                            onClick={(event) => {
+                              event.preventDefault();
+                              setReviewPage(page);
+                            }}
+                          >
+                            {page}
+                          </PaginationLink>
+                        </PaginationItem>
+                      );
+                    })}
+                  </PaginationContent>
+                </Pagination>
+              </div>
+            )}
           </CardContent>
         </Card>
 

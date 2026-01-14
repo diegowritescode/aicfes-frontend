@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTest } from '@/context/TestContext';
 import { AnswerKey } from '@/types/icfes';
@@ -8,8 +8,9 @@ import { FeedbackModal } from '@/components/FeedbackModal';
 import { QuestionSkeleton } from '@/components/LoadingSkeleton';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { GraduationCap, Home, Clock } from 'lucide-react';
+import { GraduationCap, Clock } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { getStoredAuth, heartbeatStudySession, startStudySession } from '@/services/api';
 
 export default function Test() {
   const navigate = useNavigate();
@@ -24,11 +25,20 @@ export default function Test() {
     nextQuestion,
     getCurrentQuestion,
     isLastQuestion,
+    testStartTime,
+    testArea,
+    testDifficulty,
+    testTopic,
+    testMode,
+    studySessionId,
+    setStudySessionId,
   } = useTest();
 
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [isAnswerRevealed, setIsAnswerRevealed] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(0);
+  const heartbeatIntervalRef = useRef<number | null>(null);
+  const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
   const currentQuestion = getCurrentQuestion();
   const progress = ((currentQuestionIndex + 1) / questions.length) * 100;
@@ -36,7 +46,7 @@ export default function Test() {
   // Redirect if no active test
   useEffect(() => {
     if (!isTestActive || questions.length === 0) {
-      navigate('/');
+      navigate('/generacion-libre');
     }
   }, [isTestActive, questions.length, navigate]);
 
@@ -48,6 +58,101 @@ export default function Test() {
     }, 1000);
     return () => clearInterval(timer);
   }, [isTestActive]);
+
+  useEffect(() => {
+    if (!isTestActive || !testStartTime || !testArea) return;
+    if (studySessionId) return;
+
+    let isMounted = true;
+    const start = async () => {
+      const result = await startStudySession({
+        mode: testMode || 'test',
+        area: testArea,
+        dificultad: testDifficulty || undefined,
+        tema: testTopic || undefined,
+        startedAt: testStartTime.toISOString(),
+      });
+      if (!isMounted) return;
+      if (result.success && result.data?.sessionId) {
+        setStudySessionId(result.data.sessionId);
+      }
+    };
+    start();
+    return () => {
+      isMounted = false;
+    };
+  }, [isTestActive, testStartTime, testArea, testDifficulty, testTopic, testMode, studySessionId, setStudySessionId]);
+
+  useEffect(() => {
+    if (!studySessionId || !testStartTime) return;
+
+    const sendHeartbeat = () => {
+      const elapsedSeconds = Math.max(
+        0,
+        Math.floor((Date.now() - testStartTime.getTime()) / 1000)
+      );
+      heartbeatStudySession(studySessionId, { elapsedSeconds }).catch(() => {});
+    };
+
+    const sendFinalHeartbeat = () => {
+      const elapsedSeconds = Math.max(
+        0,
+        Math.floor((Date.now() - testStartTime.getTime()) / 1000)
+      );
+      heartbeatStudySession(studySessionId, {
+        elapsedSeconds,
+        endedAt: new Date().toISOString(),
+      }).catch(() => {});
+    };
+
+    sendHeartbeat();
+    heartbeatIntervalRef.current = window.setInterval(sendHeartbeat, 60000);
+
+    return () => {
+      sendFinalHeartbeat();
+      if (heartbeatIntervalRef.current) {
+        clearInterval(heartbeatIntervalRef.current);
+        heartbeatIntervalRef.current = null;
+      }
+    };
+  }, [studySessionId, testStartTime]);
+
+  useEffect(() => {
+    if (!studySessionId || !testStartTime) return;
+
+    const sendKeepaliveHeartbeat = () => {
+      const elapsedSeconds = Math.max(
+        0,
+        Math.floor((Date.now() - testStartTime.getTime()) / 1000)
+      );
+      const auth = getStoredAuth();
+      const token = auth?.token;
+      if (!token) return;
+      fetch(`${apiBaseUrl}/api/study-sessions/${studySessionId}/heartbeat`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ elapsedSeconds, endedAt: new Date().toISOString() }),
+        keepalive: true,
+      }).catch(() => {});
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        sendKeepaliveHeartbeat();
+      }
+    };
+
+    window.addEventListener('pagehide', sendKeepaliveHeartbeat);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('pagehide', sendKeepaliveHeartbeat);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [studySessionId, testStartTime, apiBaseUrl]);
 
   // Keyboard shortcuts: A/B/C/D to select, Enter to submit
   useEffect(() => {
