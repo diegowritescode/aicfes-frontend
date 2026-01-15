@@ -15,8 +15,10 @@ import {
   Zap,
   BookOpen,
   Trophy,
+  Shuffle,
 } from 'lucide-react';
 import { ErrorAlert } from '@/components/ErrorAlert';
+import { DashboardSkeleton } from '@/components/LoadingSkeleton';
 import { DashboardData, getDashboard } from '@/services/api';
 import { AREA_LABELS, Area } from '@/types/icfes';
 
@@ -153,9 +155,7 @@ export default function Dashboard() {
     return (
       <Layout>
         <div className="container mx-auto px-4 py-10">
-          <div className="p-6 rounded-xl border border-border bg-card">
-            <p className="text-sm text-muted-foreground">Cargando dashboard...</p>
-          </div>
+          <DashboardSkeleton />
         </div>
       </Layout>
     );
@@ -190,15 +190,15 @@ export default function Dashboard() {
       return { label: 'Ir a contrarreloj', to: '/contrarreloj' };
     }
     if (mission.id.includes('questions_mat') || title.includes('matemat')) {
-      return { label: 'Practicar Matemáticas', to: '/generacion-libre?area=MAT&n=5' };
+      return { label: 'Practicar Matemáticas', to: '/generacion-especializada?area=MAT&n=5' };
     }
     if (mission.id.includes('review') || title.includes('explicac') || title.includes('analizar')) {
       return { label: 'Ver resultados', to: '/results' };
     }
     if (mission.id.includes('sessions') || title.includes('sesion')) {
-      return { label: 'Crear sesión', to: '/generacion-libre' };
+      return { label: 'Crear sesión', to: '/generacion-especializada' };
     }
-    return { label: 'Practicar ahora', to: '/generacion-libre' };
+    return { label: 'Practicar ahora', to: '/generacion-especializada' };
   };
 
   return (
@@ -233,10 +233,16 @@ export default function Dashboard() {
               </div>
             </div>
             <div className="flex flex-wrap gap-3">
-              <Link to="/generacion-libre">
+              <Link to="/generacion-especializada">
                 <Button size="lg" className="gap-2">
                   <Zap className="h-4 w-4" />
-                  Generación libre
+                  Generación especializada
+                </Button>
+              </Link>
+              <Link to="/generacion-mixta">
+                <Button size="lg" variant="outline" className="gap-2">
+                  <Shuffle className="h-4 w-4" />
+                  Generación mixta
                 </Button>
               </Link>
               <Link to="/contrarreloj">
@@ -381,12 +387,12 @@ export default function Dashboard() {
         </div>
 
         {/* Callouts */}
-        <div className="mt-6 grid gap-4 lg:grid-cols-2">
+        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <Card className="border-primary/20 bg-primary/5">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Zap className="h-5 w-5 text-primary" />
-                Generación libre
+                Generación especializada
               </CardTitle>
               <div className="flex items-center gap-2">
                 <Badge variant={data.modeCards.generacion_libre.status === 'active' ? 'default' : 'secondary'}>
@@ -399,10 +405,31 @@ export default function Dashboard() {
               <p className="text-sm text-muted-foreground mb-4">
                 Sesiones esta semana: {data.modeCards.generacion_libre.sessionsThisWeek}
               </p>
-              <Link to="/generacion-libre">
+              <Link to="/generacion-especializada">
                 <Button size="sm" className="gap-2">
-                  Ir a generación libre
+                  Ir a especializada
                   <Zap className="h-4 w-4" />
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+
+          <Card className="border-blue-500/30 bg-blue-500/5">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Shuffle className="h-5 w-5 text-blue-600" />
+                Generación mixta
+              </CardTitle>
+              <CardDescription>Combina áreas y dificultades en una sola prueba.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground mb-4">
+                Arma un mix realista como en el examen.
+              </p>
+              <Link to="/generacion-mixta">
+                <Button size="sm" variant="outline" className="gap-2">
+                  Ir a mixta
+                  <Shuffle className="h-4 w-4" />
                 </Button>
               </Link>
             </CardContent>

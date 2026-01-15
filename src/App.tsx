@@ -2,18 +2,20 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/context/AuthContext";
 import { TestProvider } from "@/context/TestContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Dashboard from "./pages/Dashboard";
-import Generate from "./pages/Generate";
+import GenerateMixed from "./pages/Generate";
+import GenerateSpecial from "./pages/GenerateSpecial";
 import Login from "./pages/Login";
 import Landing from "./pages/Landing";
 import Register from "./pages/Register";
 import TimeTrial from "./pages/TimeTrial";
 import Test from "./pages/Test";
 import Results from "./pages/Results";
+import Feedback from "./pages/Feedback";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -38,9 +40,21 @@ const App = () => (
               />
               <Route
                 path="/generacion-libre"
+                element={<Navigate to="/generacion-especializada" replace />}
+              />
+              <Route
+                path="/generacion-especializada"
                 element={
                   <ProtectedRoute>
-                    <Generate />
+                    <GenerateSpecial />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/generacion-mixta"
+                element={
+                  <ProtectedRoute>
+                    <GenerateMixed />
                   </ProtectedRoute>
                 }
               />
@@ -67,6 +81,14 @@ const App = () => (
                 element={
                   <ProtectedRoute>
                     <Results />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/feedback/:sessionId"
+                element={
+                  <ProtectedRoute>
+                    <Feedback />
                   </ProtectedRoute>
                 }
               />

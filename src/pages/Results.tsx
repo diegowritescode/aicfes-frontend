@@ -1,18 +1,27 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useTest } from '@/context/TestContext';
-import { AREA_LABELS } from '@/types/icfes';
+import { AREA_LABELS, Area } from '@/types/icfes';
 import { Layout } from '@/components/Layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
+import { ErrorAlert } from '@/components/ErrorAlert';
 import {
   Pagination,
   PaginationContent,
   PaginationItem,
   PaginationLink,
 } from '@/components/ui/pagination';
-import { AnswerPayload, completeStudySession, createStudySession, postAnswers } from '@/services/api';
+import {
+  AnswerPayload,
+  completeStudySession,
+  createStudySession,
+  generateFeedback,
+  getFeedback,
+  postAnswers,
+  startStudySession,
+} from '@/services/api';
 import {
   Trophy,
   Target,
@@ -42,15 +51,98 @@ export default function Results() {
 
   const results = getResults();
   const sessionPostedRef = useRef(false);
+  const feedbackRequestedRef = useRef(false);
   const reviewPageSize = 4;
   const [reviewPage, setReviewPage] = useState(1);
+  const [feedback, setFeedback] = useState<Awaited<ReturnType<typeof getFeedback>>['data'] | null>(null);
+  const [feedbackLoading, setFeedbackLoading] = useState(false);
+  const [feedbackError, setFeedbackError] = useState<{ code?: string; message: string } | null>(null);
+  const [sessionCompleted, setSessionCompleted] = useState(false);
+  const feedbackCacheKey = studySessionId ? `aicfes_feedback_${studySessionId}` : null;
+  const sessionCompletedKey = studySessionId ? `aicfes_session_completed_${studySessionId}` : null;
 
   // Redirect if no results
   useEffect(() => {
     if (results.total === 0) {
-      navigate('/generacion-libre');
+      navigate('/generacion-especializada');
     }
   }, [results.total, navigate]);
+
+  useEffect(() => {
+    if (!studySessionId || !sessionCompletedKey) return;
+    try {
+      const cached = sessionStorage.getItem(sessionCompletedKey);
+      if (cached === 'true') {
+        sessionPostedRef.current = true;
+        setSessionCompleted(true);
+      }
+    } catch {
+      // ignore cache errors
+    }
+  }, [studySessionId, sessionCompletedKey]);
+
+  useEffect(() => {
+    const load = async () => {
+      if (!studySessionId || feedbackRequestedRef.current) return;
+      if (feedbackCacheKey) {
+        try {
+          const cached = sessionStorage.getItem(feedbackCacheKey);
+          if (cached) {
+            setFeedback(JSON.parse(cached));
+            feedbackRequestedRef.current = true;
+            return;
+          }
+        } catch {
+          // ignore cache errors
+        }
+      }
+      if (!sessionCompleted) return;
+      feedbackRequestedRef.current = true;
+      const result = await getFeedback(studySessionId);
+      if (!result.success) {
+        if (result.error?.code === 'NOT_FOUND') {
+          await handleGenerateFeedback();
+          return;
+        }
+        setFeedbackError(result.error || { message: 'No se pudo cargar el feedback.' });
+        return;
+      }
+      setFeedback(result.data || null);
+      if (result.data && feedbackCacheKey) {
+        try {
+          sessionStorage.setItem(feedbackCacheKey, JSON.stringify(result.data));
+        } catch {
+          // ignore cache errors
+        }
+      }
+    };
+    load();
+  }, [studySessionId, sessionCompleted, feedbackCacheKey]);
+
+  const handleGenerateFeedback = async () => {
+    if (!studySessionId) return;
+    setFeedbackError(null);
+    setFeedbackLoading(true);
+    const result = await generateFeedback({
+      sessionId: studySessionId,
+      mode: testMode || 'generacion_libre',
+      focus: 'summary',
+      language: 'es',
+    });
+    setFeedbackLoading(false);
+    if (!result.success) {
+      setFeedbackError(result.error || { message: 'No se pudo generar el feedback.' });
+      return;
+    }
+    setFeedback(result.data || null);
+    if (result.data && feedbackCacheKey) {
+      try {
+        sessionStorage.setItem(feedbackCacheKey, JSON.stringify(result.data));
+      } catch {
+        // ignore cache errors
+      }
+    }
+  };
 
   useEffect(() => {
     if (sessionPostedRef.current) return;
@@ -62,16 +154,66 @@ export default function Results() {
 
     const finalize = async () => {
       let sessionId = studySessionId || null;
+      const areaSummaryMap = new Map<Area, { area: Area; totalQuestions: number; correctQuestions: number }>();
+      questions.forEach((question) => {
+        const areaKey = question.area || testArea;
+        if (!areaKey) return;
+        const existing = areaSummaryMap.get(areaKey) || {
+          area: areaKey,
+          totalQuestions: 0,
+          correctQuestions: 0,
+        };
+        existing.totalQuestions += 1;
+        areaSummaryMap.set(areaKey, existing);
+      });
+
+      results.answersHistory.forEach((answer) => {
+        const question = questions[answer.questionIndex];
+        const areaKey = question?.area || testArea;
+        if (!areaKey) return;
+        const existing = areaSummaryMap.get(areaKey) || {
+          area: areaKey,
+          totalQuestions: 0,
+          correctQuestions: 0,
+        };
+        if (answer.isCorrect) {
+          existing.correctQuestions += 1;
+        }
+        areaSummaryMap.set(areaKey, existing);
+      });
+      const areaSummary = Array.from(areaSummaryMap.values());
+      if (!sessionId) {
+        const started = await startStudySession({
+          mode: testMode || 'test',
+          area: testArea || undefined,
+          dificultad: testDifficulty || undefined,
+          tema: testTopic || undefined,
+          startedAt: testStartTime.toISOString(),
+        });
+        if (started.success && started.data?.sessionId) {
+          sessionId = started.data.sessionId;
+          setStudySessionId(sessionId);
+        }
+      }
+
       if (sessionId) {
         const completed = await completeStudySession(sessionId, {
           endedAt: endedAt.toISOString(),
           durationSeconds,
-          totalQuestions: results.total,
+          totalQuestions: questions.length || results.total,
           correctQuestions: results.correct,
+          areaSummary: areaSummary.length > 0 ? areaSummary : undefined,
         });
         if (!completed.success) {
           sessionPostedRef.current = false;
           return;
+        }
+        if (sessionCompletedKey) {
+          try {
+            sessionStorage.setItem(sessionCompletedKey, 'true');
+          } catch {
+            // ignore cache errors
+          }
         }
       } else {
         const created = await createStudySession({
@@ -82,7 +224,7 @@ export default function Results() {
           startedAt: testStartTime.toISOString(),
           endedAt: endedAt.toISOString(),
           durationSeconds,
-          totalQuestions: results.total,
+          totalQuestions: questions.length || results.total,
           correctQuestions: results.correct,
         });
         if (!created.success || !created.data?.sessionId) {
@@ -95,21 +237,44 @@ export default function Results() {
 
       const answersPayload: AnswerPayload[] = results.answersHistory
         .map((answer) => {
+          if (!sessionId) return null;
           const question = questions[answer.questionIndex];
-          if (!question || !sessionId) return null;
+          const area = question?.area || testArea;
+          const dificultad = question?.dificultad || testDifficulty;
+          if (!area || !dificultad) return null;
           return {
             sessionId,
             questionIndex: answer.questionIndex,
             selectedAnswer: answer.selectedAnswer,
             isCorrect: answer.isCorrect,
-            area: question.area,
-            dificultad: question.dificultad,
+            area,
+            dificultad,
           };
         })
         .filter(Boolean) as AnswerPayload[];
 
-      if (answersPayload.length === results.answersHistory.length) {
-        await postAnswers(answersPayload);
+      if (answersPayload.length > 0) {
+        try {
+          await postAnswers(answersPayload);
+        } finally {
+          setSessionCompleted(true);
+          if (sessionCompletedKey) {
+            try {
+              sessionStorage.setItem(sessionCompletedKey, 'true');
+            } catch {
+              // ignore cache errors
+            }
+          }
+        }
+      } else {
+        setSessionCompleted(true);
+        if (sessionCompletedKey) {
+          try {
+            sessionStorage.setItem(sessionCompletedKey, 'true');
+          } catch {
+            // ignore cache errors
+          }
+        }
       }
     };
 
@@ -140,7 +305,7 @@ export default function Results() {
 
   const handleNewTest = () => {
     resetTest();
-    navigate('/generacion-libre');
+    navigate('/generacion-especializada');
   };
 
   const getPerformanceLevel = (accuracy: number) => {
@@ -335,23 +500,53 @@ export default function Results() {
           </CardContent>
         </Card>
 
-        {/* Future AI Feedback Placeholder */}
+        {/* AI Feedback */}
         <Card className="mb-8 bg-muted/30 border-dashed animate-slide-up" style={{ animationDelay: '0.6s' }}>
-          <CardContent className="pt-6">
+          <CardContent className="pt-6 space-y-4">
             <div className="flex items-start gap-4">
               <div className="p-3 rounded-full bg-primary/10">
                 <Sparkles className="h-6 w-6 text-primary" />
               </div>
-              <div>
+              <div className="flex-1">
                 <h3 className="font-semibold text-foreground mb-1">
                   Retroalimentación IA Personalizada
                 </h3>
-                <p className="text-sm text-muted-foreground">
-                  Próximamente: Análisis detallado de tus fortalezas y áreas de mejora basado en inteligencia artificial.
-                  Recibirás recomendaciones personalizadas para optimizar tu preparación.
+                <p className="text-base text-muted-foreground">
+                  Tu valor diferencial: no solo resultados, sino un plan claro de mejora según tus patrones reales.
                 </p>
+                {feedback?.summary && (
+                  <p className="text-base text-foreground mt-3 leading-relaxed">
+                    {feedback.summary}
+                  </p>
+                )}
               </div>
             </div>
+            {feedbackError && (
+              <ErrorAlert
+                title="No pudimos cargar el feedback"
+                message={feedbackError.message}
+                code={feedbackError.code}
+                onRetry={() => handleGenerateFeedback()}
+              />
+            )}
+            <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-muted-foreground">
+              <span>
+                {feedback
+                  ? `Generado con ${feedback.model} · ${new Date(feedback.generatedAt).toLocaleString('es-CO', { dateStyle: 'medium', timeStyle: 'short' })}`
+                  : 'Generando feedback basado en tu sesión...'}
+              </span>
+            </div>
+            {studySessionId && feedback && !feedbackLoading ? (
+              <Link to={`/feedback/${studySessionId}`} className="block">
+                <Button size="lg" className="w-full sm:w-auto">
+                  Ver feedback completo
+                </Button>
+              </Link>
+            ) : (
+              <Button size="lg" className="w-full sm:w-auto" disabled>
+                {feedbackLoading ? 'Generando feedback...' : 'Ver feedback completo'}
+              </Button>
+            )}
           </CardContent>
         </Card>
 
@@ -366,7 +561,7 @@ export default function Results() {
             <RotateCcw className="h-4 w-4" />
             Nueva Prueba
           </Button>
-          <Link to="/">
+          <Link to="/dashboard">
             <Button size="lg" className="w-full sm:w-auto">
               Volver al Inicio
             </Button>

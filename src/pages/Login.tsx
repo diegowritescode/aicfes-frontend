@@ -93,8 +93,17 @@ export default function Login() {
               )}
 
               <Button className="w-full gap-2" type="submit" disabled={isLoading}>
-                <Lock className="h-4 w-4" />
-                {isLoading ? 'Entrando...' : 'Entrar'}
+                {isLoading ? (
+                  <>
+                    <div className="h-4 w-4 rounded-full border-2 border-current border-t-transparent animate-spin" />
+                    Entrando...
+                  </>
+                ) : (
+                  <>
+                    <Lock className="h-4 w-4" />
+                    Entrar
+                  </>
+                )}
               </Button>
             </form>
             <p className="text-xs text-muted-foreground text-center">

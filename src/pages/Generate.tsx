@@ -1,12 +1,10 @@
-import { useState, useRef, useEffect } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTest } from '@/context/TestContext';
-import { cancelRequest, generateItems, getRequestItems, getRequestStatus } from '@/services/api';
-import { Area, Dificultad, IcfesItem, AREA_LABELS, DIFICULTAD_LABELS } from '@/types/icfes';
+import { generateMixedItems } from '@/services/api';
+import { Area, Dificultad, AREA_LABELS, DIFICULTAD_LABELS } from '@/types/icfes';
 import { Layout } from '@/components/Layout';
 import { ErrorAlert } from '@/components/ErrorAlert';
-import { QuestionCard } from '@/components/QuestionCard';
-import { AnswerOption } from '@/components/AnswerOption';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -18,45 +16,52 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { GraduationCap, Brain, Loader2, ArrowRight, Zap, Gauge, Flame } from 'lucide-react';
-import { Progress } from '@/components/ui/progress';
+import { GraduationCap, Loader2, Zap, Gauge, Flame, Shuffle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { GeneratorSkeleton } from '@/components/LoadingSkeleton';
+import { Switch } from '@/components/ui/switch';
 
 const AREAS: Area[] = ['MAT', 'LC', 'CN', 'SOC', 'ING'];
 const DIFICULTADES: Dificultad[] = ['facil', 'media', 'alta'];
+const MAX_ITEMS = 25;
+
+type Section = {
+  id: number;
+  area: Area | '';
+  dificultad: Dificultad | '';
+  n: number;
+  tema: string;
+};
+
+const createSection = (id: number): Section => ({
+  id,
+  area: '',
+  dificultad: '',
+  n: 5,
+  tema: '',
+});
 
 export default function Generate() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { startTest } = useTest();
 
-  const [area, setArea] = useState<Area | ''>('');
-  const [dificultad, setDificultad] = useState<Dificultad | ''>('');
-  const [tema, setTema] = useState('');
-  const [cantidad, setCantidad] = useState(5);
+  const sectionIdRef = useRef(1);
+  const [sections, setSections] = useState<Section[]>([createSection(sectionIdRef.current)]);
+  const [shuffle, setShuffle] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [requestId, setRequestId] = useState<string | undefined>(undefined);
-  const [statusText, setStatusText] = useState<string | null>(null);
   const [error, setError] = useState<{ code: string; message: string } | null>(null);
-  const [previewItem, setPreviewItem] = useState<IcfesItem | null>(null);
-  const [showPreview, setShowPreview] = useState(false);
-
-  const progressIntervalRef = useRef<number | null>(null);
-  const pollTimeoutRef = useRef<number | null>(null);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const abortControllerRef = useRef<AbortController | null>(null);
-  const hasRealProgressRef = useRef(false);
+  const elapsedIntervalRef = useRef<number | null>(null);
 
   useEffect(() => {
     return () => {
-      if (progressIntervalRef.current) {
-        clearInterval(progressIntervalRef.current);
-      }
-      if (pollTimeoutRef.current) {
-        clearTimeout(pollTimeoutRef.current);
-      }
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
+      }
+      if (elapsedIntervalRef.current) {
+        clearInterval(elapsedIntervalRef.current);
       }
     };
   }, []);
@@ -67,235 +72,141 @@ export default function Generate() {
     const temaParam = searchParams.get('tema');
     const nParam = searchParams.get('n');
 
-    if (areaParam && AREAS.includes(areaParam as Area)) {
-      setArea(areaParam as Area);
-    }
-    if (dificultadParam && DIFICULTADES.includes(dificultadParam as Dificultad)) {
-      setDificultad(dificultadParam as Dificultad);
-    }
-    if (temaParam) {
-      setTema(temaParam);
-    }
-    if (nParam) {
-      const parsed = parseInt(nParam, 10);
-      if (!Number.isNaN(parsed)) {
-        setCantidad(Math.min(20, Math.max(1, parsed)));
+    if (areaParam || dificultadParam || temaParam || nParam) {
+      sectionIdRef.current += 1;
+      const next = createSection(sectionIdRef.current);
+      if (areaParam && AREAS.includes(areaParam as Area)) {
+        next.area = areaParam as Area;
       }
+      if (dificultadParam && DIFICULTADES.includes(dificultadParam as Dificultad)) {
+        next.dificultad = dificultadParam as Dificultad;
+      }
+      if (temaParam) {
+        next.tema = temaParam;
+      }
+      if (nParam) {
+        const parsed = parseInt(nParam, 10);
+        if (!Number.isNaN(parsed)) {
+          next.n = Math.min(MAX_ITEMS, Math.max(1, parsed));
+        }
+      }
+      setSections([next]);
     }
   }, [searchParams]);
 
-  const clearProgressInterval = () => {
-    if (progressIntervalRef.current) {
-      clearInterval(progressIntervalRef.current);
-      progressIntervalRef.current = null;
-    }
+  const totalRequested = useMemo(
+    () => sections.reduce((total, section) => total + (Number.isNaN(section.n) ? 0 : section.n), 0),
+    [sections]
+  );
+
+  const validSections = useMemo(
+    () =>
+      sections.filter((section) =>
+        Boolean(section.area && section.dificultad && section.n >= 1)
+      ),
+    [sections]
+  );
+
+  const updateSection = (id: number, patch: Partial<Section>) => {
+    setSections((prev) => prev.map((section) => (section.id === id ? { ...section, ...patch } : section)));
   };
 
-  const clearPolling = () => {
-    if (pollTimeoutRef.current) {
-      clearTimeout(pollTimeoutRef.current);
-      pollTimeoutRef.current = null;
-    }
+  const addSection = () => {
+    sectionIdRef.current += 1;
+    setSections((prev) => [...prev, createSection(sectionIdRef.current)]);
+  };
+
+  const removeSection = (id: number) => {
+    setSections((prev) => (prev.length > 1 ? prev.filter((section) => section.id !== id) : prev));
   };
 
   const resetLoadingState = () => {
-    clearProgressInterval();
-    clearPolling();
-    hasRealProgressRef.current = false;
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
       abortControllerRef.current = null;
     }
     setIsLoading(false);
+    setElapsedSeconds(0);
+    if (elapsedIntervalRef.current) {
+      clearInterval(elapsedIntervalRef.current);
+      elapsedIntervalRef.current = null;
+    }
   };
 
-  const normalizeStatusLabel = (status: string) => {
-    const normalized = status.toLowerCase();
-    if (normalized.includes('queue') || normalized.includes('pending')) return 'En cola';
-    if (normalized.includes('process') || normalized.includes('running')) return 'Procesando';
-    if (normalized.includes('complete') || normalized.includes('done')) return 'Completado';
-    if (normalized.includes('cancel')) return 'Cancelado';
-    if (normalized.includes('fail') || normalized.includes('error')) return 'Fallido';
-    return 'Generando';
-  };
-
-  const startPolling = async (id: string, signal: AbortSignal) => {
-    const poll = async () => {
-      const statusResult = await getRequestStatus(id, { signal });
-      if (!statusResult.success) {
-        clearPolling();
-        resetLoadingState();
-        setProgress(0);
-        setError(statusResult.error || { code: 'STATUS_ERROR', message: 'Error al consultar estado' });
-        return;
-      }
-
-      setStatusText(normalizeStatusLabel(statusResult.status));
-      if (typeof statusResult.progress === 'number') {
-        hasRealProgressRef.current = true;
-        clearProgressInterval();
-        const bounded = Math.min(99, Math.max(5, Math.round(statusResult.progress)));
-        setProgress(bounded);
-      }
-
-      const normalized = statusResult.status.toLowerCase();
-      if (normalized.includes('complete')) {
-        clearPolling();
-        const itemsResult = await getRequestItems(id, { signal });
-        if (!itemsResult.success) {
-          resetLoadingState();
-          setProgress(0);
-          setError(itemsResult.error || { code: 'REQUEST_ERROR', message: 'No se pudo obtener las preguntas' });
-          return;
-        }
-        setProgress(100);
-        setTimeout(() => setProgress(0), 600);
-        resetLoadingState();
-        if (itemsResult.items.length === 0) {
-          setError({ code: 'EMPTY_RESPONSE', message: 'No se generaron preguntas. Intenta de nuevo.' });
-          return;
-        }
-        if (cantidad === 1) {
-          setPreviewItem(itemsResult.items[0]);
-          setShowPreview(true);
-        } else {
-          startTest(itemsResult.items, area as Area, {
-            dificultad: (dificultad || null) as Dificultad | null,
-            tema: tema.trim() || null,
-            mode: 'generacion_libre',
-          });
-          navigate('/test');
-        }
-        return;
-      }
-
-      if (normalized.includes('cancel')) {
-        clearPolling();
-        resetLoadingState();
-        setProgress(0);
-        setStatusText('Cancelado');
-        setError({ code: 'CANCELLED', message: 'La generación fue cancelada.' });
-        return;
-      }
-
-      if (normalized.includes('fail') || normalized.includes('error')) {
-        clearPolling();
-        resetLoadingState();
-        setProgress(0);
-        setError(statusResult.error || { code: 'FAILED', message: 'La generación falló.' });
-        return;
-      }
-
-      pollTimeoutRef.current = window.setTimeout(poll, 1500);
-    };
-
-    pollTimeoutRef.current = window.setTimeout(poll, 1200);
+  const formatElapsed = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!area || !dificultad) return;
+    setError(null);
 
-    resetLoadingState();
+    if (validSections.length === 0) {
+      setError({ code: 'INVALID_SECTIONS', message: 'Completa al menos una sección válida.' });
+      return;
+    }
+
+    if (totalRequested > MAX_ITEMS) {
+      setError({ code: 'MAX_ITEMS', message: `El máximo permitido es ${MAX_ITEMS} preguntas.` });
+      return;
+    }
+
     abortControllerRef.current = new AbortController();
     const signal = abortControllerRef.current.signal;
 
     setIsLoading(true);
-    setRequestId(undefined);
-    setStatusText(null);
-    setProgress(5);
-    let progressVal = 5;
-    progressIntervalRef.current = window.setInterval(() => {
-      if (hasRealProgressRef.current) return;
-      progressVal = Math.min(92, progressVal + Math.random() * 6);
-      setProgress(Math.round(progressVal));
-    }, 800);
+    setElapsedSeconds(0);
+    elapsedIntervalRef.current = window.setInterval(() => {
+      setElapsedSeconds((prev) => prev + 1);
+    }, 1000);
 
-    setError(null);
-    setShowPreview(false);
+    const payload = {
+      sections: validSections.map((section) => ({
+        area: section.area as Area,
+        dificultad: section.dificultad as Dificultad,
+        n: section.n,
+        tema: section.tema.trim() || undefined,
+      })),
+      shuffle,
+      session: {
+        create: true,
+        seedAreaSummary: true,
+      },
+    };
 
     try {
-      const result = await generateItems({
-        area,
-        dificultad,
-        tema: tema.trim() || undefined,
-        n: cantidad,
-      }, { signal });
+      const result = await generateMixedItems(payload, { signal });
+      resetLoadingState();
 
-      setRequestId(result.requestId);
-
-      if (!result.success && !result.requestId) {
-        resetLoadingState();
-        setProgress(0);
-        setError(result.error || { code: 'UNKNOWN', message: 'Error desconocido' });
+      if (!result.success) {
+        setError(result.error || { code: 'UNKNOWN', message: 'No se pudo generar la prueba.' });
         return;
       }
 
-      if (result.items.length > 0) {
-        clearProgressInterval();
-        setProgress(100);
-        setTimeout(() => setProgress(0), 600);
-        resetLoadingState();
-
-        if (cantidad === 1) {
-          // Preview single question
-          setPreviewItem(result.items[0]);
-          setShowPreview(true);
-        } else {
-          // Start test with multiple questions
-          startTest(result.items, area, {
-            dificultad: (dificultad || null) as Dificultad | null,
-            tema: tema.trim() || null,
-            mode: 'generacion_libre',
-          });
-          navigate('/test');
-        }
-        return;
-      }
-
-      if (result.requestId) {
-        setStatusText('En cola');
-        await startPolling(result.requestId, signal);
-      } else {
-        resetLoadingState();
-        setProgress(0);
+      if (result.items.length === 0) {
         setError({ code: 'EMPTY_RESPONSE', message: 'No se generaron preguntas. Intenta de nuevo.' });
+        return;
       }
+
+      startTest(result.items, null, {
+        mode: 'generacion_libre',
+        sessionId: result.sessionId || null,
+      });
+      navigate('/test');
     } catch (err) {
-      clearProgressInterval();
-      clearPolling();
-      setProgress(0);
-      setIsLoading(false);
-      const message = err instanceof Error && err.name === 'CanceledError'
-        ? 'La solicitud fue cancelada.'
-        : 'No se pudo conectar con el servidor. Intenta de nuevo.';
-      setError({ code: 'NETWORK_ERROR', message });
+      resetLoadingState();
+      setError({ code: 'NETWORK_ERROR', message: 'No se pudo conectar con el servidor. Intenta de nuevo.' });
     }
   };
 
-  const handleCancel = async () => {
-    if (!requestId) return;
-    clearPolling();
-    clearProgressInterval();
+  const handleCancel = () => {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
+      abortControllerRef.current = null;
     }
-    const result = await cancelRequest(requestId);
-    resetLoadingState();
-    setProgress(0);
-    if (!result.success) {
-      setError(result.error || { code: 'CANCEL_ERROR', message: 'No se pudo cancelar la generación.' });
-      return;
-    }
-    setStatusText('Cancelado');
-    setError({ code: 'CANCELLED', message: 'La generación fue cancelada.' });
-  };
-
-  const handleStartTestWithPreview = () => {
-    if (previewItem && area) {
-      startTest([previewItem], area as Area);
-      navigate('/test');
-    }
+    setIsLoading(false);
   };
 
   return (
@@ -304,96 +215,136 @@ export default function Generate() {
         {/* Hero */}
         <div className="mb-8 flex flex-col gap-4">
           <Badge className="w-fit bg-primary/10 text-primary hover:bg-primary/20" variant="secondary">
-            Generación libre
+            Generación mixta
           </Badge>
           <h1 className="text-3xl font-bold text-foreground lg:text-4xl">
-            Crea tu sesión personalizada
+            Arma tu prueba como un puzzle
           </h1>
           <p className="text-sm text-muted-foreground lg:text-base max-w-2xl">
-            Elige área, dificultad y tema para practicar lo que necesitas sin ruido adicional.
+            Combina areas y dificultades para crear una sesion unica. Tu decides el mix de preguntas.
           </p>
         </div>
 
-        {/* Main Content */}
         <div className="grid gap-6 lg:grid-cols-3 mb-12">
-          {/* Generator Form */}
-          <Card className="shadow-lg lg:col-span-2">
+          {isLoading ? (
+            <div className="lg:col-span-2">
+              <GeneratorSkeleton />
+            </div>
+          ) : (
+            <Card className="shadow-lg lg:col-span-2">
             <CardHeader className="pb-3">
               <CardTitle className="text-lg flex items-center gap-2">
                 <Zap className="h-4 w-4 text-primary" />
-                Generar
+                Construir prueba
               </CardTitle>
               <CardDescription className="text-xs">
-                Crear tu sesión
+                Agrega secciones con area, dificultad y cantidad.
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-3">
-                <div className="space-y-2">
-                  <div>
-                    <Label htmlFor="area" className="text-xs">Área</Label>
-                    <Select
-                      value={area}
-                      onValueChange={(v) => setArea(v as Area)}
-                      disabled={isLoading}
-                    >
-                      <SelectTrigger id="area">
-                        <SelectValue placeholder="Selecciona un área" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {AREAS.map((a) => (
-                          <SelectItem key={a} value={a}>
-                            {AREA_LABELS[a]}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label htmlFor="dificultad" className="text-xs">Dificultad</Label>
-                    <Select
-                      value={dificultad}
-                      onValueChange={(v) => setDificultad(v as Dificultad)}
-                      disabled={isLoading}
-                    >
-                      <SelectTrigger id="dificultad">
-                        <SelectValue placeholder="Selecciona dificultad" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {DIFICULTADES.map((d) => (
-                          <SelectItem key={d} value={d}>
-                            {DIFICULTAD_LABELS[d]}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-3">
+                  {sections.map((section, index) => (
+                    <div key={section.id} className="rounded-lg border border-border p-3">
+                      <div className="flex items-center justify-between mb-3">
+                        <p className="text-xs font-semibold text-muted-foreground">
+                          Seccion {index + 1}
+                        </p>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => removeSection(section.id)}
+                          disabled={sections.length === 1}
+                        >
+                          Quitar
+                        </Button>
+                      </div>
+
+                      <div className="grid gap-3 md:grid-cols-4">
+                        <div>
+                          <Label className="text-xs">Area</Label>
+                          <Select
+                            value={section.area}
+                            onValueChange={(value) => updateSection(section.id, { area: value as Area })}
+                            disabled={isLoading}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecciona" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {AREAS.map((a) => (
+                                <SelectItem key={a} value={a}>
+                                  {AREA_LABELS[a]}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div>
+                          <Label className="text-xs">Dificultad</Label>
+                          <Select
+                            value={section.dificultad}
+                            onValueChange={(value) => updateSection(section.id, { dificultad: value as Dificultad })}
+                            disabled={isLoading}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecciona" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {DIFICULTADES.map((d) => (
+                                <SelectItem key={d} value={d}>
+                                  {DIFICULTAD_LABELS[d]}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div>
+                          <Label className="text-xs">Cantidad</Label>
+                          <Input
+                            className="text-sm"
+                            type="number"
+                            min={1}
+                            max={MAX_ITEMS}
+                            value={section.n}
+                            onChange={(e) => updateSection(section.id, { n: Math.max(1, parseInt(e.target.value) || 1) })}
+                            disabled={isLoading}
+                          />
+                        </div>
+
+                        <div>
+                          <Label className="text-xs">Tema (opcional)</Label>
+                          <Input
+                            className="text-sm"
+                            placeholder="Ej: Algebra"
+                            value={section.tema}
+                            onChange={(e) => updateSection(section.id, { tema: e.target.value })}
+                            disabled={isLoading}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <Button type="button" variant="outline" size="sm" onClick={addSection} disabled={isLoading}>
+                    Agregar seccion
+                  </Button>
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    Total: {totalRequested} / {MAX_ITEMS}
                   </div>
                 </div>
 
-                <div className="space-y-1">
-                  <Label htmlFor="tema" className="text-xs">Tema (opcional)</Label>
-                  <Input
-                    className="text-sm"
-                    id="tema"
-                    placeholder="Ej: Álgebra, Revolución Francesa, Mitosis..."
-                    value={tema}
-                    onChange={(e) => setTema(e.target.value)}
-                    disabled={isLoading}
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <Label htmlFor="cantidad" className="text-xs">Preguntas (1-20)</Label>
-                  <Input
-                    className="text-sm"
-                    id="cantidad"
-                    type="number"
-                    min={1}
-                    max={20}
-                    value={cantidad}
-                    onChange={(e) => setCantidad(Math.min(20, Math.max(1, parseInt(e.target.value) || 1)))}
-                    disabled={isLoading}
-                  />
+                <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2">
+                  <div className="flex items-center gap-2 text-sm text-foreground">
+                    <Shuffle className="h-4 w-4 text-primary" />
+                    Mezclar preguntas al final
+                  </div>
+                  <Switch checked={shuffle} onCheckedChange={setShuffle} />
                 </div>
 
                 {error && (
@@ -409,36 +360,20 @@ export default function Generate() {
                   <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800">
                     <div className="flex items-center gap-2 mb-2">
                       <Loader2 className="h-4 w-4 animate-spin" />
-                      <span className="font-medium">
-                        {statusText ? `Generando preguntas · ${statusText}` : 'Generando preguntas...'}
-                      </span>
+                      <span className="font-medium">Generando preguntas...</span>
                     </div>
                     <p className="text-blue-700 text-xs">
                       Esto puede tardar un poco mientras la IA genera las preguntas. Por favor, espera.
                     </p>
-                    {requestId && (
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        size="sm"
-                        className="mt-3 w-full"
-                        onClick={handleCancel}
-                      >
-                        Cancelar generación
-                      </Button>
-                    )}
-                  </div>
-                )}
-
-                {progress > 0 && (
-                  <div className="mt-3">
-                    <Progress value={progress} className="h-2" />
-                    {requestId && (
-                      <p className="text-xs text-muted-foreground mt-2">RequestId: <strong>{requestId}</strong></p>
-                    )}
-                    {statusText && (
-                      <p className="text-xs text-muted-foreground mt-1">Estado: {statusText}</p>
-                    )}
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      className="mt-3 w-full"
+                      onClick={handleCancel}
+                    >
+                      Cancelar generacion
+                    </Button>
                   </div>
                 )}
 
@@ -446,7 +381,7 @@ export default function Generate() {
                   type="submit"
                   size="sm"
                   className="w-full mt-2"
-                  disabled={!area || !dificultad || isLoading}
+                  disabled={isLoading || validSections.length === 0 || totalRequested > MAX_ITEMS}
                 >
                   {isLoading ? (
                     <>
@@ -455,41 +390,41 @@ export default function Generate() {
                     </>
                   ) : (
                     <>
-                      <Brain className="h-5 w-5 mr-2" />
-                      Generar Preguntas
+                      <GraduationCap className="h-5 w-5 mr-2" />
+                      Generar prueba
                     </>
                   )}
                 </Button>
               </form>
             </CardContent>
           </Card>
+          )}
 
-          {/* Side Info */}
           <div className="space-y-4">
-            {showPreview && previewItem ? (
-              <div className="space-y-3 animate-slide-up col-span-full lg:col-span-2">
-                <QuestionCard item={previewItem} questionNumber={1} totalQuestions={1} />
-                <div className="space-y-3">
-                  {(['A', 'B', 'C', 'D'] as const).map((key) => (
-                    <AnswerOption
-                      key={key}
-                      optionKey={key}
-                      text={previewItem.opciones[key]}
-                      isSelected={false}
-                      isDisabled
-                      onClick={() => {}}
+            {isLoading ? (
+              <Card className="border-blue-200 bg-blue-50/70">
+                <CardHeader>
+                  <CardTitle className="text-sm flex items-center gap-2 text-blue-800">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Generando tu prueba
+                  </CardTitle>
+                  <CardDescription className="text-xs text-blue-700">
+                    Espera mientras se construye el mix de preguntas.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <div className="flex items-center justify-between text-xs text-blue-700">
+                    <span>Tiempo: {formatElapsed(elapsedSeconds)}</span>
+                    <span>{Math.min(90, 5 + elapsedSeconds * 3)}%</span>
+                  </div>
+                  <div className="h-2 w-full rounded-full bg-blue-100 overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-blue-500 via-indigo-500 to-sky-400 transition-all duration-500"
+                      style={{ width: `${Math.min(90, 5 + elapsedSeconds * 3)}%` }}
                     />
-                  ))}
-                </div>
-                <Button
-                  size="lg"
-                  className="w-full"
-                  onClick={handleStartTestWithPreview}
-                >
-                  Comenzar Prueba
-                  <ArrowRight className="h-4 w-4 ml-2" />
-                </Button>
-              </div>
+                  </div>
+                </CardContent>
+              </Card>
             ) : (
               <>
                 <Card>
@@ -501,9 +436,9 @@ export default function Generate() {
                     <CardDescription>Sesiones rápidas y enfocadas.</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-3 text-sm text-muted-foreground">
-                    <p>Genera preguntas sin distracciones.</p>
-                    <p>Enfoque por tema y dificultad.</p>
-                    <p>Retroalimentación al instante.</p>
+                    <p>Arma combinaciones reales como en el examen.</p>
+                    <p>Control total de dificultad y cantidad.</p>
+                    <p>Resultados y explicaciones al instante.</p>
                   </CardContent>
                 </Card>
 
@@ -513,7 +448,7 @@ export default function Generate() {
                       <Flame className="h-5 w-5 text-primary" />
                       Reto sugerido
                     </CardTitle>
-                    <CardDescription>Completa 3 sesiones hoy.</CardDescription>
+                    <CardDescription>Completa 3 secciones hoy.</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <p className="text-sm text-muted-foreground">

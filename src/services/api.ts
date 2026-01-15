@@ -185,6 +185,52 @@ export interface StudySessionResult {
   };
 }
 
+export interface TimeTrialMode {
+  id: string;
+  title: string;
+  description: string;
+  timeLimitSeconds: number;
+  questions: number;
+  area?: Area;
+  dificultad?: Dificultad;
+  mix?: Array<{ area: Area; dificultad: Dificultad; n: number }>;
+}
+
+export interface TimeTrialStartResult {
+  success: boolean;
+  data?: {
+    sessionId: string;
+    timeLimitSeconds: number;
+    items: IcfesItem[];
+  };
+  error?: {
+    code: string;
+    message: string;
+  };
+}
+
+export interface FeedbackPayload {
+  summary: string;
+  strengths: Array<{ area: string; note: string }>;
+  weaknesses: Array<{ area: string; note: string }>;
+  plan: Array<{ title: string; detail: string }>;
+  insights?: {
+    avgTimePerQuestionSeconds?: number;
+    accuracy?: number;
+    speedNote?: string;
+  };
+  generatedAt: string;
+  model: string;
+  promptVersion?: string;
+}
+
+export interface FeedbackResult {
+  success: boolean;
+  data?: FeedbackPayload;
+  error?: { code: string; message: string };
+  cached?: boolean;
+}
+
 export function getStoredAuth(): StoredAuth | null {
   if (typeof window === 'undefined') return null;
   try {
@@ -223,6 +269,9 @@ apiClient.interceptors.request.use((config) => {
   if (stored?.token) {
     config.headers = config.headers || {};
     config.headers.Authorization = `Bearer ${stored.token}`;
+    if (stored.user?.userId) {
+      config.headers['X-User-Id'] = stored.user.userId;
+    }
   }
   return config;
 });
@@ -253,9 +302,19 @@ export interface GenerateItemsResult {
   success: boolean;
   items: IcfesItem[];
   requestId?: string;
+  sessionId?: string;
   error?: {
     code: string;
     message: string;
+  };
+}
+
+export interface GenerateMixedRequest {
+  sections: GenerateRequest[];
+  shuffle: boolean;
+  session?: {
+    create: boolean;
+    seedAreaSummary?: boolean;
   };
 }
 
@@ -408,7 +467,7 @@ export async function postAnswers(
 
 export async function createStudySession(payload: StudySessionPayload): Promise<StudySessionResult> {
   try {
-    const response = await apiClient.post('/api/study-sessions', payload);
+    const response = await apiClient.post('/api/study-sessions', payload, { withCredentials: true });
     const data = response.data as {
       ok?: boolean;
       data?: { sessionId: string; xpAwarded: number };
@@ -433,9 +492,137 @@ export async function createStudySession(payload: StudySessionPayload): Promise<
   }
 }
 
+export async function getTimeTrialModes(): Promise<{
+  success: boolean;
+  data?: TimeTrialMode[];
+  error?: { code: string; message: string };
+}> {
+  try {
+    const response = await apiClient.get('/api/time-trial/modes');
+    const data = response.data as { ok?: boolean; data?: TimeTrialMode[]; error?: { code: string; message: string } };
+    if (!data.ok || !data.data) {
+      return {
+        success: false,
+        error: data.error || { code: 'TIME_TRIAL_MODES_ERROR', message: 'No se pudieron cargar los retos.' },
+      };
+    }
+    return { success: true, data: data.data };
+  } catch (error) {
+    const lastError = error as AxiosError<{ error?: { code: string; message: string } }>;
+    return {
+      success: false,
+      error: lastError.response?.data?.error || {
+        code: 'TIME_TRIAL_MODES_ERROR',
+        message: lastError.message || 'No se pudieron cargar los retos.',
+      },
+    };
+  }
+}
+
+export async function startTimeTrial(params: {
+  modeId?: string;
+  custom?: { area: Area; dificultad: Dificultad; timeLimitSeconds: number; questions: number };
+}): Promise<TimeTrialStartResult> {
+  try {
+    const response = await apiClient.post('/api/time-trial/start', params, {
+      withCredentials: true,
+      timeout: 600000,
+    });
+    const data = response.data as {
+      ok?: boolean;
+      data?: { sessionId: string; timeLimitSeconds: number; items: IcfesItem[] };
+      error?: { code: string; message: string };
+    };
+    if (!data.ok || !data.data) {
+      return {
+        success: false,
+        error: data.error || { code: 'TIME_TRIAL_START_ERROR', message: 'No se pudo iniciar contrarreloj.' },
+      };
+    }
+    return { success: true, data: data.data };
+  } catch (error) {
+    const lastError = error as AxiosError<{ error?: { code: string; message: string } }>;
+    return {
+      success: false,
+      error: lastError.response?.data?.error || {
+        code: 'TIME_TRIAL_START_ERROR',
+        message: lastError.message || 'No se pudo iniciar contrarreloj.',
+      },
+    };
+  }
+}
+
+export async function getFeedback(sessionId: string): Promise<FeedbackResult> {
+  try {
+    const response = await apiClient.get(`/api/feedback/${sessionId}`);
+    const data = response.data as {
+      ok?: boolean;
+      data?: FeedbackPayload;
+      error?: { code: string; message: string };
+      meta?: { cached?: boolean };
+    };
+    if (!data.ok || !data.data) {
+      return {
+        success: false,
+        error: data.error || { code: 'FEEDBACK_ERROR', message: 'No se pudo cargar el feedback.' },
+      };
+    }
+    return { success: true, data: data.data, cached: data.meta?.cached };
+  } catch (error) {
+    const lastError = error as AxiosError<{ error?: { code: string; message: string } }>;
+    if (lastError.response?.status === 404) {
+      return {
+        success: false,
+        error: { code: 'NOT_FOUND', message: 'No feedback available.' },
+      };
+    }
+    return {
+      success: false,
+      error: lastError.response?.data?.error || {
+        code: 'FEEDBACK_ERROR',
+        message: lastError.message || 'No se pudo cargar el feedback.',
+      },
+    };
+  }
+}
+
+export async function generateFeedback(params: {
+  sessionId: string;
+  mode: string;
+  focus?: string;
+  language?: string;
+  force?: boolean;
+}): Promise<FeedbackResult> {
+  try {
+    const response = await apiClient.post('/api/feedback/generate', params, { withCredentials: true });
+    const data = response.data as {
+      ok?: boolean;
+      data?: FeedbackPayload;
+      error?: { code: string; message: string };
+      meta?: { cached?: boolean };
+    };
+    if (!data.ok || !data.data) {
+      return {
+        success: false,
+        error: data.error || { code: 'FEEDBACK_ERROR', message: 'No se pudo generar el feedback.' },
+      };
+    }
+    return { success: true, data: data.data, cached: data.meta?.cached };
+  } catch (error) {
+    const lastError = error as AxiosError<{ error?: { code: string; message: string } }>;
+    return {
+      success: false,
+      error: lastError.response?.data?.error || {
+        code: 'FEEDBACK_ERROR',
+        message: lastError.message || 'No se pudo generar el feedback.',
+      },
+    };
+  }
+}
+
 export async function startStudySession(payload: StudySessionStartPayload): Promise<StudySessionStartResult> {
   try {
-    const response = await apiClient.post('/api/study-sessions/start', payload);
+    const response = await apiClient.post('/api/study-sessions/start', payload, { withCredentials: true });
     const data = response.data as {
       ok?: boolean;
       data?: { sessionId: string; startedAt: string };
@@ -465,7 +652,7 @@ export async function heartbeatStudySession(
   payload: { elapsedSeconds: number; endedAt?: string }
 ): Promise<StudySessionHeartbeatResult> {
   try {
-    const response = await apiClient.post(`/api/study-sessions/${sessionId}/heartbeat`, payload);
+    const response = await apiClient.post(`/api/study-sessions/${sessionId}/heartbeat`, payload, { withCredentials: true });
     const data = response.data as {
       ok?: boolean;
       data?: { id: string; durationSeconds: number; endedAt?: string; lastHeartbeatAt?: string };
@@ -497,10 +684,11 @@ export async function completeStudySession(
     durationSeconds: number;
     totalQuestions: number;
     correctQuestions: number;
+    areaSummary?: Array<{ area: Area; totalQuestions: number; correctQuestions: number }>;
   }
 ): Promise<StudySessionResult> {
   try {
-    const response = await apiClient.post(`/api/study-sessions/${sessionId}/complete`, payload);
+    const response = await apiClient.post(`/api/study-sessions/${sessionId}/complete`, payload, { withCredentials: true });
     const data = response.data as {
       ok?: boolean;
       data?: { sessionId: string; xpAwarded: number; xpDelta?: number };
@@ -520,6 +708,49 @@ export async function completeStudySession(
       error: lastError.response?.data?.error || {
         code: 'STUDY_SESSION_COMPLETE_ERROR',
         message: lastError.message || 'No se pudo completar la sesión.',
+      },
+    };
+  }
+}
+
+export async function generateMixedItems(
+  request: GenerateMixedRequest,
+  options: GenerateItemsOptions = {}
+): Promise<GenerateItemsResult> {
+  try {
+    const response = await apiClient.post<ApiResponse<IcfesItem>>(
+      '/api/items/generate-mixed',
+      request,
+      { signal: options.signal }
+    );
+    const data = response.data as ApiResponse<IcfesItem> & {
+      meta?: { session?: { sessionId?: string } };
+    };
+
+    if (!data.ok || !data.items) {
+      return {
+        success: false,
+        items: [],
+        requestId: data.meta?.requestId,
+        sessionId: data.meta?.session?.sessionId,
+        error: data.error || { code: 'UNKNOWN_ERROR', message: 'Error inesperado' },
+      };
+    }
+
+    return {
+      success: true,
+      items: data.items,
+      requestId: data.meta?.requestId,
+      sessionId: data.meta?.session?.sessionId,
+    };
+  } catch (error) {
+    const lastError = error as AxiosError<ApiResponse<IcfesItem>>;
+    return {
+      success: false,
+      items: [],
+      error: lastError.response?.data?.error || {
+        code: 'MIXED_GENERATION_ERROR',
+        message: lastError.message || 'No se pudo generar la prueba.',
       },
     };
   }

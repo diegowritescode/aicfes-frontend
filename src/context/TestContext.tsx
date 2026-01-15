@@ -12,14 +12,21 @@ interface TestState {
   testTopic: string | null;
   testMode: 'generacion_libre' | 'contrarreloj' | 'test' | null;
   studySessionId: string | null;
+  timeLimitSeconds: number | null;
   testStartTime: Date | null;
 }
 
 interface TestContextValue extends TestState {
   startTest: (
     questions: IcfesItem[],
-    area: Area,
-    options?: { dificultad?: Dificultad | null; tema?: string | null; mode?: 'generacion_libre' | 'contrarreloj' | 'test' }
+    area: Area | null,
+    options?: {
+      dificultad?: Dificultad | null;
+      tema?: string | null;
+      mode?: 'generacion_libre' | 'contrarreloj' | 'test';
+      sessionId?: string | null;
+      timeLimitSeconds?: number | null;
+    }
   ) => void;
   selectAnswer: (answer: AnswerKey) => void;
   confirmAnswer: () => void;
@@ -51,6 +58,7 @@ const initialState: TestState = {
   testTopic: null,
   testMode: null,
   studySessionId: null,
+  timeLimitSeconds: null,
   testStartTime: null,
 };
 
@@ -88,8 +96,14 @@ export function TestProvider({ children }: { children: ReactNode }) {
 
   const startTest = useCallback((
     questions: IcfesItem[],
-    area: Area,
-    options?: { dificultad?: Dificultad | null; tema?: string | null; mode?: 'generacion_libre' | 'contrarreloj' | 'test' }
+    area: Area | null,
+    options?: {
+      dificultad?: Dificultad | null;
+      tema?: string | null;
+      mode?: 'generacion_libre' | 'contrarreloj' | 'test';
+      sessionId?: string | null;
+      timeLimitSeconds?: number | null;
+    }
   ) => {
     const newState: TestState = {
       questions,
@@ -101,7 +115,8 @@ export function TestProvider({ children }: { children: ReactNode }) {
       testDifficulty: options?.dificultad ?? null,
       testTopic: options?.tema ?? null,
       testMode: options?.mode ?? 'test',
-      studySessionId: null,
+      studySessionId: options?.sessionId ?? null,
+      timeLimitSeconds: options?.timeLimitSeconds ?? null,
       testStartTime: new Date(),
     };
     setState(newState);

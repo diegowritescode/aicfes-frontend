@@ -121,8 +121,17 @@ export default function Register() {
               )}
 
               <Button className="w-full gap-2" type="submit" disabled={isLoading}>
-                <Sparkles className="h-4 w-4" />
-                {isLoading ? 'Creando...' : 'Crear cuenta'}
+                {isLoading ? (
+                  <>
+                    <div className="h-4 w-4 rounded-full border-2 border-current border-t-transparent animate-spin" />
+                    Creando...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="h-4 w-4" />
+                    Crear cuenta
+                  </>
+                )}
               </Button>
             </form>
             <p className="text-xs text-muted-foreground text-center">

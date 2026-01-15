@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { GraduationCap, LayoutDashboard, Timer, Zap } from 'lucide-react';
+import { GraduationCap, LayoutDashboard, Shuffle, Timer, Zap } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -18,7 +18,8 @@ export function Layout({ children }: LayoutProps) {
   const isLandingPage = location.pathname === '/';
   const navItems = [
     { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { to: '/generacion-libre', label: 'Generación libre', icon: Zap },
+    { to: '/generacion-especializada', label: 'Generación especializada', icon: Zap },
+    { to: '/generacion-mixta', label: 'Generación mixta', icon: Shuffle },
     { to: '/contrarreloj', label: 'Contrarreloj', icon: Timer },
   ];
 

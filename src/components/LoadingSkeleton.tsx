@@ -68,3 +68,66 @@ export function ResultsSkeleton() {
     </div>
   );
 }
+
+export function DashboardSkeleton() {
+  return (
+    <div className="space-y-6 animate-pulse">
+      <Card>
+        <CardContent className="py-6 space-y-3">
+          <Skeleton className="h-5 w-40" />
+          <Skeleton className="h-8 w-80" />
+          <Skeleton className="h-4 w-64" />
+        </CardContent>
+      </Card>
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {[1, 2, 3, 4].map((i) => (
+          <Card key={i}>
+            <CardContent className="py-6 space-y-2">
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-8 w-20" />
+              <Skeleton className="h-3 w-32" />
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+      <div className="grid gap-6 lg:grid-cols-3">
+        <Card className="lg:col-span-2">
+          <CardContent className="py-6 space-y-3">
+            <Skeleton className="h-5 w-40" />
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div key={i} className="space-y-2">
+                <Skeleton className="h-3 w-32" />
+                <Skeleton className="h-2 w-full" />
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="py-6 space-y-3">
+            <Skeleton className="h-5 w-40" />
+            {[1, 2, 3, 4].map((i) => (
+              <Skeleton key={i} className="h-10 w-full" />
+            ))}
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+export function TimeTrialModesSkeleton() {
+  return (
+    <div className="space-y-4 animate-pulse">
+      {[1, 2, 3].map((i) => (
+        <Card key={i}>
+          <CardContent className="py-4 space-y-2">
+            <Skeleton className="h-4 w-32" />
+            <Skeleton className="h-3 w-56" />
+            <Skeleton className="h-3 w-24" />
+            <Skeleton className="h-8 w-24" />
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+}
