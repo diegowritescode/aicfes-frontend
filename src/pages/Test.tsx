@@ -67,9 +67,10 @@ export default function Test() {
     if (studySessionId) return;
 
     let isMounted = true;
+    const sessionMode = testMode === 'contrarreloj' ? 'contrarreloj' : 'test';
     const start = async () => {
       const result = await startStudySession({
-        mode: testMode || 'test',
+        mode: sessionMode,
         area: testArea || undefined,
         dificultad: testDifficulty || undefined,
         tema: testTopic || undefined,

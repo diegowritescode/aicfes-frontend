@@ -33,6 +33,7 @@ import {
   TrendingUp,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { getServerNow } from '@/lib/serverTime';
 
 export default function Results() {
   const navigate = useNavigate();
@@ -60,6 +61,8 @@ export default function Results() {
   const [sessionCompleted, setSessionCompleted] = useState(false);
   const feedbackCacheKey = studySessionId ? `aicfes_feedback_${studySessionId}` : null;
   const sessionCompletedKey = studySessionId ? `aicfes_session_completed_${studySessionId}` : null;
+  const answersPostedKey = studySessionId ? `aicfes_answers_posted_${studySessionId}` : null;
+  const answersPostInFlightRef = useRef(false);
 
   // Redirect if no results
   useEffect(() => {
@@ -80,6 +83,17 @@ export default function Results() {
       // ignore cache errors
     }
   }, [studySessionId, sessionCompletedKey]);
+
+  useEffect(() => {
+    if (!answersPostedKey) return;
+    try {
+      if (sessionStorage.getItem(answersPostedKey) === 'true') {
+        answersPostInFlightRef.current = false;
+      }
+    } catch {
+      // ignore cache errors
+    }
+  }, [answersPostedKey]);
 
   useEffect(() => {
     const load = async () => {
@@ -123,9 +137,10 @@ export default function Results() {
     if (!studySessionId) return;
     setFeedbackError(null);
     setFeedbackLoading(true);
+    const feedbackMode = testMode === 'test' ? 'generacion_libre' : (testMode || 'generacion_libre');
     const result = await generateFeedback({
       sessionId: studySessionId,
-      mode: testMode || 'generacion_libre',
+      mode: feedbackMode,
       focus: 'summary',
       language: 'es',
     });
@@ -148,7 +163,7 @@ export default function Results() {
     if (sessionPostedRef.current) return;
     if (results.total === 0 || !testStartTime) return;
 
-    const endedAt = new Date();
+    const endedAt = getServerNow();
     const durationSeconds = Math.max(0, Math.floor((endedAt.getTime() - testStartTime.getTime()) / 1000));
     sessionPostedRef.current = true;
 
@@ -184,7 +199,7 @@ export default function Results() {
       const areaSummary = Array.from(areaSummaryMap.values());
       if (!sessionId) {
         const started = await startStudySession({
-          mode: testMode || 'test',
+          mode: testMode === 'contrarreloj' ? 'contrarreloj' : 'test',
           area: testArea || undefined,
           dificultad: testDifficulty || undefined,
           tema: testTopic || undefined,
@@ -217,7 +232,7 @@ export default function Results() {
         }
       } else {
         const created = await createStudySession({
-          mode: testMode || 'test',
+          mode: testMode === 'contrarreloj' ? 'contrarreloj' : 'test',
           area: testArea || undefined,
           dificultad: testDifficulty || undefined,
           tema: testTopic || undefined,
@@ -256,6 +271,13 @@ export default function Results() {
       if (answersPayload.length > 0) {
         try {
           await postAnswers(answersPayload);
+          if (answersPostedKey) {
+            try {
+              sessionStorage.setItem(answersPostedKey, 'true');
+            } catch {
+              // ignore cache errors
+            }
+          }
         } finally {
           setSessionCompleted(true);
           if (sessionCompletedKey) {
@@ -294,6 +316,57 @@ export default function Results() {
     setStudySessionId,
     results.answersHistory.length,
     questions.length,
+  ]);
+
+  useEffect(() => {
+    if (!studySessionId || !sessionCompleted) return;
+    if (!answersPostedKey || answersPostInFlightRef.current) return;
+    try {
+      if (sessionStorage.getItem(answersPostedKey) === 'true') return;
+    } catch {
+      // ignore cache errors
+    }
+    if (results.answersHistory.length === 0) return;
+    const answersPayload: AnswerPayload[] = results.answersHistory
+      .map((answer) => {
+        const question = questions[answer.questionIndex];
+        const area = question?.area || testArea;
+        const dificultad = question?.dificultad || testDifficulty;
+        if (!area || !dificultad) return null;
+        return {
+          sessionId: studySessionId,
+          questionIndex: answer.questionIndex,
+          selectedAnswer: answer.selectedAnswer,
+          isCorrect: answer.isCorrect,
+          area,
+          dificultad,
+        };
+      })
+      .filter(Boolean) as AnswerPayload[];
+
+    if (answersPayload.length === 0) return;
+    answersPostInFlightRef.current = true;
+    postAnswers(answersPayload)
+      .then(() => {
+        if (answersPostedKey) {
+          try {
+            sessionStorage.setItem(answersPostedKey, 'true');
+          } catch {
+            // ignore cache errors
+          }
+        }
+      })
+      .finally(() => {
+        answersPostInFlightRef.current = false;
+      });
+  }, [
+    studySessionId,
+    sessionCompleted,
+    answersPostedKey,
+    results.answersHistory,
+    questions,
+    testArea,
+    testDifficulty,
   ]);
 
   useEffect(() => {

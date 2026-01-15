@@ -94,9 +94,10 @@ export default function Feedback() {
     if (!resolvedSessionId) return;
     setFeedbackError(null);
     setFeedbackLoading(true);
+    const feedbackMode = testMode === 'test' ? 'generacion_libre' : (testMode || 'generacion_libre');
     const result = await generateFeedback({
       sessionId: resolvedSessionId,
-      mode: testMode || 'generacion_libre',
+      mode: feedbackMode,
       focus: 'summary',
       language: 'es',
     });

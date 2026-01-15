@@ -1,5 +1,6 @@
 import axios, { AxiosError } from 'axios';
 import { ApiResponse, GenerateRequest, IcfesItem, Area, Dificultad } from '@/types/icfes';
+import { updateServerTimeOffset } from '@/lib/serverTime';
 
 // Configurable base URL via environment variable
 const API_BASE_URL = import.meta.env.VITE_API_URL;
@@ -283,7 +284,10 @@ apiClient.interceptors.request.use((config) => {
 });
 
 apiClient.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    updateServerTimeOffset(response.headers?.date);
+    return response;
+  },
   async (error) => {
     const originalConfig = error?.config as { _retry?: boolean; headers?: Record<string, string>; url?: string } | undefined;
     if (

@@ -171,7 +171,7 @@ export default function GenerateSpecial() {
         startTest(itemsResult.items, area as Area, {
           dificultad: (dificultad || null) as Dificultad | null,
           tema: tema.trim() || null,
-          mode: 'generacion_libre',
+          mode: 'test',
         });
         navigate('/test');
         return;
@@ -249,11 +249,11 @@ export default function GenerateSpecial() {
         resetLoadingState();
 
         // Start test immediately (even for 1 question)
-        startTest(result.items, area, {
-          dificultad: (dificultad || null) as Dificultad | null,
-          tema: tema.trim() || null,
-          mode: 'generacion_libre',
-        });
+      startTest(result.items, area, {
+        dificultad: (dificultad || null) as Dificultad | null,
+        tema: tema.trim() || null,
+        mode: 'test',
+      });
         navigate('/test');
         return;
       }

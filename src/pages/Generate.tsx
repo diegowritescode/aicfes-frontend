@@ -170,10 +170,6 @@ export default function Generate() {
         tema: section.tema.trim() || undefined,
       })),
       shuffle,
-      session: {
-        create: true,
-        seedAreaSummary: true,
-      },
     };
 
     try {
@@ -191,7 +187,7 @@ export default function Generate() {
       }
 
       startTest(result.items, null, {
-        mode: 'generacion_libre',
+        mode: 'test',
         sessionId: result.sessionId || null,
       });
       navigate('/test');

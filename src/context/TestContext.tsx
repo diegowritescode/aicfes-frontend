@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
 import { IcfesItem, AnswerKey, AnswerRecord, Area, Dificultad } from '@/types/icfes';
+import { getServerNow } from '@/lib/serverTime';
 
 interface TestState {
   questions: IcfesItem[];
@@ -117,7 +118,7 @@ export function TestProvider({ children }: { children: ReactNode }) {
       testMode: options?.mode ?? 'test',
       studySessionId: options?.sessionId ?? null,
       timeLimitSeconds: options?.timeLimitSeconds ?? null,
-      testStartTime: new Date(),
+      testStartTime: getServerNow(),
     };
     setState(newState);
     saveStateToSession(newState);
