@@ -2,7 +2,13 @@ import axios, { AxiosError } from 'axios';
 import { ApiResponse, GenerateRequest, IcfesItem, Area, Dificultad } from '@/types/icfes';
 
 // Configurable base URL via environment variable
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+const API_BASE_URL = import.meta.env.VITE_API_URL;
+
+if (!API_BASE_URL) {
+  throw new Error('VITE_API_URL is not set. Define it in .env.local or the deployment env.');
+}
+
+export { API_BASE_URL };
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,

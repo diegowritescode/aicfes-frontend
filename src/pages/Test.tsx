@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { GraduationCap, Clock, Timer } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { getStoredAuth, heartbeatStudySession, startStudySession } from '@/services/api';
+import { API_BASE_URL, getStoredAuth, heartbeatStudySession, startStudySession } from '@/services/api';
 
 export default function Test() {
   const navigate = useNavigate();
@@ -39,7 +39,6 @@ export default function Test() {
   const [isAnswerRevealed, setIsAnswerRevealed] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(0);
   const heartbeatIntervalRef = useRef<number | null>(null);
-  const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
   const hasTimedOutRef = useRef(false);
   const audioContextRef = useRef<AudioContext | null>(null);
   const lastTickRef = useRef<number | null>(null);
@@ -132,7 +131,7 @@ export default function Test() {
       const auth = getStoredAuth();
       const token = auth?.token;
       if (!token) return;
-      fetch(`${apiBaseUrl}/api/study-sessions/${studySessionId}/heartbeat`, {
+      fetch(`${API_BASE_URL}/api/study-sessions/${studySessionId}/heartbeat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -156,7 +155,7 @@ export default function Test() {
       window.removeEventListener('pagehide', sendKeepaliveHeartbeat);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [studySessionId, testStartTime, apiBaseUrl]);
+  }, [studySessionId, testStartTime]);
 
   // Keyboard shortcuts: A/B/C/D to select, Enter to submit
   useEffect(() => {

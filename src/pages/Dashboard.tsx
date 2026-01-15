@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 import { ErrorAlert } from '@/components/ErrorAlert';
 import { DashboardSkeleton } from '@/components/LoadingSkeleton';
-import { DashboardData, getDashboard } from '@/services/api';
+import { API_BASE_URL, DashboardData, getDashboard } from '@/services/api';
 import { AREA_LABELS, Area } from '@/types/icfes';
 
 export default function Dashboard() {
@@ -29,7 +29,6 @@ export default function Dashboard() {
   const [realtimeStatus, setRealtimeStatus] = useState<'live' | 'reconnecting' | 'offline'>('offline');
   const sseRef = useRef<EventSource | null>(null);
   const pollRef = useRef<number | null>(null);
-  const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
   useEffect(() => {
     let isMounted = true;
@@ -71,7 +70,7 @@ export default function Dashboard() {
 
     const startStream = () => {
       setRealtimeStatus('reconnecting');
-      const stream = new EventSource(`${apiBaseUrl}/api/dashboard/stream`, { withCredentials: true });
+      const stream = new EventSource(`${API_BASE_URL}/api/dashboard/stream`, { withCredentials: true });
       sseRef.current = stream;
 
       stream.addEventListener('open', () => {
@@ -116,7 +115,7 @@ export default function Dashboard() {
         sseRef.current = null;
       }
     };
-  }, [apiBaseUrl]);
+  }, []);
 
   const areaProgress = useMemo(() => {
     if (!data) return [];

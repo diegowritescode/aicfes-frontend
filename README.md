@@ -34,13 +34,11 @@ npm run dev
 The app runs on `http://localhost:8080`.
 
 ## Environment Variables
-Create a `.env` file if you want to override defaults:
+Create a `.env.local` file with the backend base URL:
 
 ```
 VITE_API_URL=http://localhost:3000
 ```
-
-If not set, the frontend uses `http://localhost:3000`.
 
 ## Scripts
 ```bash
