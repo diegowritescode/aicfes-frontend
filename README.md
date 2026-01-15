@@ -1,73 +1,84 @@
-# Welcome to your Lovable project
+# AICFES Frontend
 
-## Project info
+Modern web client for the AICFES exam prep platform. Built to support gamified study flows, real metrics, realtime dashboard updates, and AI feedback.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## Features
+- Auth flow with JWT + refresh cookie, protected routes, and logout.
+- Dashboard with realtime updates (SSE) and polling fallback.
+- Study session lifecycle: start, heartbeat, complete.
+- Generation modes:
+  - Specialized: single area, difficulty, 1-20 questions.
+  - Mixed: multi-section builder with shuffle support.
+  - Time trial: preset and custom modes with time limit + speed bonus.
+- Results view with auto feedback generation.
+- Dedicated AI feedback page with metrics, strengths, weaknesses, and plan.
+- Skeleton loaders across data-heavy views.
+- Animated time trial timer, progress bar, and tick-tock audio.
 
-## How can I edit this code?
+## Tech Stack
+- React 18 + TypeScript
+- Vite (port 8080 by default)
+- Tailwind CSS + shadcn/ui
+- React Router
+- React Query
+- Axios
 
-There are several ways of editing your application.
+## Local Setup
+Requirements: Node 18+ and npm.
 
-**Use Lovable**
-
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+```bash
+npm install
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+The app runs on `http://localhost:8080`.
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## Environment Variables
+Create a `.env` file if you want to override defaults:
 
-**Use GitHub Codespaces**
+```
+VITE_API_URL=http://localhost:3000
+```
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+If not set, the frontend uses `http://localhost:3000`.
 
-## What technologies are used for this project?
+## Scripts
+```bash
+npm run dev        # start dev server
+npm run build      # production build
+npm run build:dev  # build with development mode
+npm run preview    # preview production build
+npm run lint       # eslint
+```
 
-This project is built with:
+## Key Routes
+- `/dashboard`
+- `/generacion-especializada`
+- `/generacion-mixta`
+- `/contrarreloj`
+- `/test`
+- `/results`
+- `/feedback/:sessionId`
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+## Backend Integration (Summary)
+The UI expects these endpoints:
+- Auth: `/api/auth/register`, `/api/auth/login`, `/api/auth/refresh`
+- Dashboard: `/api/dashboard`, `/api/dashboard/stream` (SSE)
+- Sessions: `/api/study-sessions/start`, `/api/study-sessions/:id/heartbeat`, `/api/study-sessions/:id/complete`
+- Generation:
+  - `/api/items/generate` (specialized)
+  - `/api/items/generate-mixed` (mixed)
+- Answers: `/api/answers`
+- Time trial: `/api/time-trial/modes`, `/api/time-trial/start`
+- Feedback: `/api/feedback/generate`, `/api/feedback/:sessionId`
 
-## How can I deploy this project?
+## Notes
+- SSE uses cookies by default (no custom headers in EventSource).
+- Feedback is cached in `sessionStorage` per sessionId to avoid re-generation on back navigation.
+- Time trial UI displays minutes to users, but the backend uses seconds.
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+## Docs
+See `docs/` for backend contracts and integration notes:
+- `docs/TIME_TRIAL_BACKEND_SPEC.md`
+- `docs/AI_FEEDBACK_BACKEND_SPEC.md`
+- `docs/FEEDBACK_PROMPT_ENHANCEMENTS.md`
