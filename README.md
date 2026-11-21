@@ -80,3 +80,23 @@ See `docs/` for backend contracts and integration notes:
 - `docs/TIME_TRIAL_BACKEND_SPEC.md`
 - `docs/AI_FEEDBACK_BACKEND_SPEC.md`
 - `docs/FEEDBACK_PROMPT_ENHANCEMENTS.md`
+
+## Running it
+
+```bash
+npm ci
+cp .env.example .env     # point VITE_API_URL at the API
+npm run dev
+```
+
+## Deployment
+
+A static bundle served by an unprivileged nginx, built once in CI and
+deployed by commit SHA behind Traefik.
+
+`VITE_API_URL` is a build argument, not a runtime variable: a static
+bundle has no server to read configuration from, so the API origin is
+compiled in and the image is per-environment.
+
+Live at [aicfes.deviego.xyz](https://aicfes.deviego.xyz), talking to
+[aicfes-api.deviego.xyz](https://aicfes-api.deviego.xyz).
