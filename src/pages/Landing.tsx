@@ -21,11 +21,11 @@ import {
 
 /** The five exam areas, each with its illustration and accent. */
 const AREAS = [
-  { id: 'MAT' as const, nombre: 'Matemáticas', n: 50, acento: 'from-violeta/20 to-cyan/10' },
-  { id: 'LC' as const, nombre: 'Lectura Crítica', n: 41, acento: 'from-magenta/20 to-violeta/10' },
-  { id: 'CN' as const, nombre: 'Ciencias Naturales', n: 58, acento: 'from-cyan/20 to-lime/10' },
-  { id: 'SOC' as const, nombre: 'Sociales y Ciudadanas', n: 50, acento: 'from-amber/20 to-magenta/10' },
-  { id: 'ING' as const, nombre: 'Inglés', n: 55, acento: 'from-violeta/20 to-magenta/10' },
+  { id: 'MAT' as const, nombre: 'Matemáticas', n: 50, acento: 'from-brand-bright/10 to-cyan/10' },
+  { id: 'LC' as const, nombre: 'Lectura Crítica', n: 41, acento: 'from-cyan/12 to-brand-bright/8' },
+  { id: 'CN' as const, nombre: 'Ciencias Naturales', n: 58, acento: 'from-brand-soft/40 to-white' },
+  { id: 'SOC' as const, nombre: 'Sociales y Ciudadanas', n: 50, acento: 'from-brand-bright/8 to-brand-soft/30' },
+  { id: 'ING' as const, nombre: 'Inglés', n: 55, acento: 'from-cyan/10 to-brand-soft/25' },
 ];
 
 /** Cards that lift and tilt toward the cursor. */
@@ -45,7 +45,7 @@ function TarjetaArea({ area, i }: { area: (typeof AREAS)[number]; i: number }) {
       </div>
       <h3 className="mt-5 text-[17px] font-bold tracking-tight text-slate-900">{area.nombre}</h3>
       <p className="mt-1 text-[13px] text-slate-600">
-        <span className="font-bold text-violeta">{area.n}</span> preguntas en el examen real
+        <span className="font-bold text-brand-bright">{area.n}</span> preguntas en el examen real
       </p>
     </motion.article>
   );
@@ -80,7 +80,7 @@ function Pildora({
 function Eyebrow({ children, light = false }: { children: string; light?: boolean }) {
   return (
     <p
-      className={`mb-4 flex items-center gap-2.5 text-[11px] font-bold tracking-[0.18em] uppercase ${
+      className={`mb-4 inline-flex items-center gap-2.5 text-[11px] font-bold tracking-[0.18em] uppercase ${
         light ? 'text-cyan-light' : 'text-brand-bright'
       }`}
     >
@@ -294,7 +294,7 @@ export default function Landing() {
             <Eyebrow>Las cinco áreas</Eyebrow>
             <h2 className="max-w-3xl text-[clamp(1.9rem,4vw,2.9rem)] leading-tight font-extrabold tracking-tight text-slate-900">
               Todo lo que evalúa el Saber 11,{' '}
-              <span className="bg-gradient-to-r from-violeta to-magenta bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-brand-bright to-cyan bg-clip-text text-transparent">
                 con el peso que tiene de verdad.
               </span>
             </h2>
@@ -324,7 +324,7 @@ export default function Landing() {
                 <article
                   className={`grid gap-6 rounded-2xl p-7 sm:grid-cols-[auto_1fr] sm:p-9 ${
                     i % 2 === 0
-                      ? 'bg-gradient-to-br from-brand to-brand-bright text-white'
+                      ? 'bg-gradient-to-br from-brand-bright to-cyan text-white'
                       : 'border border-slate-200 bg-white'
                   }`}
                 >
@@ -359,22 +359,22 @@ export default function Landing() {
       </section>
 
       {/* ── What is inside ─────────────────────────────────────── */}
-      <section className="border-b border-slate-800/50 bg-slate-950 py-20 lg:py-28">
+      <section className="border-b border-slate-200/70 bg-gradient-to-b from-wash/60 to-white py-20 lg:py-28">
         <div className="mx-auto max-w-6xl px-5">
-          <Reveal>
-            <Eyebrow light>{features.eyebrow}</Eyebrow>
-            <h2 className="max-w-3xl text-[clamp(1.9rem,4vw,2.9rem)] leading-tight font-extrabold tracking-tight text-white">
+          <Reveal className="text-center">
+            <Eyebrow>{features.eyebrow}</Eyebrow>
+            <h2 className="mx-auto max-w-3xl text-[clamp(1.9rem,4vw,2.9rem)] leading-tight font-extrabold tracking-tight text-slate-900">
               {features.title}{' '}
-              <span className="text-cyan-light">{features.titleAccent}</span>
+              <span className="text-brand-bright">{features.titleAccent}</span>
             </h2>
           </Reveal>
 
           <div className="mt-14 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {features.items.map((f, i) => (
               <Reveal key={f.title} delay={(i % 4) * 70}>
-                <article className="h-full rounded-xl border border-white/10 bg-white/[0.04] p-5 transition-colors hover:border-cyan/40">
-                  <h3 className="text-[15px] font-bold text-white">{f.title}</h3>
-                  <p className="mt-2 text-[13.5px] leading-relaxed text-slate-400">{f.body}</p>
+                <article className="h-full rounded-2xl border border-slate-200 bg-white p-6 shadow-[0_2px_12px_-6px_rgba(15,23,42,0.12)] transition-all hover:-translate-y-1 hover:border-brand-bright/30 hover:shadow-[0_12px_28px_-12px_rgba(37,99,235,0.3)]">
+                  <h3 className="text-[15px] font-bold text-slate-900">{f.title}</h3>
+                  <p className="mt-2 text-[13.5px] leading-relaxed text-slate-600">{f.body}</p>
                 </article>
               </Reveal>
             ))}
@@ -396,7 +396,7 @@ export default function Landing() {
             </p>
             <Link
               to="/registro"
-              className="mt-8 inline-block rounded-xl bg-brand px-7 py-3.5 text-[15px] font-bold text-white shadow-xl shadow-brand/25 transition-transform hover:scale-[1.03]"
+              className="mt-8 inline-block rounded-full bg-brand-bright px-7 py-3.5 text-[15px] font-bold text-white shadow-[0_8px_24px_-8px_hsl(var(--brand-bright))] transition-transform hover:scale-[1.03]"
             >
               Hacer un simulacro
             </Link>
@@ -463,7 +463,7 @@ export default function Landing() {
       </section>
 
       {/* ── Closing ────────────────────────────────────────────── */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-brand to-brand-bright py-20 lg:py-28">
+      <section className="relative overflow-hidden bg-gradient-to-br from-brand-bright to-cyan py-20 lg:py-28">
         <div aria-hidden className="grid-paper absolute inset-0 opacity-20" />
         <Reveal className="relative mx-auto max-w-3xl px-5 text-center">
           <h2 className="text-[clamp(2rem,5vw,3.2rem)] leading-tight font-extrabold tracking-tight text-white">
@@ -474,13 +474,13 @@ export default function Landing() {
           <div className="mt-9 flex flex-wrap justify-center gap-3">
             <Link
               to="/registro"
-              className="rounded-xl bg-white px-8 py-3.5 text-[15px] font-bold text-brand shadow-xl transition-transform hover:scale-[1.03]"
+              className="rounded-full bg-white px-8 py-3.5 text-[15px] font-bold text-brand-bright shadow-xl transition-transform hover:scale-[1.03]"
             >
               {closing.primary}
             </Link>
             <Link
               to="/login"
-              className="rounded-xl border border-white/30 px-7 py-3.5 text-[15px] font-semibold text-white transition-colors hover:bg-white/10"
+              className="rounded-full border border-white/40 px-7 py-3.5 text-[15px] font-semibold text-white transition-colors hover:bg-white/10"
             >
               {closing.secondary}
             </Link>

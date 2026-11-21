@@ -21,16 +21,16 @@ export function IlustracionMatematicas({ className = '' }: Props) {
     <svg viewBox="0 0 160 120" className={`${base} ${className}`} role="img" aria-label="Matemáticas">
       <defs>
         <linearGradient id="il-mat" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#6D4AFF" />
+          <stop offset="0%" stopColor="#2563EB" />
           <stop offset="100%" stopColor="#00D4FF" />
         </linearGradient>
       </defs>
-      <circle cx="128" cy="30" r="22" fill="#FF3D8B" opacity="0.18" />
+      <circle cx="128" cy="30" r="22" fill="#38BDF8" opacity="0.18" />
       <polygon points="28,96 108,96 28,34" fill="url(#il-mat)" opacity="0.9" />
       {/* The right-angle mark: the figure is a real triangle. */}
       <path d="M28 82 L42 82 L42 96" fill="none" stroke="#0B1033" strokeWidth="2.5" />
-      <circle cx="108" cy="96" r="5" fill="#B8FF3D" />
-      <circle cx="28" cy="34" r="5" fill="#FFB020" />
+      <circle cx="108" cy="96" r="5" fill="#7DD3FC" />
+      <circle cx="28" cy="34" r="5" fill="#60A5FA" />
     </svg>
   );
 }
@@ -40,8 +40,8 @@ export function IlustracionLectura({ className = '' }: Props) {
     <svg viewBox="0 0 160 120" className={`${base} ${className}`} role="img" aria-label="Lectura Crítica">
       <defs>
         <linearGradient id="il-lc" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#FF3D8B" />
-          <stop offset="100%" stopColor="#6D4AFF" />
+          <stop offset="0%" stopColor="#38BDF8" />
+          <stop offset="100%" stopColor="#2563EB" />
         </linearGradient>
       </defs>
       <rect x="22" y="22" width="78" height="92" rx="7" fill="url(#il-lc)" opacity="0.9" />
@@ -62,17 +62,17 @@ export function IlustracionCiencias({ className = '' }: Props) {
       <defs>
         <linearGradient id="il-cn" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor="#00D4FF" />
-          <stop offset="100%" stopColor="#B8FF3D" />
+          <stop offset="100%" stopColor="#7DD3FC" />
         </linearGradient>
       </defs>
       <path
         d="M66 20 L66 50 L40 100 Q36 110 48 110 L112 110 Q124 110 120 100 L94 50 L94 20 Z"
-        fill="none" stroke="#6D4AFF" strokeWidth="4" strokeLinejoin="round"
+        fill="none" stroke="#2563EB" strokeWidth="4" strokeLinejoin="round"
       />
       <path d="M52 78 L108 78 L120 100 Q124 110 112 110 L48 110 Q36 110 40 100 Z" fill="url(#il-cn)" opacity="0.85" />
       <circle cx="72" cy="92" r="4" fill="#ffffff" opacity="0.7" />
       <circle cx="90" cy="98" r="3" fill="#ffffff" opacity="0.5" />
-      <rect x="62" y="14" width="36" height="7" rx="3.5" fill="#FF3D8B" />
+      <rect x="62" y="14" width="36" height="7" rx="3.5" fill="#38BDF8" />
     </svg>
   );
 }
@@ -82,8 +82,8 @@ export function IlustracionSociales({ className = '' }: Props) {
     <svg viewBox="0 0 160 120" className={`${base} ${className}`} role="img" aria-label="Sociales y Ciudadanas">
       <defs>
         <linearGradient id="il-soc" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#FFB020" />
-          <stop offset="100%" stopColor="#FF3D8B" />
+          <stop offset="0%" stopColor="#60A5FA" />
+          <stop offset="100%" stopColor="#38BDF8" />
         </linearGradient>
       </defs>
       <circle cx="80" cy="62" r="42" fill="url(#il-soc)" opacity="0.9" />
@@ -93,7 +93,7 @@ export function IlustracionSociales({ className = '' }: Props) {
       <path d="M44 42 Q80 54 116 42" fill="none" stroke="#ffffff" strokeWidth="2" opacity="0.4" />
       <path d="M44 82 Q80 70 116 82" fill="none" stroke="#ffffff" strokeWidth="2" opacity="0.4" />
       <circle cx="122" cy="26" r="9" fill="#00D4FF" />
-      <circle cx="34" cy="98" r="6" fill="#B8FF3D" />
+      <circle cx="34" cy="98" r="6" fill="#7DD3FC" />
     </svg>
   );
 }
@@ -103,8 +103,8 @@ export function IlustracionIngles({ className = '' }: Props) {
     <svg viewBox="0 0 160 120" className={`${base} ${className}`} role="img" aria-label="Inglés">
       <defs>
         <linearGradient id="il-ing" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#6D4AFF" />
-          <stop offset="100%" stopColor="#FF3D8B" />
+          <stop offset="0%" stopColor="#2563EB" />
+          <stop offset="100%" stopColor="#38BDF8" />
         </linearGradient>
       </defs>
       <path d="M20 24 H104 Q112 24 112 32 V74 Q112 82 104 82 H48 L28 100 V82 H20 Q12 82 12 74 V32 Q12 24 20 24 Z"

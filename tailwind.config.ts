@@ -26,6 +26,7 @@ export default {
   					light: 'hsl(var(--accent-cyan-light))'
   				},
   				lime: { DEFAULT: 'hsl(var(--lime))' },
+  				wash: 'hsl(var(--wash))',
   				violeta: { DEFAULT: 'hsl(var(--violeta))' },
   				magenta: { DEFAULT: 'hsl(var(--magenta))' },
   				ink: {
