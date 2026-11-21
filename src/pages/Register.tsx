@@ -79,7 +79,7 @@ export default function Register() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="tucorreo@ejemplo.com"
-            className="h-12 rounded-xl border-slate-300 text-[15px]"
+            className="h-12 rounded-xl border-slate-200 bg-slate-50/60 text-[15px] focus-visible:border-brand-bright focus-visible:bg-white"
           />
         </div>
 
@@ -96,7 +96,7 @@ export default function Register() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Mínimo 8 caracteres"
-            className="h-12 rounded-xl border-slate-300 text-[15px]"
+            className="h-12 rounded-xl border-slate-200 bg-slate-50/60 text-[15px] focus-visible:border-brand-bright focus-visible:bg-white"
           />
         </div>
 
@@ -112,14 +112,14 @@ export default function Register() {
             value={passwordConfirm}
             onChange={(e) => setPasswordConfirm(e.target.value)}
             placeholder="••••••••"
-            className="h-12 rounded-xl border-slate-300 text-[15px]"
+            className="h-12 rounded-xl border-slate-200 bg-slate-50/60 text-[15px] focus-visible:border-brand-bright focus-visible:bg-white"
           />
         </div>
 
         <Button
           type="submit"
           disabled={isLoading}
-          className="h-12 w-full rounded-xl bg-brand-bright text-[15px] font-bold shadow-lg shadow-brand-bright/25 hover:bg-brand"
+          className="h-12 w-full rounded-full bg-brand-bright text-[15px] font-bold shadow-[0_8px_24px_-8px_hsl(var(--brand-bright))] transition-transform hover:scale-[1.02] hover:bg-brand-bright"
         >
           {isLoading ? 'Creando tu cuenta…' : 'Crear mi cuenta gratis'}
         </Button>
