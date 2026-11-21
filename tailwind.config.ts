@@ -15,6 +15,17 @@ export default {
   	},
   	extend: {
 		colors: {
+  				brand: {
+  					DEFAULT: 'hsl(var(--brand))',
+  					bright: 'hsl(var(--brand-bright))',
+  					foreground: 'hsl(var(--brand-foreground))'
+  				},
+  				cyan: {
+  					DEFAULT: 'hsl(var(--accent-cyan))',
+  					light: 'hsl(var(--accent-cyan-light))'
+  				},
+  				lime: { DEFAULT: 'hsl(var(--lime))' },
+  				amber: { DEFAULT: 'hsl(var(--amber))' },
 			border: 'hsl(var(--border))',
 			input: 'hsl(var(--input))',
 			ring: 'hsl(var(--ring))',

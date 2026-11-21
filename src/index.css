@@ -9,25 +9,48 @@
 
 @layer base {
   :root {
-    /* Deep Indigo/Blue academic palette */
-    --background: 220 20% 97%;
-    --foreground: 222 47% 11%;
+    /* --------------------------------------------------------------
+       AICFES brand.
+
+       Built on the ICFES institutional blue (#004884) and its cyan
+       (#03ACBD), taken from icfes.gov.co, so the platform reads as
+       belonging to the exam it prepares for. Everything else is ours:
+       the lime that marks progress, the amber that marks a warning,
+       and a lighter blue for interface weight the institutional one is
+       too heavy to carry.
+       -------------------------------------------------------------- */
+
+    /* The institutional blue. Reserved for identity and emphasis. */
+    --brand: 207 100% 26%;
+    --brand-foreground: 0 0% 100%;
+    /* Lighter blue: what buttons and links actually use, because the
+       institutional blue goes muddy at small sizes. */
+    --brand-bright: 208 90% 39%;
+    /* The institutional cyan, for accents and the logo mark. */
+    --accent-cyan: 185 97% 38%;
+    --accent-cyan-light: 185 76% 54%;
+    /* Progress, streaks, a right answer. */
+    --lime: 75 79% 54%;
+    /* A warning, a timer running out. */
+    --amber: 39 100% 56%;
+
+    --background: 210 40% 98%;
+    --foreground: 207 45% 12%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
+    --card-foreground: 207 45% 12%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
+    --popover-foreground: 207 45% 12%;
 
-    /* Primary: Deep Indigo */
-    --primary: 226 71% 40%;
-    --primary-foreground: 210 40% 98%;
+    --primary: 208 90% 39%;
+    --primary-foreground: 0 0% 100%;
 
-    /* Secondary: Neutral Gray */
-    --secondary: 220 14% 96%;
-    --secondary-foreground: 222 47% 11%;
+    --secondary: 207 30% 95%;
+    --secondary-foreground: 207 45% 12%;
 
-    --muted: 220 14% 96%;
+    --muted: 207 25% 95%;
+
     --muted-foreground: 220 9% 46%;
 
     --accent: 220 14% 96%;
@@ -214,4 +237,52 @@
   0% { box-shadow: inset 0 0 0 rgba(239, 68, 68, 0); }
   50% { box-shadow: inset 0 0 80px rgba(239, 68, 68, 0.08); }
   100% { box-shadow: inset 0 0 0 rgba(239, 68, 68, 0); }
+}
+
+/* ----------------------------------------------------------------
+   Landing motion. Sections rise as they enter, once, and hold still
+   afterwards. Everything is disabled under prefers-reduced-motion.
+   ---------------------------------------------------------------- */
+@layer utilities {
+  .reveal {
+    opacity: 0;
+    transform: translateY(22px);
+    transition:
+      opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
+      transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .reveal.is-visible {
+    opacity: 1;
+    transform: none;
+  }
+
+  /* The ticker that runs across the hero, as the reference does. */
+  .marquee {
+    animation: marquee 32s linear infinite;
+  }
+
+  @keyframes marquee {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .reveal { opacity: 1; transform: none; transition: none; }
+    .marquee { animation: none; }
+  }
+
+  /* The soft blue glow behind the hero. */
+  .brand-glow {
+    background:
+      radial-gradient(60% 50% at 50% 0%, hsl(var(--accent-cyan) / 0.18), transparent 70%),
+      radial-gradient(50% 50% at 80% 20%, hsl(var(--brand-bright) / 0.16), transparent 70%);
+  }
+
+  .grid-paper {
+    background-image:
+      linear-gradient(hsl(var(--brand) / 0.06) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(var(--brand) / 0.06) 1px, transparent 1px);
+    background-size: 48px 48px;
+  }
 }
