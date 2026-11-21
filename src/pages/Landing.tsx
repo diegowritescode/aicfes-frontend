@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { HeroScene } from '@/components/brand/HeroScene';
+import { HeroLines } from '@/components/brand/HeroLines';
 import { ILUSTRACIONES } from '@/components/brand/Ilustraciones';
 import { Logo } from '@/components/brand/Logo';
 import { Reveal } from '@/components/brand/Reveal';
@@ -47,6 +48,31 @@ function TarjetaArea({ area, i }: { area: (typeof AREAS)[number]; i: number }) {
         <span className="font-bold text-violeta">{area.n}</span> preguntas en el examen real
       </p>
     </motion.article>
+  );
+}
+
+
+/** A floating label with a small arrow pointing back at the orb. */
+function Pildora({
+  children,
+  className = '',
+  flecha,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  flecha: 'izquierda' | 'derecha';
+}) {
+  return (
+    <motion.span
+      initial={{ opacity: 0, scale: 0.85 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.5, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
+      className={`absolute hidden items-center gap-1.5 rounded-lg bg-white px-3 py-1.5 text-[12px] font-semibold whitespace-nowrap text-slate-700 shadow-[0_4px_16px_-4px_rgba(15,23,42,0.18)] sm:inline-flex ${className}`}
+    >
+      {flecha === 'izquierda' && <span aria-hidden className="text-brand-bright">◂</span>}
+      {children}
+      {flecha === 'derecha' && <span aria-hidden className="text-brand-bright">▸</span>}
+    </motion.span>
   );
 }
 
@@ -152,79 +178,83 @@ export default function Landing() {
       </header>
 
       {/* ── Hero ───────────────────────────────────────────────── */}
-      <section className="relative overflow-hidden bg-ink">
-        {/* The particle field sits behind everything and parts around
-            the cursor. It is decorative: the page reads without it. */}
-        <HeroScene />
-        <div aria-hidden className="pointer-events-none absolute inset-0 bg-gradient-to-b from-transparent via-ink/40 to-ink" />
+      <section className="hero-wash relative overflow-hidden">
+        <HeroLines className="absolute inset-x-0 bottom-0 h-full w-full" />
 
-        <div className="relative mx-auto grid max-w-6xl items-center gap-12 px-5 py-24 lg:grid-cols-[1.1fr_0.9fr] lg:py-32">
+        <div className="relative mx-auto max-w-4xl px-5 pt-16 pb-20 text-center lg:pt-20 lg:pb-28">
+          {/* The orb floats above the headline, with the pills
+              pointing at it, as in the reference. */}
+          <div className="relative mx-auto mb-7 h-[190px] w-[190px] lg:h-[230px] lg:w-[230px]">
+            <HeroScene className="h-full w-full" />
+
+            <Pildora className="-left-24 top-10 lg:-left-40" flecha="derecha">
+              5 áreas
+            </Pildora>
+            <Pildora className="-right-20 top-6 lg:-right-36" flecha="izquierda">
+              254 preguntas
+            </Pildora>
+            <Pildora className="-left-16 bottom-6 lg:-left-32" flecha="derecha">
+              Gratis
+            </Pildora>
+            <Pildora className="-right-16 bottom-10 lg:-right-28" flecha="izquierda">
+              Verificado
+            </Pildora>
+          </div>
+
           <motion.div
-            initial={{ opacity: 0, y: 26 }}
+            initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+            transition={{ duration: 0.65, ease: [0.16, 1, 0.3, 1] }}
           >
-            <p className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3.5 py-1.5 text-[11px] font-bold tracking-[0.16em] text-cyan uppercase backdrop-blur">
-              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-lime" />
+            <p className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/70 bg-white/80 py-1.5 pr-3.5 pl-1.5 text-[12.5px] font-medium text-slate-600 shadow-sm backdrop-blur">
+              <span className="rounded-full bg-brand-bright px-2.5 py-1 text-[11px] font-bold text-white">
+                Nuevo
+              </span>
               {hero.eyebrow}
+              <span aria-hidden className="text-slate-400">›</span>
             </p>
-            <h1 className="text-[clamp(2.6rem,6.5vw,4.6rem)] leading-[0.98] font-extrabold tracking-tight text-white">
+
+            <h1 className="text-[clamp(2.3rem,6vw,4rem)] leading-[1.05] font-extrabold tracking-tight text-slate-900">
               {hero.titleLine1}
               <br />
-              {hero.titleLine2}
+              <span className="text-brand-bright">{hero.titleLine2}</span>
               <br />
-              <span className="bg-gradient-to-r from-violeta via-magenta to-cyan bg-clip-text text-transparent">
-                {hero.titleAccent}
-              </span>
+              {hero.titleAccent}
             </h1>
-            <p className="mt-7 max-w-xl text-[16.5px] leading-relaxed text-slate-300">{hero.body}</p>
-            <div className="mt-9 flex flex-wrap items-center gap-3">
+
+            <p className="mx-auto mt-6 max-w-xl text-[15.5px] leading-relaxed text-slate-600">
+              {hero.body}
+            </p>
+
+            <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
               <Link
                 to="/registro"
-                className="group relative overflow-hidden rounded-xl bg-gradient-to-r from-violeta to-magenta px-7 py-3.5 text-[15px] font-bold text-white shadow-[0_8px_32px_-8px_hsl(var(--violeta))] transition-transform hover:scale-[1.03]"
+                className="rounded-full bg-brand-bright px-7 py-3 text-[14.5px] font-semibold text-white shadow-[0_8px_24px_-8px_hsl(var(--brand-bright))] transition-transform hover:scale-[1.03]"
               >
                 {hero.primary}
               </Link>
               <a
                 href="#como"
-                className="rounded-xl border border-white/20 px-6 py-3.5 text-[15px] font-semibold text-white transition-colors hover:border-cyan hover:text-cyan"
+                className="rounded-full border border-brand-bright/40 bg-white/70 px-6 py-3 text-[14.5px] font-semibold text-brand-bright backdrop-blur transition-colors hover:bg-white"
               >
                 {hero.secondary}
               </a>
             </div>
-            <ul className="mt-8 flex flex-wrap gap-x-5 gap-y-2">
-              {hero.reassurance.map((r) => (
-                <li key={r} className="flex items-center gap-1.5 text-[12.5px] text-slate-400">
-                  <span aria-hidden className="text-lime">✓</span>
-                  {r}
-                </li>
-              ))}
-            </ul>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 36, rotateX: 8 }}
-            animate={{ opacity: 1, y: 0, rotateX: 0 }}
-            transition={{ duration: 0.8, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
-            className="hidden justify-self-center lg:block"
-            style={{ perspective: 1000 }}
-          >
-            <QuestionMock />
           </motion.div>
         </div>
 
-        <div className="relative overflow-hidden border-y border-white/10 bg-white/[0.03] py-3.5 backdrop-blur">
-          <div className="marquee flex w-max gap-8">
-            {[...ticker, ...ticker].map((t, i) => (
-              <span
-                key={`${t}-${i}`}
-                className="flex items-center gap-8 text-[13px] font-semibold whitespace-nowrap text-white/70"
-              >
+        {/* The trust bar, on white as in the reference. */}
+        <div className="relative border-t border-slate-200/70 bg-white py-7">
+          <p className="mb-5 text-center text-[12.5px] text-slate-500">
+            Construido sobre los cuadernillos oficiales del Saber 11
+          </p>
+          <ul className="mx-auto flex max-w-4xl flex-wrap items-center justify-center gap-x-9 gap-y-4 px-5">
+            {ticker.slice(0, 6).map((t) => (
+              <li key={t} className="text-[13.5px] font-semibold text-slate-400">
                 {t}
-                <span aria-hidden className="text-magenta">◆</span>
-              </span>
+              </li>
             ))}
-          </div>
+          </ul>
         </div>
       </section>
 

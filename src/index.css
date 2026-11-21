@@ -12,39 +12,37 @@
     /* --------------------------------------------------------------
        AICFES brand.
 
-       The ICFES institutional blue stays as the anchor, so the
-       platform still reads as belonging to the exam it prepares for.
-       Everything around it is ours and louder: the audience is
-       sixteen, and an institutional palette alone reads as a
-       government form.
+       A light palette: a pale blue wash that lifts to white, with one
+       confident blue carrying every action. Lighter than the ICFES
+       institutional blue so the page reads as a product rather than a
+       form, but close enough in hue to stay recognisable.
 
-       Five accents rather than one. CambriLearn, the award-winning
-       learning platform, runs a deep blue base with four saturated
-       accents for exactly this reason: one accent cannot separate a
-       streak from a warning from a correct answer.
+       The accents stay for the interface — progress, warnings, a
+       right answer — but the marketing page is blue and white.
        -------------------------------------------------------------- */
 
-    /* Ink. Darker and bluer than black, so the accents sit on it. */
-    --ink: 232 65% 12%;
-    --ink-soft: 232 40% 20%;
+    --ink: 222 47% 11%;
+    --ink-soft: 217 19% 35%;
 
-    /* The institutional blue, kept for identity and trust. */
+    /* The institutional blue, kept for the mark. */
     --brand: 207 100% 26%;
     --brand-foreground: 0 0% 100%;
-    --brand-bright: 208 90% 39%;
+    /* What buttons and links actually use. */
+    --brand-bright: 217 91% 55%;
+    --brand-soft: 213 97% 87%;
+    /* The hero wash. */
+    --wash: 212 100% 95%;
 
-    /* The five accents. Each one means something. */
-    --violeta: 252 100% 65%;   /* primary action, the hero gradient */
-    --magenta: 336 100% 62%;   /* emphasis, streaks, the thing that moves */
-    --cyan: 190 100% 50%;      /* data, charts, the technical register */
-    --lime: 82 100% 62%;       /* progress, a right answer */
-    --amber: 39 100% 56%;      /* a timer running out, a warning */
+    /* Kept: the interface still needs to tell these apart. */
+    --violeta: 252 100% 65%;
+    --magenta: 336 100% 62%;
+    --cyan: 199 95% 55%;
+    --lime: 142 71% 45%;
+    --amber: 39 100% 56%;
+    --accent-cyan: 199 95% 55%;
+    --accent-cyan-light: 199 90% 70%;
 
-    /* Kept so existing components do not break. */
-    --accent-cyan: 190 100% 50%;
-    --accent-cyan-light: 190 90% 65%;
-
-    --background: 210 40% 98%;
+    --background: 0 0% 100%;
     --foreground: 207 45% 12%;
 
     --card: 0 0% 100%;
@@ -53,7 +51,7 @@
     --popover: 0 0% 100%;
     --popover-foreground: 207 45% 12%;
 
-    --primary: 252 100% 65%;
+    --primary: 217 91% 55%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 207 30% 95%;
@@ -280,6 +278,14 @@
   @media (prefers-reduced-motion: reduce) {
     .reveal { opacity: 1; transform: none; transition: none; }
     .marquee { animation: none; }
+  }
+
+  /* The pale wash the hero sits on: blue at the edges, white in the
+     middle where the headline goes. */
+  .hero-wash {
+    background:
+      radial-gradient(120% 80% at 50% 100%, hsl(var(--brand-soft) / 0.95), transparent 70%),
+      linear-gradient(180deg, hsl(var(--wash)) 0%, hsl(var(--wash) / 0.5) 45%, #ffffff 100%);
   }
 
   /* The soft blue glow behind the hero. */

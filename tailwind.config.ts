@@ -18,6 +18,7 @@ export default {
   				brand: {
   					DEFAULT: 'hsl(var(--brand))',
   					bright: 'hsl(var(--brand-bright))',
+  					soft: 'hsl(var(--brand-soft))',
   					foreground: 'hsl(var(--brand-foreground))'
   				},
   				cyan: {
