@@ -106,7 +106,7 @@ export default function Landing() {
               Entrar
             </Link>
             <Link
-              to="/register"
+              to="/registro"
               className="rounded-lg bg-brand-bright px-4 py-2 text-[13.5px] font-semibold text-white shadow-lg shadow-brand-bright/25 transition-transform hover:scale-[1.03]"
             >
               Crear cuenta
@@ -133,7 +133,7 @@ export default function Landing() {
             <p className="mt-6 max-w-xl text-[16.5px] leading-relaxed text-slate-600">{hero.body}</p>
             <div className="mt-8 flex flex-wrap items-center gap-3">
               <Link
-                to="/register"
+                to="/registro"
                 className="rounded-xl bg-brand-bright px-7 py-3.5 text-[15px] font-bold text-white shadow-xl shadow-brand-bright/30 transition-transform hover:scale-[1.03]"
               >
                 {hero.primary}
@@ -293,7 +293,7 @@ export default function Landing() {
               {simulacro.body}
             </p>
             <Link
-              to="/register"
+              to="/registro"
               className="mt-8 inline-block rounded-xl bg-brand px-7 py-3.5 text-[15px] font-bold text-white shadow-xl shadow-brand/25 transition-transform hover:scale-[1.03]"
             >
               Hacer un simulacro
@@ -371,7 +371,7 @@ export default function Landing() {
           <p className="mx-auto mt-5 max-w-lg text-[16.5px] text-white/85">{closing.body}</p>
           <div className="mt-9 flex flex-wrap justify-center gap-3">
             <Link
-              to="/register"
+              to="/registro"
               className="rounded-xl bg-white px-8 py-3.5 text-[15px] font-bold text-brand shadow-xl transition-transform hover:scale-[1.03]"
             >
               {closing.primary}

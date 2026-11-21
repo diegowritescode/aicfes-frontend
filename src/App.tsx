@@ -68,6 +68,9 @@ const App = () => (
               />
               <Route path="/login" element={<Login />} />
               <Route path="/registro" element={<Register />} />
+              {/* English spelling kept as an alias: it is what
+                  people type, and a 404 here loses a signup. */}
+              <Route path="/register" element={<Navigate to="/registro" replace />} />
               <Route
                 path="/test"
                 element={

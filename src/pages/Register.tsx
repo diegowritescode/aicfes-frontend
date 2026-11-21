@@ -1,12 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Layout } from '@/components/Layout';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { AuthFrame } from '@/components/brand/AuthFrame';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { GraduationCap, Sparkles } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { ErrorAlert } from '@/components/ErrorAlert';
 
@@ -14,15 +11,13 @@ export default function Register() {
   const navigate = useNavigate();
   const location = useLocation();
   const { register, isAuthenticated } = useAuth();
-  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [passwordConfirm, setPasswordConfirm] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<{ code?: string; message: string } | null>(null);
 
-  const redirectTarget =
-    (location.state as { from?: string } | null)?.from || '/dashboard';
+  const redirectTarget = (location.state as { from?: string } | null)?.from || '/dashboard';
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -49,100 +44,91 @@ export default function Register() {
   };
 
   return (
-    <Layout>
-      <div className="min-h-screen flex items-center justify-center px-4 py-10 bg-gradient-to-br from-background via-background to-blue-500/5">
-        <Card className="w-full max-w-md border-border shadow-lg">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <Badge className="bg-blue-500/10 text-blue-600 hover:bg-blue-500/20" variant="secondary">
-                Crear cuenta
-              </Badge>
-              <div className="p-2 rounded-full bg-blue-500/10">
-                <GraduationCap className="h-5 w-5 text-blue-600" />
-              </div>
-            </div>
-            <CardTitle className="mt-4 text-2xl">Empieza tu ruta ICFES</CardTitle>
-            <CardDescription>
-              Crea tu cuenta y desbloquea tu dashboard personalizado.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <form className="space-y-4" onSubmit={handleSubmit}>
-              <div className="space-y-2">
-                <Label htmlFor="name">Nombre</Label>
-                <Input
-                  id="name"
-                  type="text"
-                  placeholder="Tu nombre"
-                  value={name}
-                  onChange={(event) => setName(event.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="email">Correo</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="tu@email.com"
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">Contraseña</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="passwordConfirm">Confirmar contraseña</Label>
-                <Input
-                  id="passwordConfirm"
-                  type="password"
-                  placeholder="••••••••"
-                  value={passwordConfirm}
-                  onChange={(event) => setPasswordConfirm(event.target.value)}
-                  required
-                />
-              </div>
+    <AuthFrame
+      badge="Crear cuenta"
+      title="Empieza hoy, no el lunes."
+      subtitle="Dos campos y ya estás adentro. Sin tarjeta, sin letra chiquita."
+      panelTitle="Lo difícil no es el examen. Es sostener el estudio hasta llegar."
+      panelPoints={[
+        'Un diagnóstico corto te dice dónde estás parado',
+        'Simulacros con la estructura real del Saber 11',
+        'Cada pregunta se verifica antes de que la veas',
+        'Tu progreso en números, no en sensaciones',
+      ]}
+      footer={
+        <p>
+          ¿Ya tienes cuenta?{' '}
+          <Link to="/login" className="font-semibold text-brand-bright hover:underline">
+            Entra aquí
+          </Link>
+        </p>
+      }
+    >
+      <form onSubmit={handleSubmit} className="space-y-5">
+        {error ? <ErrorAlert error={error} /> : null}
 
-              {error && (
-                <ErrorAlert
-                  title="No pudimos crear tu cuenta"
-                  message={error.message}
-                  code={error.code}
-                />
-              )}
+        <div className="space-y-2">
+          <Label htmlFor="email" className="text-[13.5px] font-semibold text-slate-700">
+            Correo
+          </Label>
+          <Input
+            id="email"
+            type="email"
+            autoComplete="email"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="tucorreo@ejemplo.com"
+            className="h-12 rounded-xl border-slate-300 text-[15px]"
+          />
+        </div>
 
-              <Button className="w-full gap-2" type="submit" disabled={isLoading}>
-                {isLoading ? (
-                  <>
-                    <div className="h-4 w-4 rounded-full border-2 border-current border-t-transparent animate-spin" />
-                    Creando...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="h-4 w-4" />
-                    Crear cuenta
-                  </>
-                )}
-              </Button>
-            </form>
-            <p className="text-xs text-muted-foreground text-center">
-              ¿Ya tienes cuenta?{' '}
-              <Link to="/login" className="text-primary hover:underline">
-                Iniciar sesión
-              </Link>
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-    </Layout>
+        <div className="space-y-2">
+          <Label htmlFor="password" className="text-[13.5px] font-semibold text-slate-700">
+            Contraseña
+          </Label>
+          <Input
+            id="password"
+            type="password"
+            autoComplete="new-password"
+            required
+            minLength={8}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Mínimo 8 caracteres"
+            className="h-12 rounded-xl border-slate-300 text-[15px]"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="passwordConfirm" className="text-[13.5px] font-semibold text-slate-700">
+            Repite la contraseña
+          </Label>
+          <Input
+            id="passwordConfirm"
+            type="password"
+            autoComplete="new-password"
+            required
+            value={passwordConfirm}
+            onChange={(e) => setPasswordConfirm(e.target.value)}
+            placeholder="••••••••"
+            className="h-12 rounded-xl border-slate-300 text-[15px]"
+          />
+        </div>
+
+        <Button
+          type="submit"
+          disabled={isLoading}
+          className="h-12 w-full rounded-xl bg-brand-bright text-[15px] font-bold shadow-lg shadow-brand-bright/25 hover:bg-brand"
+        >
+          {isLoading ? 'Creando tu cuenta…' : 'Crear mi cuenta gratis'}
+        </Button>
+
+        <p className="text-center text-[12px] leading-relaxed text-slate-500">
+          Al crear la cuenta aceptas que esto es una plataforma de práctica independiente,
+          sin relación con el ICFES.
+        </p>
+      </form>
+    </AuthFrame>
   );
 }
