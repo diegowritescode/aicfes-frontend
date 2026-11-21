@@ -1,5 +1,4 @@
 import { useEffect, useRef } from 'react';
-import * as THREE from 'three';
 
 /**
  * The floating orb above the headline.
@@ -109,6 +108,30 @@ export function HeroScene({ className = '' }: { className?: string }) {
     const nodo = host.current;
     if (!nodo) return;
 
+    let limpiar: (() => void) | undefined;
+    let cancelado = false;
+
+    // Imported here so Three.js lands in its own chunk: it is most of
+    // the bundle, and the hero reads without the orb.
+    void (async () => {
+      const THREE = await import('three');
+      if (cancelado) return;
+      limpiar = montar(THREE, nodo);
+    })();
+
+    return () => {
+      cancelado = true;
+      limpiar?.();
+    };
+  }, []);
+
+  return <div ref={host} aria-hidden className={className} />;
+}
+
+/** Builds the scene. Returns the teardown. */
+function montar(THREE: typeof import('three'), nodo: HTMLDivElement): () => void {
+  {
+
     const quieto = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     const escena = new THREE.Scene();
@@ -120,7 +143,7 @@ export function HeroScene({ className = '' }: { className?: string }) {
       renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     } catch {
       // No WebGL: the hero still reads, it just has no orb.
-      return;
+      return () => undefined;
     }
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     nodo.appendChild(renderer.domElement);
@@ -200,9 +223,7 @@ export function HeroScene({ className = '' }: { className?: string }) {
       renderer.dispose();
       renderer.domElement.remove();
     };
-  }, []);
-
-  return <div ref={host} aria-hidden className={className} />;
+  }
 }
 
 export default HeroScene;
