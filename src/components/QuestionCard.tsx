@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { BookOpen, BarChart3 } from 'lucide-react';
 import { useState } from 'react';
+import { QuestionFigure } from './QuestionFigure';
 
 interface QuestionCardProps {
   item: IcfesItem;
@@ -56,6 +57,11 @@ export function QuestionCard({ item, questionNumber, totalQuestions }: QuestionC
               )}
             </div>
           </div>
+        )}
+        {/* Between the context and the question, as in the real exam:
+            the figure is part of the stimulus, not an illustration. */}
+        {item.figura && item.id && (
+          <QuestionFigure itemId={item.id} alt={item.figura.alt} />
         )}
         <div>
           <p className="text-lg font-medium leading-relaxed text-foreground">

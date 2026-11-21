@@ -16,6 +16,13 @@ export interface IcfesItem {
   tags: string[];
   distractores?: Record<AnswerKey, string>;
   explicaciones?: Record<AnswerKey, string>;
+  /**
+   * A diagram drawn from the item's own numbers. The API serves it as
+   * SVG; the client only needs to know whether there is one.
+   */
+  figura?: { plantilla: string; parametros: Record<string, unknown>; alt?: string } | null;
+  /** Present once the item is stored, which is what the figure URL needs. */
+  id?: string;
 }
 
 export type Area = 'MAT' | 'LC' | 'CN' | 'SOC' | 'ING';
