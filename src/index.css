@@ -12,27 +12,37 @@
     /* --------------------------------------------------------------
        AICFES brand.
 
-       Built on the ICFES institutional blue (#004884) and its cyan
-       (#03ACBD), taken from icfes.gov.co, so the platform reads as
-       belonging to the exam it prepares for. Everything else is ours:
-       the lime that marks progress, the amber that marks a warning,
-       and a lighter blue for interface weight the institutional one is
-       too heavy to carry.
+       The ICFES institutional blue stays as the anchor, so the
+       platform still reads as belonging to the exam it prepares for.
+       Everything around it is ours and louder: the audience is
+       sixteen, and an institutional palette alone reads as a
+       government form.
+
+       Five accents rather than one. CambriLearn, the award-winning
+       learning platform, runs a deep blue base with four saturated
+       accents for exactly this reason: one accent cannot separate a
+       streak from a warning from a correct answer.
        -------------------------------------------------------------- */
 
-    /* The institutional blue. Reserved for identity and emphasis. */
+    /* Ink. Darker and bluer than black, so the accents sit on it. */
+    --ink: 232 65% 12%;
+    --ink-soft: 232 40% 20%;
+
+    /* The institutional blue, kept for identity and trust. */
     --brand: 207 100% 26%;
     --brand-foreground: 0 0% 100%;
-    /* Lighter blue: what buttons and links actually use, because the
-       institutional blue goes muddy at small sizes. */
     --brand-bright: 208 90% 39%;
-    /* The institutional cyan, for accents and the logo mark. */
-    --accent-cyan: 185 97% 38%;
-    --accent-cyan-light: 185 76% 54%;
-    /* Progress, streaks, a right answer. */
-    --lime: 75 79% 54%;
-    /* A warning, a timer running out. */
-    --amber: 39 100% 56%;
+
+    /* The five accents. Each one means something. */
+    --violeta: 252 100% 65%;   /* primary action, the hero gradient */
+    --magenta: 336 100% 62%;   /* emphasis, streaks, the thing that moves */
+    --cyan: 190 100% 50%;      /* data, charts, the technical register */
+    --lime: 82 100% 62%;       /* progress, a right answer */
+    --amber: 39 100% 56%;      /* a timer running out, a warning */
+
+    /* Kept so existing components do not break. */
+    --accent-cyan: 190 100% 50%;
+    --accent-cyan-light: 190 90% 65%;
 
     --background: 210 40% 98%;
     --foreground: 207 45% 12%;
@@ -43,7 +53,7 @@
     --popover: 0 0% 100%;
     --popover-foreground: 207 45% 12%;
 
-    --primary: 208 90% 39%;
+    --primary: 252 100% 65%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 207 30% 95%;

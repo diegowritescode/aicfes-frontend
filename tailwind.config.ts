@@ -25,6 +25,12 @@ export default {
   					light: 'hsl(var(--accent-cyan-light))'
   				},
   				lime: { DEFAULT: 'hsl(var(--lime))' },
+  				violeta: { DEFAULT: 'hsl(var(--violeta))' },
+  				magenta: { DEFAULT: 'hsl(var(--magenta))' },
+  				ink: {
+  					DEFAULT: 'hsl(var(--ink))',
+  					soft: 'hsl(var(--ink-soft))'
+  				},
   				amber: { DEFAULT: 'hsl(var(--amber))' },
 			border: 'hsl(var(--border))',
 			input: 'hsl(var(--input))',

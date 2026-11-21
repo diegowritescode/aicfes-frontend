@@ -1,4 +1,7 @@
 import { Link } from 'react-router-dom';
+import { motion } from 'motion/react';
+import { HeroScene } from '@/components/brand/HeroScene';
+import { ILUSTRACIONES } from '@/components/brand/Ilustraciones';
 import { Logo } from '@/components/brand/Logo';
 import { Reveal } from '@/components/brand/Reveal';
 import {
@@ -13,6 +16,39 @@ import {
   steps,
   ticker,
 } from './landing/copy';
+
+
+/** The five exam areas, each with its illustration and accent. */
+const AREAS = [
+  { id: 'MAT' as const, nombre: 'Matemáticas', n: 50, acento: 'from-violeta/20 to-cyan/10' },
+  { id: 'LC' as const, nombre: 'Lectura Crítica', n: 41, acento: 'from-magenta/20 to-violeta/10' },
+  { id: 'CN' as const, nombre: 'Ciencias Naturales', n: 58, acento: 'from-cyan/20 to-lime/10' },
+  { id: 'SOC' as const, nombre: 'Sociales y Ciudadanas', n: 50, acento: 'from-amber/20 to-magenta/10' },
+  { id: 'ING' as const, nombre: 'Inglés', n: 55, acento: 'from-violeta/20 to-magenta/10' },
+];
+
+/** Cards that lift and tilt toward the cursor. */
+function TarjetaArea({ area, i }: { area: (typeof AREAS)[number]; i: number }) {
+  const Ilustracion = ILUSTRACIONES[area.id];
+  return (
+    <motion.article
+      initial={{ opacity: 0, y: 24 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: '-60px' }}
+      transition={{ duration: 0.5, delay: (i % 3) * 0.08, ease: [0.16, 1, 0.3, 1] }}
+      whileHover={{ y: -6 }}
+      className={`group relative overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br ${area.acento} p-6`}
+    >
+      <div className="h-28 w-full">
+        <Ilustracion className="transition-transform duration-500 group-hover:scale-105" />
+      </div>
+      <h3 className="mt-5 text-[17px] font-bold tracking-tight text-slate-900">{area.nombre}</h3>
+      <p className="mt-1 text-[13px] text-slate-600">
+        <span className="font-bold text-violeta">{area.n}</span> preguntas en el examen real
+      </p>
+    </motion.article>
+  );
+}
 
 /** A section label: a short rule and a word, as the reference uses. */
 function Eyebrow({ children, light = false }: { children: string; light?: boolean }) {
@@ -116,60 +152,76 @@ export default function Landing() {
       </header>
 
       {/* ── Hero ───────────────────────────────────────────────── */}
-      <section className="brand-glow relative overflow-hidden border-b border-slate-200/70">
-        <div aria-hidden className="grid-paper absolute inset-0 opacity-60" />
-        <div className="relative mx-auto grid max-w-6xl items-center gap-12 px-5 py-20 lg:grid-cols-[1.1fr_0.9fr] lg:py-28">
-          <Reveal>
-            <Eyebrow>{hero.eyebrow}</Eyebrow>
-            <h1 className="text-[clamp(2.4rem,6vw,4rem)] leading-[1.03] font-extrabold tracking-tight text-slate-900">
+      <section className="relative overflow-hidden bg-ink">
+        {/* The particle field sits behind everything and parts around
+            the cursor. It is decorative: the page reads without it. */}
+        <HeroScene />
+        <div aria-hidden className="pointer-events-none absolute inset-0 bg-gradient-to-b from-transparent via-ink/40 to-ink" />
+
+        <div className="relative mx-auto grid max-w-6xl items-center gap-12 px-5 py-24 lg:grid-cols-[1.1fr_0.9fr] lg:py-32">
+          <motion.div
+            initial={{ opacity: 0, y: 26 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+          >
+            <p className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3.5 py-1.5 text-[11px] font-bold tracking-[0.16em] text-cyan uppercase backdrop-blur">
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-lime" />
+              {hero.eyebrow}
+            </p>
+            <h1 className="text-[clamp(2.6rem,6.5vw,4.6rem)] leading-[0.98] font-extrabold tracking-tight text-white">
               {hero.titleLine1}
               <br />
               {hero.titleLine2}
               <br />
-              <span className="bg-gradient-to-r from-brand-bright to-cyan bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-violeta via-magenta to-cyan bg-clip-text text-transparent">
                 {hero.titleAccent}
               </span>
             </h1>
-            <p className="mt-6 max-w-xl text-[16.5px] leading-relaxed text-slate-600">{hero.body}</p>
-            <div className="mt-8 flex flex-wrap items-center gap-3">
+            <p className="mt-7 max-w-xl text-[16.5px] leading-relaxed text-slate-300">{hero.body}</p>
+            <div className="mt-9 flex flex-wrap items-center gap-3">
               <Link
                 to="/registro"
-                className="rounded-xl bg-brand-bright px-7 py-3.5 text-[15px] font-bold text-white shadow-xl shadow-brand-bright/30 transition-transform hover:scale-[1.03]"
+                className="group relative overflow-hidden rounded-xl bg-gradient-to-r from-violeta to-magenta px-7 py-3.5 text-[15px] font-bold text-white shadow-[0_8px_32px_-8px_hsl(var(--violeta))] transition-transform hover:scale-[1.03]"
               >
                 {hero.primary}
               </Link>
               <a
                 href="#como"
-                className="rounded-xl border border-slate-300 bg-white px-6 py-3.5 text-[15px] font-semibold text-slate-700 transition-colors hover:border-brand hover:text-brand"
+                className="rounded-xl border border-white/20 px-6 py-3.5 text-[15px] font-semibold text-white transition-colors hover:border-cyan hover:text-cyan"
               >
                 {hero.secondary}
               </a>
             </div>
-            <ul className="mt-7 flex flex-wrap gap-x-5 gap-y-2">
+            <ul className="mt-8 flex flex-wrap gap-x-5 gap-y-2">
               {hero.reassurance.map((r) => (
-                <li key={r} className="flex items-center gap-1.5 text-[12.5px] text-slate-500">
+                <li key={r} className="flex items-center gap-1.5 text-[12.5px] text-slate-400">
                   <span aria-hidden className="text-lime">✓</span>
                   {r}
                 </li>
               ))}
             </ul>
-          </Reveal>
+          </motion.div>
 
-          <Reveal delay={150} className="hidden justify-self-center lg:block">
+          <motion.div
+            initial={{ opacity: 0, y: 36, rotateX: 8 }}
+            animate={{ opacity: 1, y: 0, rotateX: 0 }}
+            transition={{ duration: 0.8, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
+            className="hidden justify-self-center lg:block"
+            style={{ perspective: 1000 }}
+          >
             <QuestionMock />
-          </Reveal>
+          </motion.div>
         </div>
 
-        {/* The ticker, duplicated so the loop has no seam. */}
-        <div className="relative overflow-hidden border-t border-slate-200/70 bg-brand py-3">
+        <div className="relative overflow-hidden border-y border-white/10 bg-white/[0.03] py-3.5 backdrop-blur">
           <div className="marquee flex w-max gap-8">
             {[...ticker, ...ticker].map((t, i) => (
               <span
                 key={`${t}-${i}`}
-                className="flex items-center gap-8 text-[13px] font-semibold whitespace-nowrap text-white/85"
+                className="flex items-center gap-8 text-[13px] font-semibold whitespace-nowrap text-white/70"
               >
                 {t}
-                <span aria-hidden className="text-cyan-light">◆</span>
+                <span aria-hidden className="text-magenta">◆</span>
               </span>
             ))}
           </div>
@@ -200,6 +252,26 @@ export default function Landing() {
                   <p className="mt-3 text-[13.5px] leading-relaxed text-slate-600">{s.label}</p>
                 </div>
               </Reveal>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── The five areas ─────────────────────────────────────── */}
+      <section className="border-b border-slate-200/70 bg-white py-20 lg:py-28">
+        <div className="mx-auto max-w-6xl px-5">
+          <Reveal>
+            <Eyebrow>Las cinco áreas</Eyebrow>
+            <h2 className="max-w-3xl text-[clamp(1.9rem,4vw,2.9rem)] leading-tight font-extrabold tracking-tight text-slate-900">
+              Todo lo que evalúa el Saber 11,{' '}
+              <span className="bg-gradient-to-r from-violeta to-magenta bg-clip-text text-transparent">
+                con el peso que tiene de verdad.
+              </span>
+            </h2>
+          </Reveal>
+          <div className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {AREAS.map((area, i) => (
+              <TarjetaArea key={area.id} area={area} i={i} />
             ))}
           </div>
         </div>
