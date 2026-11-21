@@ -20,20 +20,26 @@ export function Layout({ children }: LayoutProps) {
   const shouldShowSidebar = !isTestPage && !isAuthPage && !isLandingPage;
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [isSidebarLoading, setIsSidebarLoading] = useState(false);
+  // Named for what the learner gets, not for how generation works
+  // inside. "Generación especializada" described the implementation.
   const navItems = [
-    { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { to: '/generacion-especializada', label: 'Generación especializada', icon: Zap },
-    { to: '/generacion-mixta', label: 'Generación mixta', icon: Shuffle },
+    { to: '/dashboard', label: 'Mi progreso', icon: LayoutDashboard },
+    { to: '/generacion-especializada', label: 'Practicar un tema', icon: Zap },
+    { to: '/generacion-mixta', label: 'Simulacro', icon: Shuffle },
     { to: '/contrarreloj', label: 'Contrarreloj', icon: Timer },
   ];
   const exploreItems = [
-    { to: '/results', label: 'Resultados', icon: ScrollText },
-    { to: '/metricas-personales', label: 'Métricas personales', icon: BarChart3, badge: 'Pronto', disabled: true },
+    { to: '/results', label: 'Mis resultados', icon: ScrollText },
   ];
-  const supportItems = [
-    { to: '/recursos', label: 'Guía y recursos', icon: BookOpen, badge: 'Pronto', disabled: true },
-    { to: '/coach-ia', label: 'Coach IA', icon: Sparkles, badge: 'Pronto', disabled: true },
-  ];
+  // Unbuilt destinations are not listed. Three "Pronto" rows took
+  // space in the sidebar and did nothing when pressed.
+  const supportItems: Array<{
+    to: string;
+    label: string;
+    icon: typeof BookOpen;
+    badge?: string;
+    disabled?: boolean;
+  }> = [];
 
   useEffect(() => {
     if (!shouldShowSidebar || !isAuthenticated) return;

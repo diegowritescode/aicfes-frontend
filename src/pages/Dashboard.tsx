@@ -1,5 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Layout } from '@/components/Layout';
+import {
+  EmptyState,
+  ModeCard,
+  PageHeader,
+  ProgressRow,
+  Section,
+  StatCard,
+} from '@/components/ui-kit';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -200,265 +208,167 @@ export default function Dashboard() {
     return { label: 'Practicar ahora', to: '/generacion-especializada' };
   };
 
+  // A learner with no sessions yet. The board used to meet them with
+  // five zeroes and nothing to press; the first thing they need is a
+  // first step, not a report on an empty history.
+  const sinDatos =
+    !data || (data.timeStudied.weekMinutes === 0 && data.streak.currentDays === 0);
+
+  const porEmpezar = [...areaProgress].sort((a, b) => a.accuracy - b.accuracy)[0];
+
   return (
     <Layout>
-      <div className="container mx-auto px-4 py-6 lg:py-10">
-        {/* Hero */}
-        <div className="mb-8 rounded-2xl border border-border bg-gradient-to-br from-primary/10 via-background to-blue-500/10 p-6 lg:p-8">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div className="max-w-2xl">
-              <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
-                <Sparkles className="h-3.5 w-3.5" />
-                Tablero de progreso
-              </div>
-              <h1 className="mt-3 text-3xl font-bold text-foreground lg:text-4xl">
-                Tu ruta ICFES en modo juego
-              </h1>
-              <p className="mt-2 text-sm text-muted-foreground lg:text-base">
-                Sube de nivel con práctica diaria, desafíos contrarreloj y generación libre de preguntas.
-              </p>
-              <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
-                <Badge
-                  variant={realtimeStatus === 'live' ? 'default' : 'secondary'}
-                  className={realtimeStatus === 'live' ? 'bg-success/20 text-success' : ''}
-                >
-                  {realtimeStatus === 'live'
-                    ? 'En vivo'
-                    : realtimeStatus === 'reconnecting'
-                      ? 'Reconectando'
-                      : 'Sin conexión'}
-                </Badge>
-                <span>Actualización en tiempo real</span>
-              </div>
+      <div className="mx-auto max-w-6xl px-5 py-8">
+        {error ? <ErrorAlert error={error} className="mb-6" /> : null}
+
+        <PageHeader
+          titulo={sinDatos ? 'Empecemos' : 'Tu progreso'}
+          descripcion={
+            sinDatos
+              ? 'Veinte minutos hoy valen más que seis horas el domingo.'
+              : porEmpezar
+                ? `Lo que más te conviene practicar hoy: ${porEmpezar.label}.`
+                : undefined
+          }
+          // One primary action. The old header offered six, and a
+          // learner could not tell which one was the next step.
+          accion={{
+            texto: sinDatos ? 'Hacer mi primer diagnóstico' : 'Practicar ahora',
+            to: '/generacion-especializada',
+          }}
+        >
+          {realtimeStatus === 'live' ? (
+            <span className="hidden items-center gap-1.5 text-[12.5px] text-slate-500 sm:inline-flex">
+              <span className="h-1.5 w-1.5 rounded-full bg-lime" />
+              En vivo
+            </span>
+          ) : null}
+        </PageHeader>
+
+        {sinDatos ? (
+          <EmptyState
+            titulo="Todavía no hay nada que medir"
+            descripcion="Haz una sesión corta y aquí aparecerá tu racha, tu nivel y en qué área estás más flojo."
+            accion={{ texto: 'Empezar una sesión', to: '/generacion-especializada' }}
+          />
+        ) : (
+          <>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <StatCard
+                etiqueta="Racha"
+                valor={data.streak.currentDays}
+                unidad={data.streak.currentDays === 1 ? 'día' : 'días'}
+                nota={
+                  data.streak.currentDays === 0
+                    ? 'Entra hoy para empezarla.'
+                    : `Tu mejor racha: ${data.streak.longestDays} días.`
+                }
+                acento="amber"
+              />
+              <StatCard
+                etiqueta="Nivel"
+                valor={data.level.level}
+                nota={`${data.level.currentXp} de ${data.level.nextLevelXp} XP para el siguiente.`}
+              />
+              <StatCard
+                etiqueta="Esta semana"
+                valor={weekTimeLabel}
+                nota={`Última sesión: ${lastSessionLabel}.`}
+                acento="cyan"
+              />
+              <StatCard
+                etiqueta="Misiones"
+                valor={`${data.missions.completed}/${data.missions.total}`}
+                nota="Metas cortas para los días sin ganas."
+                acento="lime"
+              />
             </div>
-            <div className="flex flex-wrap gap-3">
-              <Link to="/generacion-especializada">
-                <Button size="lg" className="gap-2">
-                  <Zap className="h-4 w-4" />
-                  Generación especializada
-                </Button>
-              </Link>
-              <Link to="/generacion-mixta">
-                <Button size="lg" variant="outline" className="gap-2">
-                  <Shuffle className="h-4 w-4" />
-                  Generación mixta
-                </Button>
-              </Link>
-              <Link to="/contrarreloj">
-                <Button size="lg" variant="outline" className="gap-2">
-                  <Timer className="h-4 w-4" />
-                  Contrarreloj
-                </Button>
-              </Link>
+
+            <div className="mt-6 grid gap-6 lg:grid-cols-[1.4fr_1fr]">
+              <Section
+                titulo="Cómo vas por área"
+                descripcion="Ordenado de lo más flojo a lo más fuerte: por ahí conviene empezar."
+              >
+                <div className="space-y-5">
+                  {[...areaProgress]
+                    .sort((a, b) => a.accuracy - b.accuracy)
+                    .map((area) => (
+                      <ProgressRow
+                        key={area.area}
+                        etiqueta={area.label}
+                        porcentaje={Math.round(area.accuracy)}
+                        detalle={
+                          area.answered > 0
+                            ? `${area.correct} de ${area.answered} preguntas`
+                            : 'Sin preguntas todavía'
+                        }
+                      />
+                    ))}
+                </div>
+              </Section>
+
+              <Section titulo="Misiones de hoy" descripcion="Cada una suma XP.">
+                {data.missions.items.length === 0 ? (
+                  <p className="text-[13.5px] text-slate-500">
+                    No hay misiones pendientes. Vuelve mañana.
+                  </p>
+                ) : (
+                  <ul className="space-y-2.5">
+                    {data.missions.items.slice(0, 5).map((m) => (
+                      <li
+                        key={m.id}
+                        className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 px-4 py-3"
+                      >
+                        <div className="min-w-0">
+                          <p className="truncate text-[13.5px] font-medium text-slate-800">
+                            {m.title}
+                          </p>
+                          <p className="text-[12px] text-slate-500">+{m.xp} XP</p>
+                        </div>
+                        <span
+                          className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold ${
+                            m.status === 'completed'
+                              ? 'bg-lime/15 text-lime'
+                              : 'bg-slate-100 text-slate-500'
+                          }`}
+                        >
+                          {m.status === 'completed' ? 'Lista' : 'Pendiente'}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </Section>
             </div>
-          </div>
-        </div>
+          </>
+        )}
 
-        {/* Quick Stats */}
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription>Racha activa</CardDescription>
-              <CardTitle className="text-2xl flex items-center gap-2">
-                {data.streak.currentDays} días
-                <Flame className="h-5 w-5 text-amber-500" />
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="text-xs text-muted-foreground">
-              Mantén {data.streak.nextMilestoneDays} días para el próximo hito.
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription>Nivel actual</CardDescription>
-              <CardTitle className="text-2xl flex items-center gap-2">
-                Nivel {data.level.level}
-                <Award className="h-5 w-5 text-primary" />
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="text-xs text-muted-foreground space-y-2">
-              <p>
-                {data.level.currentXp} / {data.level.nextLevelXp} XP para subir.
-              </p>
-              <Progress value={xpProgress} className="h-2" />
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription>Tiempo estudiado</CardDescription>
-              <CardTitle className="text-2xl flex items-center gap-2">
-                {weekTimeLabel}
-                <Clock className="h-5 w-5 text-blue-600" />
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="text-xs text-muted-foreground">
-              Última sesión: {lastSessionLabel}.
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription>Misiones completas</CardDescription>
-              <CardTitle className="text-2xl flex items-center gap-2">
-                {data.missions.completed} / {data.missions.total}
-                <Target className="h-5 w-5 text-success" />
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="text-xs text-muted-foreground">
-              Completa las misiones diarias para ganar XP.
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Progress + Missions */}
-        <div className="mt-6 grid gap-6 lg:grid-cols-3">
-          <Card className="lg:col-span-2">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Trophy className="h-5 w-5 text-primary" />
-                Progreso por área
-              </CardTitle>
-              <CardDescription>Tu avance semanal en cada componente.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {areaProgress.map((item) => (
-                <div key={item.label} className="space-y-2">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="font-medium text-foreground">{item.label}</span>
-                    <span className="text-muted-foreground">{item.accuracy}%</span>
-                  </div>
-                  <div className="h-2 rounded-full bg-muted">
-                    <div className={`h-2 rounded-full ${item.color}`} style={{ width: `${item.accuracy}%` }} />
-                  </div>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <BookOpen className="h-5 w-5 text-primary" />
-                Misiones de hoy
-              </CardTitle>
-              <CardDescription>Completa todas para subir XP.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {data.missions.items.map((mission) => {
-                const action = getMissionAction(mission);
-                return (
-                <div
-                  key={mission.id}
-                  className={`flex flex-col gap-2 rounded-lg border px-3 py-2 text-sm sm:flex-row sm:items-center sm:justify-between ${
-                    mission.status === 'done'
-                      ? 'border-success/30 bg-success/5'
-                      : 'border-border bg-card'
-                  }`}
-                >
-                  <div>
-                    <span className={mission.status === 'done' ? 'text-foreground' : 'text-muted-foreground'}>
-                      {mission.title}
-                    </span>
-                    <p className="text-xs text-muted-foreground">+{mission.xpReward} XP</p>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2 sm:justify-end">
-                    <Badge
-                      variant={mission.status === 'done' ? 'default' : 'secondary'}
-                      className={mission.status === 'done' ? 'bg-success/20 text-success' : ''}
-                    >
-                      {mission.status === 'done' ? 'Hecha' : 'Pendiente'}
-                    </Badge>
-                    {mission.status !== 'done' && (
-                      <Link to={action.to} className="w-full sm:w-auto">
-                        <Button size="sm" variant="outline" className="w-full sm:w-auto">
-                          {action.label}
-                        </Button>
-                      </Link>
-                    )}
-                  </div>
-                </div>
-              )})}
-              <div className="rounded-lg border border-dashed border-primary/40 bg-primary/5 p-3 text-xs text-muted-foreground">
-                <p className="font-semibold text-foreground">{data.suggestedChallenge.title}</p>
-                <p className="mt-1">{data.suggestedChallenge.description}</p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Callouts */}
-        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <Card className="border-primary/20 bg-primary/5">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Zap className="h-5 w-5 text-primary" />
-                Generación especializada
-              </CardTitle>
-              <div className="flex items-center gap-2">
-                <Badge variant={data.modeCards.generacion_libre.status === 'active' ? 'default' : 'secondary'}>
-                  {statusLabel(data.modeCards.generacion_libre.status)}
-                </Badge>
-                <CardDescription>{data.modeCards.generacion_libre.recommendation}</CardDescription>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground mb-4">
-                Sesiones esta semana: {data.modeCards.generacion_libre.sessionsThisWeek}
-              </p>
-              <Link to="/generacion-especializada">
-                <Button size="sm" className="gap-2">
-                  Ir a especializada
-                  <Zap className="h-4 w-4" />
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
-
-          <Card className="border-blue-500/30 bg-blue-500/5">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Shuffle className="h-5 w-5 text-blue-600" />
-                Generación mixta
-              </CardTitle>
-              <CardDescription>Combina áreas y dificultades en una sola prueba.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground mb-4">
-                Arma un mix realista como en el examen.
-              </p>
-              <Link to="/generacion-mixta">
-                <Button size="sm" variant="outline" className="gap-2">
-                  Ir a mixta
-                  <Shuffle className="h-4 w-4" />
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
-
-          <Card className="border-amber-500/30 bg-amber-500/5">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Timer className="h-5 w-5 text-amber-600" />
-                Contrarreloj
-              </CardTitle>
-              <div className="flex items-center gap-2">
-                <Badge variant={data.modeCards.contrarreloj.status === 'active' ? 'default' : 'secondary'}>
-                  {statusLabel(data.modeCards.contrarreloj.status)}
-                </Badge>
-                <CardDescription>{data.modeCards.contrarreloj.recommendation}</CardDescription>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground mb-4">
-                Sesiones esta semana: {data.modeCards.contrarreloj.sessionsThisWeek}
-              </p>
-              <Link to="/contrarreloj">
-                <Button size="sm" variant="outline" className="gap-2">
-                  Iniciar contrarreloj
-                  <Timer className="h-4 w-4" />
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
+        {/* The study modes live here only. They used to appear in the
+            sidebar, in the header and again as cards: three doors to
+            the same room. */}
+        <h2 className="mt-10 mb-4 text-[16px] font-bold tracking-tight text-slate-900">
+          Otras formas de practicar
+        </h2>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <ModeCard
+            titulo="Practicar un tema"
+            descripcion="Preguntas de un solo tema, para afianzar lo que te cuesta."
+            to="/generacion-especializada"
+            duracion="10 a 15 minutos"
+            destacado={sinDatos}
+          />
+          <ModeCard
+            titulo="Simulacro"
+            descripcion="Las cinco áreas con el peso que tienen en el examen real."
+            to="/generacion-mixta"
+            duracion="Lo que tengas disponible"
+          />
+          <ModeCard
+            titulo="Contrarreloj"
+            descripcion="Con el cronómetro corriendo, porque en el examen el tiempo cuenta."
+            to="/contrarreloj"
+            duracion="5 minutos"
+          />
         </div>
       </div>
     </Layout>
