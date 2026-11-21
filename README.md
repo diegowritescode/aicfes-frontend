@@ -99,4 +99,4 @@ bundle has no server to read configuration from, so the API origin is
 compiled in and the image is per-environment.
 
 Live at [aicfes.deviego.xyz](https://aicfes.deviego.xyz), talking to
-[aicfes-api.deviego.xyz](https://aicfes-api.deviego.xyz).
+[aicfes-backend.deviego.xyz](https://aicfes-backend.deviego.xyz).
