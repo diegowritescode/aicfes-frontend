@@ -132,6 +132,10 @@ export interface AnswerPayload {
   isCorrect: boolean;
   area: Area;
   dificultad: Dificultad;
+  /** Which item was answered. The server drops answers without it:
+   *  there is no way back to the topic or the kind of mistake. */
+  itemId?: string;
+  tiempoMs?: number;
 }
 
 export interface StudySessionPayload {

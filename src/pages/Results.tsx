@@ -244,6 +244,10 @@ export default function Results() {
             isCorrect: answer.isCorrect,
             area,
             dificultad,
+            // Without these the server cannot tell which item was
+            // answered, so the mistake has no topic to attach to.
+            itemId: answer.itemId ?? question?.id,
+            tiempoMs: answer.tiempoMs,
           };
         })
         .filter(Boolean) as AnswerPayload[];
@@ -320,6 +324,10 @@ export default function Results() {
           isCorrect: answer.isCorrect,
           area,
           dificultad,
+          // Without these the server cannot tell which item was
+          // answered, so the mistake has no topic to attach to.
+          itemId: answer.itemId ?? question?.id,
+          tiempoMs: answer.tiempoMs,
         };
       })
       .filter(Boolean) as AnswerPayload[];

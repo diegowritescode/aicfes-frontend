@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useCallback, useRef, ReactNode } from 'react';
 import { IcfesItem, AnswerKey, AnswerRecord, Area, Dificultad } from '@/types/icfes';
 import { getServerNow } from '@/lib/serverTime';
 
@@ -94,6 +94,10 @@ const TestContext = createContext<TestContextValue | undefined>(undefined);
 
 export function TestProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<TestState>(() => loadStateFromSession());
+  /* When the current question first appeared. A ref rather than state:
+     a clock held in state would re-render the question on every tick,
+     while someone is trying to read it. */
+  const inicioPreguntaRef = useRef<number | null>(Date.now());
 
   const startTest = useCallback((
     questions: IcfesItem[],
@@ -106,6 +110,7 @@ export function TestProvider({ children }: { children: ReactNode }) {
       timeLimitSeconds?: number | null;
     }
   ) => {
+    inicioPreguntaRef.current = Date.now();
     const newState: TestState = {
       questions,
       currentQuestionIndex: 0,
@@ -140,6 +145,13 @@ export function TestProvider({ children }: { children: ReactNode }) {
       const isCorrect = prev.selectedAnswer === currentQuestion.respuesta_correcta;
       const explanation = currentQuestion.explicaciones?.[prev.selectedAnswer] || currentQuestion.justificacion;
 
+      /* Capped at ten minutes: a tab left open over lunch would
+         otherwise drown the average for every other answer. */
+      const inicio = inicioPreguntaRef.current;
+      const tiempoMs = inicio
+        ? Math.min(Math.max(Date.now() - inicio, 0), 600_000)
+        : undefined;
+
       const record: AnswerRecord = {
         questionIndex: prev.currentQuestionIndex,
         selectedAnswer: prev.selectedAnswer,
@@ -147,6 +159,10 @@ export function TestProvider({ children }: { children: ReactNode }) {
         isCorrect,
         explanation,
         answeredAt: new Date().toISOString(),
+        // Carried so the server can attribute the answer to its topic
+        // and to the kind of mistake the chosen option represents.
+        itemId: currentQuestion.id,
+        tiempoMs,
       };
 
       const next = {
@@ -159,6 +175,7 @@ export function TestProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const nextQuestion = useCallback(() => {
+    inicioPreguntaRef.current = Date.now();
     setState((prev) => {
       const next = {
         ...prev,

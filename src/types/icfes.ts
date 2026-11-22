@@ -56,6 +56,11 @@ export interface AnswerRecord {
   isCorrect: boolean;
   explanation?: string;
   answeredAt?: string; // ISO timestamp
+  /** Which stored item this answers, so the server can attribute it. */
+  itemId?: string;
+  /** Milliseconds on this question. A right answer that took three
+   *  minutes is not the same as one that took twenty seconds. */
+  tiempoMs?: number;
 }
 
 export const AREA_LABELS: Record<Area, string> = {
