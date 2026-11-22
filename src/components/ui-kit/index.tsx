@@ -161,17 +161,23 @@ export function ProgressRow({
   etiqueta,
   porcentaje,
   detalle,
+  valorTexto,
 }: {
   etiqueta: string;
   porcentaje: number;
   detalle?: string;
+  /** Shown instead of the percentage, for a bar with nothing to
+   *  measure yet: "0%" and "no data" are different facts. */
+  valorTexto?: string;
 }) {
   const pct = Math.max(0, Math.min(100, porcentaje));
   return (
     <div>
       <div className="mb-1.5 flex items-baseline justify-between gap-3">
         <span className="text-[13.5px] font-medium text-slate-700">{etiqueta}</span>
-        <span className="text-[13px] font-bold text-slate-900 tabular-nums">{pct}%</span>
+        <span className="text-[13px] font-bold text-slate-900 tabular-nums">
+          {valorTexto ?? `${pct}%`}
+        </span>
       </div>
       <div
         role="progressbar"

@@ -312,23 +312,38 @@ export default function Dashboard() {
               >
                 <div className="space-y-5">
                   {[...areaProgress]
-                    .sort((a, b) => a.accuracy - b.accuracy)
-                    .map((area) => (
-                      <ProgressRow
-                        key={area.area}
-                        etiqueta={area.label}
-                        porcentaje={Math.round(area.accuracy)}
-                        /* The API sends `questions`; this read
-                           `answered` and `correct`, which are
-                           undefined, so every area said "sin preguntas
-                           todavía" however many had been answered. */
-                        detalle={
-                          area.questions > 0
-                            ? `${Math.round((area.accuracy / 100) * area.questions)} de ${area.questions} preguntas`
-                            : 'Sin preguntas todavía'
-                        }
-                      />
-                    ))}
+                    /* An area with nothing answered sorts last, not
+                       first. Both read 0%, so the untouched ones were
+                       filling the top of a list whose whole promise is
+                       "lo más flojo primero" — and an area nobody has
+                       tried is not weak, it is unmeasured. */
+                    .sort((a, b) => {
+                      if ((a.questions > 0) !== (b.questions > 0)) {
+                        return a.questions > 0 ? -1 : 1;
+                      }
+                      return a.accuracy - b.accuracy;
+                    })
+                    .map((area) => {
+                      const medida = area.questions > 0;
+                      const aciertos = Math.round((area.accuracy / 100) * area.questions);
+                      return (
+                        <ProgressRow
+                          key={area.area}
+                          etiqueta={area.label}
+                          porcentaje={Math.round(area.accuracy)}
+                          /* "0%" for an area never practised and "0%"
+                             for one where everything went wrong are
+                             very different facts that looked
+                             identical. */
+                          valorTexto={medida ? undefined : '—'}
+                          detalle={
+                            medida
+                              ? `${aciertos} de ${area.questions} ${area.questions === 1 ? 'correcta' : 'correctas'}`
+                              : 'Todavía sin practicar'
+                          }
+                        />
+                      );
+                    })}
                 </div>
               </Section>
 
