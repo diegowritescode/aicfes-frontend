@@ -18,6 +18,9 @@ import { Timer } from 'lucide-react';
 import { TimeTrialModesSkeleton } from '@/components/LoadingSkeleton';
 
 const AREAS: Area[] = ['MAT', 'LC', 'CN', 'SOC', 'ING'];
+/** The real exam: 270 minutes for 254 questions. Every mode is read
+ *  against this, so "45 segundos" becomes "19 menos que el examen". */
+const SEGUNDOS_EXAMEN_REAL = 64;
 const DIFICULTADES: Dificultad[] = ['facil', 'media', 'alta'];
 
 export default function TimeTrial() {
@@ -128,6 +131,13 @@ export default function TimeTrial() {
             Responda contra el reloj, como el día del examen. Si se acaba el tiempo, la
             práctica termina donde iba.
           </p>
+          {/* Worth saying plainly: the questions are not random. Someone
+              who sees Matemáticas four rounds running should know it is
+              deliberate, not a broken shuffle. */}
+          <p className="mt-2 max-w-xl text-[13.5px] leading-relaxed text-slate-500">
+            Las preguntas salen de donde más está fallando. Cada ronda ajusta lo que le
+            toca después.
+          </p>
         </header>
 
         {/* The speed bonus is real: the backend pays
@@ -187,18 +197,45 @@ export default function TimeTrial() {
           ) : (
             <ul className="space-y-3">
               {modes.map((mode) => {
-                const porPregunta = Math.round(mode.timeLimitSeconds / mode.questions);
+                const porPregunta =
+                  mode.segundosPorPregunta ??
+                  Math.round(mode.timeLimitSeconds / mode.questions);
+                /* Every mode is worth understanding against one number:
+                   what the real exam gives. "45 segundos" means nothing
+                   on its own; "19 menos que el examen" is the whole
+                   point of the mode. */
+                const diferencia = porPregunta - SEGUNDOS_EXAMEN_REAL;
                 return (
                   <li key={mode.id}>
                     <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-5 sm:flex-row sm:items-center sm:justify-between">
                       <div className="min-w-0">
-                        <h3 className="text-[15px] font-bold text-slate-900">{mode.title}</h3>
-                        <p className="mt-0.5 text-[13.5px] leading-relaxed text-slate-600">
+                        <div className="flex flex-wrap items-center gap-2">
+                          {mode.nivel ? (
+                            <span className="rounded-full bg-brand-soft px-2.5 py-0.5 text-[11px] font-bold text-brand">
+                              Nivel {mode.nivel}
+                            </span>
+                          ) : null}
+                          <h3 className="text-[15px] font-bold text-slate-900">{mode.title}</h3>
+                        </div>
+                        <p className="mt-1 text-[13.5px] leading-relaxed text-slate-600">
                           {mode.description}
                         </p>
                         <p className="mt-2 text-[12.5px] font-semibold text-slate-500">
                           {Math.round(mode.timeLimitSeconds / 60)} min ·{' '}
                           {mode.questions} preguntas · {formatoPorPregunta(porPregunta)}
+                        </p>
+                        <p className="mt-1 text-[12px] text-slate-500">
+                          {diferencia === 0 ? (
+                            <span className="font-semibold text-brand-bright">
+                              El mismo tiempo que da el examen
+                            </span>
+                          ) : diferencia > 0 ? (
+                            `${diferencia} segundos más que el examen`
+                          ) : (
+                            <span className="font-semibold text-amber">
+                              {Math.abs(diferencia)} segundos menos que el examen
+                            </span>
+                          )}
                         </p>
                       </div>
                       <button

@@ -205,6 +205,10 @@ export interface TimeTrialMode {
   area?: Area;
   dificultad?: Dificultad;
   mix?: Array<{ area: Area; dificultad: Dificultad; n: number }>;
+  /** Where this sits in the ladder, 1 being the gentlest. */
+  nivel?: number;
+  /** The pace it sets. The real exam gives 64 seconds. */
+  segundosPorPregunta?: number;
 }
 
 export interface TimeTrialStartResult {
