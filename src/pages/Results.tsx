@@ -3,16 +3,8 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useTest } from '@/context/TestContext';
 import { AREA_LABELS, Area } from '@/types/icfes';
 import { Layout } from '@/components/Layout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
 import { ErrorAlert } from '@/components/ErrorAlert';
-import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationLink,
-} from '@/components/ui/pagination';
+import { RepasoPregunta } from '@/components/examen/RepasoPregunta';
 import {
   AnswerPayload,
   completeStudySession,
@@ -22,17 +14,7 @@ import {
   postAnswers,
   startStudySession,
 } from '@/services/api';
-import {
-  Trophy,
-  Target,
-  XCircle,
-  CheckCircle2,
-  RotateCcw,
-  BookOpen,
-  Sparkles,
-  TrendingUp,
-} from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { RotateCcw, Sparkles } from 'lucide-react';
 import { getServerNow } from '@/lib/serverTime';
 
 export default function Results() {
@@ -53,8 +35,6 @@ export default function Results() {
   const results = getResults();
   const sessionPostedRef = useRef(false);
   const feedbackRequestedRef = useRef(false);
-  const reviewPageSize = 4;
-  const [reviewPage, setReviewPage] = useState(1);
   const [feedback, setFeedback] = useState<Awaited<ReturnType<typeof getFeedback>>['data'] | null>(null);
   const [feedbackLoading, setFeedbackLoading] = useState(false);
   const [feedbackError, setFeedbackError] = useState<{ code?: string; message: string } | null>(null);
@@ -369,276 +349,202 @@ export default function Results() {
     testDifficulty,
   ]);
 
-  useEffect(() => {
-    const totalPages = Math.max(1, Math.ceil(results.answersHistory.length / reviewPageSize));
-    if (reviewPage > totalPages) {
-      setReviewPage(totalPages);
-    }
-  }, [results.answersHistory.length, reviewPage, reviewPageSize]);
-
   const handleNewTest = () => {
     resetTest();
     navigate('/generacion-especializada');
   };
 
   const getPerformanceLevel = (accuracy: number) => {
-    if (accuracy >= 80) return { label: '¡Excelente!', color: 'text-success', icon: Trophy };
-    if (accuracy >= 60) return { label: 'Buen trabajo', color: 'text-primary', icon: TrendingUp };
-    if (accuracy >= 40) return { label: 'Puedes mejorar', color: 'text-warning', icon: Target };
-    return { label: 'Sigue practicando', color: 'text-destructive', icon: BookOpen };
+    if (accuracy >= 80) return { label: 'Excelente' };
+    if (accuracy >= 60) return { label: 'Buen trabajo' };
+    if (accuracy >= 40) return { label: 'Puede mejorar' };
+    return { label: 'Siga practicando' };
   };
 
   const performance = getPerformanceLevel(results.accuracy);
-  const PerformanceIcon = performance.icon;
-  const totalReviewPages = Math.max(1, Math.ceil(results.answersHistory.length / reviewPageSize));
-  const reviewStart = (reviewPage - 1) * reviewPageSize;
-  const reviewAnswers = results.answersHistory.slice(reviewStart, reviewStart + reviewPageSize);
 
   if (results.total === 0) {
     return null;
   }
+  /* The questions that were missed come first, because those are the
+     ones worth reading. A learner reviewing fifty answers does not
+     need the ones they already got right at the top of the list. */
+  const repasoOrdenado = [...results.answersHistory].sort((a, b) => {
+    if (a.isCorrect !== b.isCorrect) return a.isCorrect ? 1 : -1;
+    return a.questionIndex - b.questionIndex;
+  });
+  const falladas = results.incorrect;
 
   return (
     <Layout>
-      <div className="container mx-auto px-4 py-8 lg:py-12 max-w-4xl">
-        {/* Header */}
-        <div className="text-center mb-10 animate-fade-in">
+      <div className="mx-auto max-w-3xl px-4 py-8 lg:py-12">
+        {/* The score, first and alone. The old page opened with three
+            cards for total, correct and incorrect — two numbers
+            stretched into three tiles, with the one figure that
+            answers "how did I do" pushed below them. */}
+        <section className="rounded-3xl border border-slate-200 bg-white p-7 sm:p-9">
+          <p className="text-[12.5px] font-semibold uppercase tracking-[0.14em] text-brand-bright">
+            {results.area ? AREA_LABELS[results.area] : 'Práctica'}
+          </p>
+
+          <div className="mt-4 flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <p className="flex items-baseline gap-2">
+                <span className="text-[4rem] leading-none font-extrabold tracking-tight text-slate-900">
+                  {results.accuracy}
+                </span>
+                <span className="text-[1.75rem] font-bold text-slate-400">%</span>
+              </p>
+              <p className="mt-2 text-[14.5px] text-slate-600">
+                {results.correct} de {results.total} correctas
+              </p>
+            </div>
+            <p className="text-[15px] font-semibold text-slate-700">{performance.label}</p>
+          </div>
+
           <div
-            className={cn(
-              'inline-flex items-center justify-center p-4 rounded-full mb-4',
-              results.accuracy >= 60 ? 'bg-success/10' : 'bg-primary/10'
-            )}
+            role="progressbar"
+            aria-valuenow={results.accuracy}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-label="Precisión de esta sesión"
+            className="mt-6 h-2.5 overflow-hidden rounded-full bg-slate-100"
           >
-            <PerformanceIcon
-              className={cn('h-10 w-10', performance.color)}
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-brand-bright to-cyan transition-all duration-700"
+              style={{ width: `${results.accuracy}%` }}
             />
           </div>
-          <h1 className={cn('text-3xl lg:text-4xl font-bold mb-2', performance.color)}>
-            {performance.label}
-          </h1>
-          <p className="text-lg text-muted-foreground">
-            Has completado la prueba de {results.area ? AREA_LABELS[results.area] : 'práctica'}
+
+          <p className="mt-4 text-[13.5px] leading-relaxed text-slate-600">
+            {falladas === 0
+              ? 'No falló ninguna. Suba la dificultad o pase a otra área.'
+              : `Hay ${falladas} ${falladas === 1 ? 'pregunta' : 'preguntas'} para repasar abajo. Son las que más le van a subir el puntaje.`}
           </p>
-        </div>
+        </section>
 
-        {/* Stats Grid */}
-        <div className="grid sm:grid-cols-3 gap-4 mb-8">
-          <Card className="animate-slide-up" style={{ animationDelay: '0.1s' }}>
-            <CardContent className="pt-6 text-center">
-              <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-primary/10 mb-3">
-                <Target className="h-7 w-7 text-primary" />
-              </div>
-              <p className="text-4xl font-bold text-foreground">{results.total}</p>
-              <p className="text-sm text-muted-foreground">Total Preguntas</p>
-            </CardContent>
-          </Card>
+        {/* What the AI saw, without the sales copy that used to wrap
+            it. The learner is already inside the product; they need
+            the reading, not the pitch for it. */}
+        <section className="mt-5 rounded-3xl border border-brand-soft bg-gradient-to-br from-wash/80 to-white p-7">
+          <h2 className="flex items-center gap-2 text-[16px] font-bold tracking-tight text-slate-900">
+            <Sparkles aria-hidden className="h-4 w-4 text-brand-bright" />
+            Qué dice su sesión
+          </h2>
 
-          <Card className="animate-slide-up" style={{ animationDelay: '0.2s' }}>
-            <CardContent className="pt-6 text-center">
-              <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-success/10 mb-3">
-                <CheckCircle2 className="h-7 w-7 text-success" />
-              </div>
-              <p className="text-4xl font-bold text-success">{results.correct}</p>
-              <p className="text-sm text-muted-foreground">Correctas</p>
-            </CardContent>
-          </Card>
-
-          <Card className="animate-slide-up" style={{ animationDelay: '0.3s' }}>
-            <CardContent className="pt-6 text-center">
-              <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-destructive/10 mb-3">
-                <XCircle className="h-7 w-7 text-destructive" />
-              </div>
-              <p className="text-4xl font-bold text-destructive">{results.incorrect}</p>
-              <p className="text-sm text-muted-foreground">Incorrectas</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Accuracy Card */}
-        <Card className="mb-8 animate-slide-up" style={{ animationDelay: '0.4s' }}>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 text-primary" />
-              Precisión General
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-end justify-between">
-                <span className="text-5xl font-bold text-foreground">{results.accuracy}%</span>
-                <span className="text-sm text-muted-foreground">
-                  {results.correct} de {results.total} correctas
-                </span>
-              </div>
-              <Progress
-                value={results.accuracy}
-                className="h-3"
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Answer Review */}
-        <Card className="mb-8 animate-slide-up" style={{ animationDelay: '0.5s' }}>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <BookOpen className="h-5 w-5 text-primary" />
-              Resumen de Respuestas
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-5 sm:grid-cols-10 gap-2">
-              {results.answersHistory.map((answer, index) => (
-                <div
-                  key={index}
-                  className={cn(
-                    'aspect-square rounded-lg flex items-center justify-center font-bold text-sm transition-colors',
-                    answer.isCorrect
-                      ? 'bg-success/10 text-success border border-success/30'
-                      : 'bg-destructive/10 text-destructive border border-destructive/30'
-                  )}
-                  title={`Pregunta ${index + 1}: ${answer.isCorrect ? 'Correcta' : 'Incorrecta'}`}
-                >
-                  {index + 1}
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Question-by-question Review with Explanations */}
-        <Card className="mb-8 animate-slide-up" style={{ animationDelay: '0.55s' }}>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <BookOpen className="h-5 w-5 text-primary" />
-              Revisión detallada
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {reviewAnswers.map((answer) => {
-                const question = questions[answer.questionIndex];
-                if (!question) return null;
-                const selectedKey = answer.selectedAnswer;
-                const selectedText = question.opciones[selectedKey];
-                const correctKey = question.respuesta_correcta;
-                const explanation = question.explicaciones?.[selectedKey] || question.justificacion;
-
-                return (
-                  <div key={answer.questionIndex} className="p-4 rounded-lg border border-border bg-card">
-                    <div className="flex items-start gap-3">
-                      <div className={cn('font-bold text-sm w-8 h-8 flex items-center justify-center rounded-full', answer.isCorrect ? 'bg-success/10 text-success' : 'bg-destructive/10 text-destructive')}>
-                        {answer.questionIndex + 1}
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-foreground">{question.pregunta}</p>
-                        <p className="text-xs text-muted-foreground mt-2">Tu respuesta: <strong>{selectedKey} — {selectedText}</strong></p>
-                        {!answer.isCorrect && (
-                          <p className="text-xs text-muted-foreground">Correcta: <strong>{correctKey}</strong></p>
-                        )}
-                        <div className="mt-3 bg-muted/50 rounded-md p-3 text-sm text-muted-foreground whitespace-pre-wrap">
-                          {explanation}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-            {totalReviewPages > 1 && (
-              <div className="mt-6">
-                <Pagination>
-                  <PaginationContent>
-                    {Array.from({ length: totalReviewPages }).map((_, index) => {
-                      const page = index + 1;
-                      return (
-                        <PaginationItem key={page}>
-                          <PaginationLink
-                            href="#"
-                            isActive={reviewPage === page}
-                            onClick={(event) => {
-                              event.preventDefault();
-                              setReviewPage(page);
-                            }}
-                          >
-                            {page}
-                          </PaginationLink>
-                        </PaginationItem>
-                      );
-                    })}
-                  </PaginationContent>
-                </Pagination>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* AI Feedback */}
-        <Card className="mb-8 bg-muted/30 border-dashed animate-slide-up" style={{ animationDelay: '0.6s' }}>
-          <CardContent className="pt-6 space-y-4">
-            <div className="flex items-start gap-4">
-              <div className="p-3 rounded-full bg-primary/10">
-                <Sparkles className="h-6 w-6 text-primary" />
-              </div>
-              <div className="flex-1">
-                <h3 className="font-semibold text-foreground mb-1">
-                  Retroalimentación IA Personalizada
-                </h3>
-                <p className="text-base text-muted-foreground">
-                  Tu valor diferencial: no solo resultados, sino un plan claro de mejora según tus patrones reales.
-                </p>
-                {feedback?.summary && (
-                  <p className="text-base text-foreground mt-3 leading-relaxed">
-                    {feedback.summary}
-                  </p>
-                )}
-              </div>
-            </div>
-            {feedbackError && (
+          {feedback?.summary ? (
+            <p className="mt-3 text-[14.5px] leading-[1.75] text-slate-700">{feedback.summary}</p>
+          ) : feedbackError ? (
+            <div className="mt-4">
               <ErrorAlert
-                title="No pudimos cargar el feedback"
+                title="No pudimos cargar el análisis"
                 message={feedbackError.message}
                 code={feedbackError.code}
                 onRetry={() => handleGenerateFeedback()}
               />
-            )}
-            <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-muted-foreground">
-              <span>
-                {feedback
-                  ? `Generado con ${feedback.model} · ${new Date(feedback.generatedAt).toLocaleString('es-CO', { dateStyle: 'medium', timeStyle: 'short' })}`
-                  : 'Generando feedback basado en tu sesión...'}
-              </span>
             </div>
-            {studySessionId && feedback && !feedbackLoading ? (
-              <Link to={`/feedback/${studySessionId}`} className="block">
-                <Button size="lg" className="w-full sm:w-auto">
-                  Ver feedback completo
-                </Button>
-              </Link>
-            ) : (
-              <Button size="lg" className="w-full sm:w-auto" disabled>
-                {feedbackLoading ? 'Generando feedback...' : 'Ver feedback completo'}
-              </Button>
-            )}
-          </CardContent>
-        </Card>
+          ) : (
+            <div className="mt-3 space-y-2" aria-live="polite">
+              <p className="text-[14px] text-slate-500">
+                {feedbackLoading || !sessionCompleted
+                  ? 'Estamos leyendo sus respuestas. Tarda unos segundos.'
+                  : 'Preparando el análisis de esta sesión.'}
+              </p>
+              <div aria-hidden className="h-3 w-4/5 animate-pulse rounded bg-slate-200/70" />
+              <div aria-hidden className="h-3 w-3/5 animate-pulse rounded bg-slate-200/70" />
+            </div>
+          )}
 
-        {/* Actions */}
-        <div className="flex flex-col sm:flex-row gap-4 justify-center animate-slide-up" style={{ animationDelay: '0.7s' }}>
-          <Button
-            variant="outline"
-            size="lg"
-            onClick={handleNewTest}
-            className="flex items-center gap-2"
-          >
-            <RotateCcw className="h-4 w-4" />
-            Nueva Prueba
-          </Button>
-          <Link to="/dashboard">
-            <Button size="lg" className="w-full sm:w-auto">
-              Volver al Inicio
-            </Button>
-          </Link>
+          {studySessionId && feedback && !feedbackLoading ? (
+            <Link
+              to={`/feedback/${studySessionId}`}
+              className="mt-5 inline-flex items-center gap-2 rounded-full bg-brand-bright px-6 py-2.5 text-[14px] font-semibold text-white
+                shadow-[0_6px_20px_-6px_hsl(var(--brand-bright))] transition-transform hover:scale-[1.02]
+                focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-bright focus-visible:ring-offset-2"
+            >
+              Ver el análisis completo
+            </Link>
+          ) : null}
+        </section>
+
+        {/* Review. One page, closed by default, wrong answers open
+            and first. The old version paginated four-at-a-time
+            through thirteen pages of always-expanded cards. */}
+        <section className="mt-5">
+          <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
+            <h2 className="text-[16px] font-bold tracking-tight text-slate-900">
+              Repase sus respuestas
+            </h2>
+            <p className="text-[13px] text-slate-500">
+              {falladas > 0
+                ? 'Las falladas van primero y ya están abiertas'
+                : 'Toque una pregunta para ver la explicación'}
+            </p>
+          </div>
+
+          <div className="space-y-2.5">
+            {repasoOrdenado.map((answer) => {
+              const question = questions[answer.questionIndex];
+              if (!question) return null;
+              return (
+                <RepasoPregunta
+                  key={answer.questionIndex}
+                  item={question}
+                  numero={answer.questionIndex + 1}
+                  elegida={answer.selectedAnswer}
+                  acerto={answer.isCorrect}
+                  abiertoPorDefecto={!answer.isCorrect}
+                />
+              );
+            })}
+          </div>
+        </section>
+
+        {/* One primary action, chosen by how the session went: more
+            practice when there is ground to make up, a clean exit
+            when there is not. The old footer offered two buttons of
+            equal weight and left the choice to the learner. */}
+        <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+          {falladas > 0 ? (
+            <>
+              <button
+                type="button"
+                onClick={handleNewTest}
+                className="inline-flex items-center gap-2 rounded-full bg-brand-bright px-7 py-3 text-[14.5px] font-semibold text-white
+                  shadow-[0_6px_20px_-6px_hsl(var(--brand-bright))] transition-transform hover:scale-[1.02]
+                  focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-bright focus-visible:ring-offset-2"
+              >
+                <RotateCcw aria-hidden className="h-4 w-4" />
+                Practicar otra ronda
+              </button>
+              <Link
+                to="/dashboard"
+                className="rounded-full px-5 py-3 text-[14px] font-semibold text-slate-600 transition-colors hover:text-slate-900
+                  focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-bright"
+              >
+                Volver a mi progreso
+              </Link>
+            </>
+          ) : (
+            <>
+              <Link
+                to="/dashboard"
+                className="inline-flex items-center rounded-full bg-brand-bright px-7 py-3 text-[14.5px] font-semibold text-white
+                  shadow-[0_6px_20px_-6px_hsl(var(--brand-bright))] transition-transform hover:scale-[1.02]
+                  focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-bright focus-visible:ring-offset-2"
+              >
+                Volver a mi progreso
+              </Link>
+              <button
+                type="button"
+                onClick={handleNewTest}
+                className="rounded-full px-5 py-3 text-[14px] font-semibold text-slate-600 transition-colors hover:text-slate-900
+                  focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-bright"
+              >
+                Otra ronda
+              </button>
+            </>
+          )}
         </div>
       </div>
     </Layout>
