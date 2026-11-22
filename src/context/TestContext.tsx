@@ -32,6 +32,8 @@ interface TestContextValue extends TestState {
   selectAnswer: (answer: AnswerKey) => void;
   confirmAnswer: () => void;
   nextQuestion: () => void;
+  /** Back to the same question after tutoring, without advancing. */
+  reintentarPregunta: () => void;
   resetTest: () => void;
   getCurrentQuestion: () => IcfesItem | null;
   isLastQuestion: () => boolean;
@@ -187,6 +189,19 @@ export function TestProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  /* The first answer is already recorded and still counts: what the
+     learner knew before the explanation is the honest measure. This
+     only clears the selection so they can work through it again, and
+     restarts the clock so the retry is timed on its own. */
+  const reintentarPregunta = useCallback(() => {
+    inicioPreguntaRef.current = Date.now();
+    setState((prev) => {
+      const next = { ...prev, selectedAnswer: null };
+      saveStateToSession(next);
+      return next;
+    });
+  }, []);
+
   const setStudySessionId = useCallback((sessionId: string | null) => {
     setState((prev) => {
       const next = { ...prev, studySessionId: sessionId };
@@ -236,6 +251,7 @@ export function TestProvider({ children }: { children: ReactNode }) {
         selectAnswer,
         confirmAnswer,
         nextQuestion,
+        reintentarPregunta,
         resetTest,
         getCurrentQuestion,
         isLastQuestion,

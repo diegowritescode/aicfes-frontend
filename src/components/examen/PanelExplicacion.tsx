@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { motion } from 'motion/react';
-import { ArrowRight, Check, X } from 'lucide-react';
+import { ArrowRight, Check, MessageCircleQuestion, X } from 'lucide-react';
 import { IcfesItem, AnswerKey } from '@/types/icfes';
 
 /**
@@ -25,12 +25,15 @@ export function PanelExplicacion({
   acerto,
   esUltima,
   onSiguiente,
+  onRepasar,
 }: {
   item: IcfesItem;
   elegida: AnswerKey;
   acerto: boolean;
   esUltima: boolean;
   onSiguiente: () => void;
+  /** Open the tutor. Only offered after a wrong answer. */
+  onRepasar?: () => void;
 }) {
   const botonRef = useRef<HTMLButtonElement | null>(null);
 
@@ -84,7 +87,22 @@ export function PanelExplicacion({
         </p>
       </div>
 
-      <div className="mt-6 flex justify-end">
+      <div className="mt-6 flex flex-wrap items-center justify-end gap-3">
+        {/* Only on a wrong answer, and placed before "siguiente": the
+            explanation above says what the right answer is, and this
+            is for the learner who still does not see why. */}
+        {!acerto && onRepasar ? (
+          <button
+            type="button"
+            onClick={onRepasar}
+            className="inline-flex items-center gap-2 rounded-full border border-slate-300 px-5 py-3 text-[14px] font-semibold text-slate-700
+              transition-colors hover:bg-white
+              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-bright"
+          >
+            <MessageCircleQuestion aria-hidden className="h-4 w-4" />
+            No entiendo por qué
+          </button>
+        ) : null}
         <button
           type="button"
           ref={botonRef}

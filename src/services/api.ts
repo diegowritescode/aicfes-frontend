@@ -988,3 +988,78 @@ export async function checkHealth(): Promise<boolean> {
     return false;
   }
 }
+
+/* ── Tutoría ─────────────────────────────────────────────────────
+   The conversation about a question the learner just got wrong.
+   Opening it costs nothing and returns at once: the server answers
+   from the explanation the item already carries. Only sending a
+   message calls a model. */
+
+export interface MensajeTutoria {
+  autor: 'estudiante' | 'tutor';
+  contenido: string;
+  createdAt: string;
+}
+
+export interface EstadoTutoria {
+  id: string;
+  mensajes: MensajeTutoria[];
+  turnosUsados: number;
+  turnosRestantes: number;
+  /** True until the learner has said why they chose what they chose. */
+  esperaDefensa: boolean;
+}
+
+interface RespuestaTutoria {
+  success: boolean;
+  data?: EstadoTutoria;
+  error?: { code: string; message: string };
+}
+
+async function pedirTutoria(
+  ruta: string,
+  cuerpo?: Record<string, unknown>,
+): Promise<RespuestaTutoria> {
+  try {
+    const response = cuerpo
+      ? await apiClient.post(ruta, cuerpo)
+      : await apiClient.get(ruta);
+    const data = response.data as {
+      ok?: boolean;
+      data?: EstadoTutoria;
+      error?: { code: string; message: string };
+    };
+    if (!data.ok) {
+      return {
+        success: false,
+        error: data.error || { code: 'TUTORIA_ERROR', message: 'No se pudo abrir la tutoría.' },
+      };
+    }
+    return { success: true, data: data.data };
+  } catch (error) {
+    const fallo = error as AxiosError<{ error?: { code: string; message: string } }>;
+    return {
+      success: false,
+      error: fallo.response?.data?.error || {
+        code: 'TUTORIA_ERROR',
+        message: fallo.message || 'No se pudo contactar al tutor.',
+      },
+    };
+  }
+}
+
+export function abrirTutoria(itemId: string, opcionElegida: string) {
+  return pedirTutoria(`/api/tutoria/${itemId}/abrir`, { opcionElegida });
+}
+
+export function enviarDefensa(itemId: string, defensa: string) {
+  return pedirTutoria(`/api/tutoria/${itemId}/defensa`, { defensa });
+}
+
+export function enviarMensajeTutoria(itemId: string, mensaje: string) {
+  return pedirTutoria(`/api/tutoria/${itemId}/mensaje`, { mensaje });
+}
+
+export function marcarTutoriaResuelta(itemId: string) {
+  return pedirTutoria(`/api/tutoria/${itemId}/resuelto`, {});
+}

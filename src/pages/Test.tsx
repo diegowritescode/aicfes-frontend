@@ -9,6 +9,8 @@ import { Enunciado } from '@/components/examen/Enunciado';
 import { OpcionRespuesta, EstadoOpcion } from '@/components/examen/OpcionRespuesta';
 import { BarraExamen } from '@/components/examen/BarraExamen';
 import { PanelExplicacion } from '@/components/examen/PanelExplicacion';
+import { ModalTutoria } from '@/components/examen/ModalTutoria';
+import { marcarTutoriaResuelta } from '@/services/api';
 import { API_BASE_URL, getStoredAuth, heartbeatStudySession, startStudySession } from '@/services/api';
 
 const LETRAS = ['A', 'B', 'C', 'D'] as const;
@@ -24,6 +26,7 @@ export default function Test() {
     selectAnswer,
     confirmAnswer,
     nextQuestion,
+    reintentarPregunta,
     getCurrentQuestion,
     isLastQuestion,
     testStartTime,
@@ -39,6 +42,11 @@ export default function Test() {
   const [respondida, setRespondida] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [confirmarSalida, setConfirmarSalida] = useState(false);
+  const [tutoriaAbierta, setTutoriaAbierta] = useState(false);
+  /* The option that opened the tutor. Kept apart from selectedAnswer,
+     which gets cleared on a retry while the conversation is still
+     about the original mistake. */
+  const [opcionTutoria, setOpcionTutoria] = useState<AnswerKey | null>(null);
   const heartbeatIntervalRef = useRef<number | null>(null);
   const hasTimedOutRef = useRef(false);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -234,9 +242,23 @@ export default function Test() {
 
   const handleSubmitAnswer = useCallback(() => {
     if (!selectedAnswer || bloqueado) return;
+
+    /* Getting it right after being tutored closes that conversation.
+       Recorded separately from a first-try correct answer: "lo sacó
+       tras explicárselo" is a different thing to know about a learner
+       than "lo sabía". */
+    if (
+      opcionTutoria &&
+      currentQuestion?.id &&
+      selectedAnswer === currentQuestion.respuesta_correcta
+    ) {
+      void marcarTutoriaResuelta(currentQuestion.id);
+      setOpcionTutoria(null);
+    }
+
     confirmAnswer();
     setRespondida(true);
-  }, [selectedAnswer, bloqueado, confirmAnswer]);
+  }, [selectedAnswer, bloqueado, confirmAnswer, opcionTutoria, currentQuestion]);
 
   const handleNext = useCallback(() => {
     setRespondida(false);
@@ -365,6 +387,14 @@ export default function Test() {
               acerto={acerto}
               esUltima={isLastQuestion()}
               onSiguiente={handleNext}
+              onRepasar={
+                currentQuestion.id
+                  ? () => {
+                      setOpcionTutoria(selectedAnswer);
+                      setTutoriaAbierta(true);
+                    }
+                  : undefined
+              }
             />
           ) : (
             <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
@@ -401,6 +431,23 @@ export default function Test() {
           )}
         </div>
       </main>
+
+      {tutoriaAbierta && currentQuestion.id && opcionTutoria ? (
+        <ModalTutoria
+          itemId={currentQuestion.id}
+          opcionElegida={opcionTutoria}
+          onSaltar={() => setTutoriaAbierta(false)}
+          onReintentar={() => {
+            setTutoriaAbierta(false);
+            /* Back to the same question, options live again. The first
+               answer stays recorded: what the learner knew before the
+               explanation is the honest measure, and overwriting it
+               would make the profile read better than the student. */
+            setRespondida(false);
+            reintentarPregunta();
+          }}
+        />
+      ) : null}
 
       {/* Leaving used to be a single unguarded click on the logo. */}
       <Modal
