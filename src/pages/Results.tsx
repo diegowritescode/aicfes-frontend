@@ -39,6 +39,10 @@ export default function Results() {
   const [feedbackLoading, setFeedbackLoading] = useState(false);
   const [feedbackError, setFeedbackError] = useState<{ code?: string; message: string } | null>(null);
   const [sessionCompleted, setSessionCompleted] = useState(false);
+  /* True when the answers could not be stored. Worth saying out
+     loud: a silent loss means the weakness profile never learns
+     from the session the learner just did. */
+  const [guardadoFallido, setGuardadoFallido] = useState(false);
   const feedbackCacheKey = studySessionId ? `aicfes_feedback_${studySessionId}` : null;
   const sessionCompletedKey = studySessionId ? `aicfes_session_completed_${studySessionId}` : null;
   const answersPostedKey = studySessionId ? `aicfes_answers_posted_${studySessionId}` : null;
@@ -141,10 +145,26 @@ export default function Results() {
 
   useEffect(() => {
     if (sessionPostedRef.current) return;
-    if (results.total === 0 || !testStartTime) return;
+    if (results.total === 0) return;
 
+    /* A missing start time used to abort this effect entirely, so the
+       session was never created, the answers were never sent, and
+       nothing said so: the page showed the score from memory while the
+       server learned nothing. Any route into the results that does not
+       pass through the timer — a reload, a direct link — lost the whole
+       session that way.
+
+       The answers are the thing worth keeping, so a missing start time
+       now costs only the duration, which is estimated from the answers
+       themselves. */
     const endedAt = getServerNow();
-    const durationSeconds = Math.max(0, Math.floor((endedAt.getTime() - testStartTime.getTime()) / 1000));
+    const inicio =
+      testStartTime ??
+      (() => {
+        const primera = results.answersHistory[0]?.answeredAt;
+        return primera ? new Date(primera) : endedAt;
+      })();
+    const durationSeconds = Math.max(0, Math.floor((endedAt.getTime() - inicio.getTime()) / 1000));
     sessionPostedRef.current = true;
 
     const finalize = async () => {
@@ -183,7 +203,7 @@ export default function Results() {
           area: testArea || undefined,
           dificultad: testDifficulty || undefined,
           tema: testTopic || undefined,
-          startedAt: testStartTime.toISOString(),
+          startedAt: inicio.toISOString(),
         });
         if (started.success && started.data?.sessionId) {
           sessionId = started.data.sessionId;
@@ -216,7 +236,7 @@ export default function Results() {
           area: testArea || undefined,
           dificultad: testDifficulty || undefined,
           tema: testTopic || undefined,
-          startedAt: testStartTime.toISOString(),
+          startedAt: inicio.toISOString(),
           endedAt: endedAt.toISOString(),
           durationSeconds,
           totalQuestions: questions.length || results.total,
@@ -254,8 +274,14 @@ export default function Results() {
 
       if (answersPayload.length > 0) {
         try {
-          await postAnswers(answersPayload);
-          if (answersPostedKey) {
+          /* The result was being discarded, so a rejected batch was
+             then marked as sent and never retried. The learner's
+             answers were simply gone, and the page showed their score
+             from memory as if everything had been recorded. */
+          const enviado = await postAnswers(answersPayload);
+          if (!enviado.success) {
+            setGuardadoFallido(true);
+          } else if (answersPostedKey) {
             try {
               sessionStorage.setItem(answersPostedKey, 'true');
             } catch {
@@ -386,6 +412,15 @@ export default function Results() {
   return (
     <Layout>
       <div className="mx-auto max-w-3xl px-4 py-8 lg:py-12">
+        {guardadoFallido ? (
+          <div className="mb-5">
+            <ErrorAlert
+              title="No pudimos guardar sus respuestas"
+              message="Vemos sus resultados aquí, pero no quedaron registrados en su progreso. Revise su conexión y vuelva a entrar a esta pantalla."
+            />
+          </div>
+        ) : null}
+
         {/* The score, first and alone. The old page opened with three
             cards for total, correct and incorrect — two numbers
             stretched into three tiles, with the one figure that
