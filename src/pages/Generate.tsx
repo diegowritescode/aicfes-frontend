@@ -5,8 +5,6 @@ import { generateMixedItems } from '@/services/api';
 import { Area, Dificultad, AREA_LABELS, DIFICULTAD_LABELS } from '@/types/icfes';
 import { Layout } from '@/components/Layout';
 import { ErrorAlert } from '@/components/ErrorAlert';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -16,9 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { GraduationCap, Loader2, Zap, Gauge, Flame, Shuffle } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { GeneratorSkeleton } from '@/components/LoadingSkeleton';
+import { Loader2 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 
 const AREAS: Area[] = ['MAT', 'LC', 'CN', 'SOC', 'ING'];
@@ -139,8 +135,12 @@ export default function Generate() {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    void generar();
+  };
+
+  const generar = async () => {
     setError(null);
 
     if (validSections.length === 0) {
@@ -205,257 +205,216 @@ export default function Generate() {
     setIsLoading(false);
   };
 
+  const excede = totalRequested > MAX_ITEMS;
+
   return (
     <Layout>
-      <div className="container mx-auto px-4 py-6 lg:py-10">
-        {/* Hero */}
-        <div className="mb-8 flex flex-col gap-4">
-          <Badge className="w-fit bg-primary/10 text-primary hover:bg-primary/20" variant="secondary">
-            Generación mixta
-          </Badge>
-          <h1 className="text-3xl font-bold text-foreground lg:text-4xl">
-            Arma tu prueba como un puzzle
+      <div className="mx-auto max-w-3xl px-4 py-8 lg:py-10">
+        <header className="mb-7">
+          <h1 className="text-[1.75rem] leading-tight font-extrabold tracking-tight text-slate-900">
+            Practicar un tema
           </h1>
-          <p className="text-sm text-muted-foreground lg:text-base max-w-2xl">
-            Combina areas y dificultades para crear una sesion unica. Tu decides el mix de preguntas.
+          <p className="mt-1.5 max-w-xl text-[14.5px] leading-relaxed text-slate-600">
+            Elija el área, qué tan difícil la quiere y cuántas preguntas. Puede mezclar
+            varias áreas en una misma práctica.
           </p>
-        </div>
+        </header>
 
-        <div className="grid gap-6 lg:grid-cols-3 mb-12">
-          {isLoading ? (
-            <div className="lg:col-span-2">
-              <GeneratorSkeleton />
-            </div>
-          ) : (
-            <Card className="shadow-lg lg:col-span-2">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Zap className="h-4 w-4 text-primary" />
-                Construir prueba
-              </CardTitle>
-              <CardDescription className="text-xs">
-                Agrega secciones con area, dificultad y cantidad.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="space-y-3">
-                  {sections.map((section, index) => (
-                    <div key={section.id} className="rounded-lg border border-border p-3">
-                      <div className="flex items-center justify-between mb-3">
-                        <p className="text-xs font-semibold text-muted-foreground">
-                          Seccion {index + 1}
-                        </p>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => removeSection(section.id)}
-                          disabled={sections.length === 1}
-                        >
-                          Quitar
-                        </Button>
-                      </div>
-
-                      <div className="grid gap-3 md:grid-cols-4">
-                        <div>
-                          <Label className="text-xs">Area</Label>
-                          <Select
-                            value={section.area}
-                            onValueChange={(value) => updateSection(section.id, { area: value as Area })}
-                            disabled={isLoading}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Selecciona" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {AREAS.map((a) => (
-                                <SelectItem key={a} value={a}>
-                                  {AREA_LABELS[a]}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        <div>
-                          <Label className="text-xs">Dificultad</Label>
-                          <Select
-                            value={section.dificultad}
-                            onValueChange={(value) => updateSection(section.id, { dificultad: value as Dificultad })}
-                            disabled={isLoading}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Selecciona" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {DIFICULTADES.map((d) => (
-                                <SelectItem key={d} value={d}>
-                                  {DIFICULTAD_LABELS[d]}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        <div>
-                          <Label className="text-xs">Cantidad</Label>
-                          <Input
-                            className="text-sm"
-                            type="number"
-                            min={1}
-                            max={MAX_ITEMS}
-                            value={section.n}
-                            onChange={(e) => updateSection(section.id, { n: Math.max(1, parseInt(e.target.value) || 1) })}
-                            disabled={isLoading}
-                          />
-                        </div>
-
-                        <div>
-                          <Label className="text-xs">Tema (opcional)</Label>
-                          <Input
-                            className="text-sm"
-                            placeholder="Ej: Algebra"
-                            value={section.tema}
-                            onChange={(e) => updateSection(section.id, { tema: e.target.value })}
-                            disabled={isLoading}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <Button type="button" variant="outline" size="sm" onClick={addSection} disabled={isLoading}>
-                    Agregar seccion
-                  </Button>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    Total: {totalRequested} / {MAX_ITEMS}
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2">
-                  <div className="flex items-center gap-2 text-sm text-foreground">
-                    <Shuffle className="h-4 w-4 text-primary" />
-                    Mezclar preguntas al final
-                  </div>
-                  <Switch checked={shuffle} onCheckedChange={setShuffle} />
-                </div>
-
-                {error && (
-                  <ErrorAlert
-                    title="Error al generar"
-                    message={error.message}
-                    code={error.code}
-                    onRetry={() => setError(null)}
-                  />
-                )}
-
-                {isLoading && (
-                  <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      <span className="font-medium">Generando preguntas...</span>
-                    </div>
-                    <p className="text-blue-700 text-xs">
-                      Esto puede tardar un poco mientras la IA genera las preguntas. Por favor, espera.
-                    </p>
-                    <Button
+        {/* While the questions are being written there is one place to
+            look. The old page showed a skeleton, a blue notice, a
+            sidebar card and a loading button all at once, plus a
+            progress bar computed as 5 + seconds * 3 that measured
+            nothing and stuck at 90%. A bar that does not track real
+            progress tells the learner less than the clock does. */}
+        {isLoading ? (
+          <section
+            aria-live="polite"
+            className="rounded-3xl border border-brand-soft bg-gradient-to-br from-wash/80 to-white p-8 text-center"
+          >
+            <Loader2 aria-hidden className="mx-auto h-7 w-7 animate-spin text-brand-bright" />
+            <h2 className="mt-4 text-[17px] font-bold text-slate-900">
+              Estamos escribiendo sus preguntas
+            </h2>
+            <p className="mx-auto mt-2 max-w-sm text-[14px] leading-relaxed text-slate-600">
+              Cada pregunta se escribe y se revisa una por una, así que suele tardar entre
+              medio minuto y dos minutos. No cierre esta pestaña.
+            </p>
+            <p className="mt-5 font-mono text-[22px] tabular-nums text-slate-700">
+              {formatElapsed(elapsedSeconds)}
+            </p>
+            <button
+              type="button"
+              onClick={handleCancel}
+              className="mt-6 rounded-full border border-slate-300 px-6 py-2.5 text-[14px] font-semibold text-slate-700
+                transition-colors hover:bg-slate-50
+                focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-bright"
+            >
+              Cancelar
+            </button>
+          </section>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {sections.map((section, index) => (
+              <fieldset
+                key={section.id}
+                className="rounded-2xl border border-slate-200 bg-white p-5"
+              >
+                <div className="mb-4 flex items-center justify-between">
+                  <legend className="text-[13px] font-bold text-slate-900">
+                    {sections.length > 1 ? `Bloque ${index + 1}` : 'Qué quiere practicar'}
+                  </legend>
+                  {sections.length > 1 ? (
+                    <button
                       type="button"
-                      variant="secondary"
-                      size="sm"
-                      className="mt-3 w-full"
-                      onClick={handleCancel}
+                      onClick={() => removeSection(section.id)}
+                      className="rounded px-2 py-1 text-[13px] font-semibold text-slate-500 transition-colors
+                        hover:text-rose-600
+                        focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-bright"
                     >
-                      Cancelar generacion
-                    </Button>
-                  </div>
-                )}
+                      Quitar
+                    </button>
+                  ) : null}
+                </div>
 
-                <Button
-                  type="submit"
-                  size="sm"
-                  className="w-full mt-2"
-                  disabled={isLoading || validSections.length === 0 || totalRequested > MAX_ITEMS}
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                      Generando preguntas...
-                    </>
-                  ) : (
-                    <>
-                      <GraduationCap className="h-5 w-5 mr-2" />
-                      Generar prueba
-                    </>
-                  )}
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
-          )}
-
-          <div className="space-y-4">
-            {isLoading ? (
-              <Card className="border-blue-200 bg-blue-50/70">
-                <CardHeader>
-                  <CardTitle className="text-sm flex items-center gap-2 text-blue-800">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Generando tu prueba
-                  </CardTitle>
-                  <CardDescription className="text-xs text-blue-700">
-                    Espera mientras se construye el mix de preguntas.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  <div className="flex items-center justify-between text-xs text-blue-700">
-                    <span>Tiempo: {formatElapsed(elapsedSeconds)}</span>
-                    <span>{Math.min(90, 5 + elapsedSeconds * 3)}%</span>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <Label htmlFor={`area-${section.id}`} className="text-[13px] font-medium text-slate-700">
+                      Área
+                    </Label>
+                    <Select
+                      value={section.area}
+                      onValueChange={(value) => updateSection(section.id, { area: value as Area })}
+                    >
+                      <SelectTrigger id={`area-${section.id}`} className="mt-1.5">
+                        <SelectValue placeholder="Elija un área" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {AREAS.map((a) => (
+                          <SelectItem key={a} value={a}>
+                            {AREA_LABELS[a]}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
-                  <div className="h-2 w-full rounded-full bg-blue-100 overflow-hidden">
-                    <div
-                      className="h-full bg-gradient-to-r from-blue-500 via-indigo-500 to-sky-400 transition-all duration-500"
-                      style={{ width: `${Math.min(90, 5 + elapsedSeconds * 3)}%` }}
+
+                  <div>
+                    <Label htmlFor={`dif-${section.id}`} className="text-[13px] font-medium text-slate-700">
+                      Qué tan difícil
+                    </Label>
+                    <Select
+                      value={section.dificultad}
+                      onValueChange={(value) => updateSection(section.id, { dificultad: value as Dificultad })}
+                    >
+                      <SelectTrigger id={`dif-${section.id}`} className="mt-1.5">
+                        <SelectValue placeholder="Elija el nivel" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {DIFICULTADES.map((d) => (
+                          <SelectItem key={d} value={d}>
+                            {DIFICULTAD_LABELS[d]}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Label htmlFor={`n-${section.id}`} className="text-[13px] font-medium text-slate-700">
+                      Cuántas preguntas
+                    </Label>
+                    <Input
+                      id={`n-${section.id}`}
+                      className="mt-1.5"
+                      type="number"
+                      min={1}
+                      max={MAX_ITEMS}
+                      value={section.n}
+                      onChange={(e) =>
+                        updateSection(section.id, { n: Math.max(1, parseInt(e.target.value) || 1) })
+                      }
                     />
                   </div>
-                </CardContent>
-              </Card>
-            ) : (
-              <>
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Gauge className="h-5 w-5 text-primary" />
-                      Beneficios
-                    </CardTitle>
-                    <CardDescription>Sesiones rápidas y enfocadas.</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-3 text-sm text-muted-foreground">
-                    <p>Arma combinaciones reales como en el examen.</p>
-                    <p>Control total de dificultad y cantidad.</p>
-                    <p>Resultados y explicaciones al instante.</p>
-                  </CardContent>
-                </Card>
 
-                <Card className="border-primary/20 bg-primary/5">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Flame className="h-5 w-5 text-primary" />
-                      Reto sugerido
-                    </CardTitle>
-                    <CardDescription>Completa 3 secciones hoy.</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground">
-                      Gana +80 XP y sube tu racha semanal.
+                  <div>
+                    <Label htmlFor={`tema-${section.id}`} className="text-[13px] font-medium text-slate-700">
+                      Tema <span className="font-normal text-slate-400">(opcional)</span>
+                    </Label>
+                    <Input
+                      id={`tema-${section.id}`}
+                      className="mt-1.5"
+                      placeholder="Por ejemplo: álgebra"
+                      value={section.tema}
+                      onChange={(e) => updateSection(section.id, { tema: e.target.value })}
+                    />
+                    <p className="mt-1.5 text-[12px] text-slate-500">
+                      Déjelo vacío para ver de todo el área
                     </p>
-                  </CardContent>
-                </Card>
-              </>
-            )}
-          </div>
-        </div>
+                  </div>
+                </div>
+              </fieldset>
+            ))}
+
+            <div className="flex flex-wrap items-center justify-between gap-3 px-1">
+              <button
+                type="button"
+                onClick={addSection}
+                className="rounded-full border border-slate-300 px-5 py-2 text-[13.5px] font-semibold text-slate-700
+                  transition-colors hover:bg-slate-50
+                  focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-bright"
+              >
+                Añadir otra área
+              </button>
+
+              {/* The limit used to be silent until submit, when it
+                  came back as an error. It is now live beside the
+                  count. */}
+              <p
+                aria-live="polite"
+                className={`text-[13.5px] font-semibold tabular-nums ${
+                  excede ? 'text-rose-600' : 'text-slate-500'
+                }`}
+              >
+                {totalRequested} de {MAX_ITEMS} preguntas
+                {excede ? ' · son demasiadas' : ''}
+              </p>
+            </div>
+
+            <label className="flex cursor-pointer items-center justify-between rounded-2xl border border-slate-200 bg-white px-5 py-4">
+              <span>
+                <span className="block text-[14px] font-semibold text-slate-900">
+                  Mezclar las preguntas
+                </span>
+                <span className="mt-0.5 block text-[12.5px] text-slate-500">
+                  Como en el examen real, donde las áreas vienen revueltas
+                </span>
+              </span>
+              <Switch checked={shuffle} onCheckedChange={setShuffle} />
+            </label>
+
+            {error ? (
+              <ErrorAlert
+                title="No pudimos armar la práctica"
+                message={error.message}
+                code={error.code}
+                onRetry={() => void generar()}
+              />
+            ) : null}
+
+            <button
+              type="submit"
+              disabled={validSections.length === 0 || excede}
+              className="w-full rounded-full bg-brand-bright px-7 py-3.5 text-[15px] font-semibold text-white
+                shadow-[0_6px_20px_-6px_hsl(var(--brand-bright))] transition-transform hover:scale-[1.01]
+                focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-bright focus-visible:ring-offset-2
+                disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:hover:scale-100"
+            >
+              {validSections.length === 0
+                ? 'Elija un área y un nivel para empezar'
+                : `Empezar con ${totalRequested} ${totalRequested === 1 ? 'pregunta' : 'preguntas'}`}
+            </button>
+          </form>
+        )}
       </div>
     </Layout>
   );
