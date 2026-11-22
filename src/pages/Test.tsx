@@ -1,16 +1,17 @@
-import { useMemo, useState, useEffect, useRef } from 'react';
+import { useMemo, useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTest } from '@/context/TestContext';
 import { AnswerKey } from '@/types/icfes';
-import { QuestionCard } from '@/components/QuestionCard';
-import { AnswerOption } from '@/components/AnswerOption';
-import { FeedbackModal } from '@/components/FeedbackModal';
 import { QuestionSkeleton } from '@/components/LoadingSkeleton';
+import { Modal } from '@/components/Modal';
 import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
-import { GraduationCap, Clock, Timer } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Enunciado } from '@/components/examen/Enunciado';
+import { OpcionRespuesta, EstadoOpcion } from '@/components/examen/OpcionRespuesta';
+import { BarraExamen } from '@/components/examen/BarraExamen';
+import { PanelExplicacion } from '@/components/examen/PanelExplicacion';
 import { API_BASE_URL, getStoredAuth, heartbeatStudySession, startStudySession } from '@/services/api';
+
+const LETRAS = ['A', 'B', 'C', 'D'] as const;
 
 export default function Test() {
   const navigate = useNavigate();
@@ -35,16 +36,16 @@ export default function Test() {
     timeLimitSeconds,
   } = useTest();
 
-  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
-  const [isAnswerRevealed, setIsAnswerRevealed] = useState(false);
+  const [respondida, setRespondida] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(0);
+  const [confirmarSalida, setConfirmarSalida] = useState(false);
   const heartbeatIntervalRef = useRef<number | null>(null);
   const hasTimedOutRef = useRef(false);
   const audioContextRef = useRef<AudioContext | null>(null);
   const lastTickRef = useRef<number | null>(null);
+  const opcionesRef = useRef<Record<string, HTMLButtonElement | null>>({});
 
   const currentQuestion = getCurrentQuestion();
-  const progress = ((currentQuestionIndex + 1) / questions.length) * 100;
 
   // Redirect if no active test
   useEffect(() => {
@@ -158,27 +159,6 @@ export default function Test() {
     };
   }, [studySessionId, testStartTime]);
 
-  // Keyboard shortcuts: A/B/C/D to select, Enter to submit
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (!currentQuestion) return;
-      if (isAnswerRevealed) return;
-      const key = e.key.toLowerCase();
-      if (['a', 'b', 'c', 'd'].includes(key)) {
-        const mapped = key.toUpperCase() as AnswerKey;
-        selectAnswer(mapped);
-      }
-      if (e.key === 'Enter') {
-        if (selectedAnswer) {
-          e.preventDefault();
-          handleSubmitAnswer();
-        }
-      }
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [currentQuestion, isAnswerRevealed, selectedAnswer, selectAnswer]);
-
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -190,25 +170,9 @@ export default function Test() {
     return Math.max(0, timeLimitSeconds - elapsedTime);
   }, [timeLimitSeconds, elapsedTime]);
 
-  const remainingRatio = useMemo(() => {
-    if (!timeLimitSeconds || remainingSeconds === null) return null;
-    return Math.max(0, Math.min(1, remainingSeconds / timeLimitSeconds));
-  }, [remainingSeconds, timeLimitSeconds]);
-
-  const timeBarClass = useMemo(() => {
-    if (remainingRatio === null) return 'bg-primary';
-    if (remainingRatio <= 0.2) return 'bg-destructive';
-    if (remainingRatio <= 0.4) return 'bg-amber-500';
-    return 'bg-emerald-500';
-  }, [remainingRatio]);
-
-  const timePanicClass = useMemo(() => {
-    if (remainingSeconds === null) return '';
-    if (remainingSeconds <= 10) return 'animate-time-panic-intense';
-    if (remainingSeconds <= 20) return 'animate-time-panic';
-    return '';
-  }, [remainingSeconds]);
-
+  /* The ticking clock plays only in contrarreloj, where the learner
+     opted into a timed drill and the sound is the point. It is kept
+     exactly as it was. */
   useEffect(() => {
     if (!timeLimitSeconds || testMode !== 'contrarreloj') return;
     if (remainingSeconds === null || remainingSeconds <= 0) return;
@@ -254,160 +218,207 @@ export default function Test() {
     if (remainingSeconds > 0) return;
     if (hasTimedOutRef.current) return;
     hasTimedOutRef.current = true;
-    setIsAnswerRevealed(true);
+    setRespondida(true);
     navigate('/results');
   }, [remainingSeconds, timeLimitSeconds, navigate]);
 
-  const handleAnswerClick = (key: AnswerKey) => {
-    if (isAnswerRevealed || (timeLimitSeconds && remainingSeconds === 0)) return;
-    selectAnswer(key);
-  };
+  const bloqueado = respondida || (timeLimitSeconds !== null && remainingSeconds === 0);
 
-  const handleSubmitAnswer = () => {
-    if (!selectedAnswer) return;
-    if (timeLimitSeconds && remainingSeconds === 0) return;
+  const handleAnswerClick = useCallback(
+    (key: AnswerKey) => {
+      if (bloqueado) return;
+      selectAnswer(key);
+    },
+    [bloqueado, selectAnswer]
+  );
+
+  const handleSubmitAnswer = useCallback(() => {
+    if (!selectedAnswer || bloqueado) return;
     confirmAnswer();
-    setIsAnswerRevealed(true);
-    // Show feedback after a brief delay
-    setTimeout(() => {
-      setShowFeedbackModal(true);
-    }, 500);
-  };
+    setRespondida(true);
+  }, [selectedAnswer, bloqueado, confirmAnswer]);
 
-  const handleNext = () => {
-    setShowFeedbackModal(false);
-    setIsAnswerRevealed(false);
-    
+  const handleNext = useCallback(() => {
+    setRespondida(false);
     if (isLastQuestion()) {
       navigate('/results');
     } else {
       nextQuestion();
     }
-  };
+  }, [isLastQuestion, navigate, nextQuestion]);
 
-  const handleFinish = () => {
-    setShowFeedbackModal(false);
-    navigate('/results');
-  };
+  /* Keyboard: A–D choose, arrows move through the group, Enter
+     submits. Arrow support is new — a radiogroup that ignores arrow
+     keys is broken by every accessibility guideline there is, and
+     the shortcuts are now printed on screen so they are findable
+     rather than secret. */
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (!currentQuestion || bloqueado) return;
+      const objetivo = e.target as HTMLElement | null;
+      if (objetivo && /^(INPUT|TEXTAREA|SELECT)$/.test(objetivo.tagName)) return;
+
+      const key = e.key.toLowerCase();
+      if (['a', 'b', 'c', 'd'].includes(key)) {
+        e.preventDefault();
+        const letra = key.toUpperCase() as AnswerKey;
+        selectAnswer(letra);
+        opcionesRef.current[letra]?.focus();
+        return;
+      }
+
+      if (['ArrowDown', 'ArrowRight', 'ArrowUp', 'ArrowLeft'].includes(e.key)) {
+        e.preventDefault();
+        const paso = e.key === 'ArrowDown' || e.key === 'ArrowRight' ? 1 : -1;
+        const actual = selectedAnswer ? LETRAS.indexOf(selectedAnswer) : -1;
+        const siguiente = (actual + paso + LETRAS.length) % LETRAS.length;
+        const letra = LETRAS[siguiente];
+        selectAnswer(letra);
+        opcionesRef.current[letra]?.focus();
+        return;
+      }
+
+      if (e.key === 'Enter' && selectedAnswer) {
+        e.preventDefault();
+        handleSubmitAnswer();
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [currentQuestion, bloqueado, selectedAnswer, selectAnswer, handleSubmitAnswer]);
 
   if (!currentQuestion) {
     return (
-      <div className="min-h-screen bg-background p-4 lg:p-8">
+      <div className="min-h-screen bg-wash/40 p-4 lg:p-8">
         <QuestionSkeleton />
       </div>
     );
   }
 
   const lastAnswer = answersHistory[answersHistory.length - 1];
-  const isCorrect = lastAnswer?.isCorrect ?? false;
+  const acerto = lastAnswer?.isCorrect ?? false;
+
+  const estadoDe = (letra: AnswerKey): EstadoOpcion => {
+    if (!respondida) return 'pendiente';
+    if (letra === currentQuestion.respuesta_correcta) return 'correcta';
+    if (letra === selectedAnswer) return 'elegida-mal';
+    return 'descartada';
+  };
+
+  // The tab stop sits on the chosen option, or on A before anything
+  // is chosen, so Tab reaches the group once and arrows do the rest.
+  const letraFoco = selectedAnswer ?? 'A';
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      {/* Top Bar */}
-      <header className="sticky top-0 z-10 bg-card border-b border-border shadow-sm">
-        <div className="container mx-auto px-4 py-3">
-          <div className="flex items-center justify-between">
-            <Link to="/" className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
-              <GraduationCap className="h-5 w-5" />
-              <span className="text-sm font-medium hidden sm:inline">AICFES</span>
-            </Link>
+    <div className="flex min-h-screen flex-col bg-wash/40">
+      <BarraExamen
+        numero={currentQuestionIndex + 1}
+        total={questions.length}
+        tiempo={formatTime(elapsedTime)}
+        limite={timeLimitSeconds ?? null}
+        restante={
+          remainingSeconds !== null
+            ? { texto: formatTime(remainingSeconds), segundos: remainingSeconds }
+            : null
+        }
+        onSalir={() => setConfirmarSalida(true)}
+      />
 
-            <div className="flex-1 max-w-md mx-4">
-              {remainingSeconds !== null && (
-                <div className="mb-3">
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
-                    <Timer className="h-3.5 w-3.5 text-destructive" />
-                    <span>Tiempo restante</span>
-                  </div>
-                  <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
-                    <div
-                      className={`h-full transition-all duration-500 ${timeBarClass} ${timePanicClass} ${remainingSeconds !== null && remainingSeconds <= 10 ? 'shadow-[0_0_10px_rgba(239,68,68,0.7)]' : ''}`}
-                      style={{ width: `${(remainingRatio || 0) * 100}%` }}
-                    />
-                  </div>
-                </div>
-              )}
-              <div className="flex items-center gap-3">
-                <span className="text-sm font-medium text-foreground whitespace-nowrap">
-                  {currentQuestionIndex + 1} / {questions.length}
-                </span>
-                <Progress value={progress} className="h-2" />
-              </div>
-            </div>
+      {/* Spoken once when a minute is left, for anyone who cannot see
+          the bar turn red. */}
+      <p aria-live="assertive" className="sr-only">
+        {remainingSeconds !== null && remainingSeconds <= 60 && remainingSeconds > 55
+          ? 'Queda un minuto.'
+          : ''}
+      </p>
 
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <Clock className="h-4 w-4" />
-              {remainingSeconds !== null ? (
-                <div className="flex items-center gap-2">
-                  <span
-                    className={`text-base font-mono ${timePanicClass} ${
-                      remainingSeconds <= 60 ? 'text-destructive' : ''
-                    } ${remainingSeconds <= 10 ? 'drop-shadow-[0_0_8px_rgba(239,68,68,0.6)]' : ''}`}
-                  >
-                    {formatTime(remainingSeconds)}
-                  </span>
-                  <span className="text-xs text-muted-foreground hidden sm:inline">
-                    / {formatTime(timeLimitSeconds || 0)}
-                  </span>
-                </div>
-              ) : (
-                <span className="text-sm font-mono">{formatTime(elapsedTime)}</span>
-              )}
-            </div>
-          </div>
-        </div>
-      </header>
+      <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-6 sm:py-8">
+        <div className="space-y-5">
+          <Enunciado item={currentQuestion} />
 
-      {/* Main Content */}
-      <main className={`flex-1 container mx-auto px-4 py-6 lg:py-8 max-w-3xl ${remainingSeconds !== null && remainingSeconds <= 10 ? 'animate-time-panic-bg' : ''}`}>
-        <div className="space-y-6 animate-fade-in">
-          <QuestionCard
-            item={currentQuestion}
-            questionNumber={currentQuestionIndex + 1}
-            totalQuestions={questions.length}
-          />
-
-          <div className="space-y-3">
-            {(['A', 'B', 'C', 'D'] as const).map((key) => (
-              <AnswerOption
-                key={key}
-                optionKey={key}
-                text={currentQuestion.opciones[key]}
-                isSelected={selectedAnswer === key}
-                isCorrect={key === currentQuestion.respuesta_correcta}
-                isRevealed={isAnswerRevealed}
-                isDisabled={isAnswerRevealed}
-                onClick={() => handleAnswerClick(key)}
+          <div
+            role="radiogroup"
+            aria-label={`Opciones de la pregunta ${currentQuestionIndex + 1}`}
+            className="space-y-3"
+          >
+            {LETRAS.map((letra) => (
+              <OpcionRespuesta
+                key={letra}
+                letra={letra}
+                texto={currentQuestion.opciones[letra]}
+                elegida={selectedAnswer === letra}
+                estado={estadoDe(letra)}
+                bloqueada={bloqueado}
+                esFoco={letraFoco === letra}
+                onElegir={() => handleAnswerClick(letra)}
+                refBoton={(nodo) => {
+                  opcionesRef.current[letra] = nodo;
+                }}
               />
             ))}
           </div>
 
-          {!isAnswerRevealed && (
-            <div className="flex justify-end pt-4">
-              <Button
-                size="lg"
+          {respondida && selectedAnswer ? (
+            <PanelExplicacion
+              item={currentQuestion}
+              elegida={selectedAnswer}
+              acerto={acerto}
+              esUltima={isLastQuestion()}
+              onSiguiente={handleNext}
+            />
+          ) : (
+            <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+              {/* The shortcuts were already implemented and entirely
+                  invisible. A feature nobody can discover is not a
+                  feature. */}
+              <p className="text-[12.5px] text-slate-500">
+                Teclas{' '}
+                <kbd className="rounded border border-slate-300 bg-white px-1.5 py-0.5 font-mono text-[11px] text-slate-600">
+                  A
+                </kbd>
+                –
+                <kbd className="rounded border border-slate-300 bg-white px-1.5 py-0.5 font-mono text-[11px] text-slate-600">
+                  D
+                </kbd>{' '}
+                para elegir,{' '}
+                <kbd className="rounded border border-slate-300 bg-white px-1.5 py-0.5 font-mono text-[11px] text-slate-600">
+                  Enter
+                </kbd>{' '}
+                para responder
+              </p>
+              <button
+                type="button"
                 onClick={handleSubmitAnswer}
                 disabled={!selectedAnswer}
+                className="rounded-full bg-brand-bright px-8 py-3 text-[14.5px] font-semibold text-white
+                  shadow-[0_6px_20px_-6px_hsl(var(--brand-bright))] transition-transform hover:scale-[1.02]
+                  focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-bright focus-visible:ring-offset-2
+                  disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:hover:scale-100"
               >
-                Enviar Respuesta
-              </Button>
+                Responder
+              </button>
             </div>
           )}
         </div>
       </main>
 
-      {/* Feedback Modal */}
-      {isAnswerRevealed && selectedAnswer && (
-        <FeedbackModal
-          open={showFeedbackModal}
-          item={currentQuestion}
-          selectedAnswer={selectedAnswer}
-          isCorrect={isCorrect}
-          isLastQuestion={isLastQuestion()}
-          onNext={handleNext}
-          onFinish={handleFinish}
-        />
-      )}
+      {/* Leaving used to be a single unguarded click on the logo. */}
+      <Modal
+        open={confirmarSalida}
+        onOpenChange={setConfirmarSalida}
+        title="¿Salir del examen?"
+        description={`Vas en la pregunta ${currentQuestionIndex + 1} de ${questions.length}. Si sales ahora, pierdes este intento.`}
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setConfirmarSalida(false)}>
+              Seguir respondiendo
+            </Button>
+            <Button variant="destructive" onClick={() => navigate('/dashboard')}>
+              Salir y perder el intento
+            </Button>
+          </>
+        }
+      />
     </div>
   );
 }
