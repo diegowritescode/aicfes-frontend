@@ -436,6 +436,17 @@ export default function Test() {
         <ModalTutoria
           itemId={currentQuestion.id}
           opcionElegida={opcionTutoria}
+          /* Only what is needed to re-read the question. The correct
+             answer is deliberately not among these fields: the panel
+             exists so the learner thinks it through again. */
+          pregunta={{
+            area: currentQuestion.area,
+            contexto: currentQuestion.contexto,
+            pregunta: currentQuestion.pregunta,
+            opciones: currentQuestion.opciones,
+            tieneFigura: Boolean(currentQuestion.figura),
+            figuraAlt: currentQuestion.figura?.alt,
+          }}
           onSaltar={() => setTutoriaAbierta(false)}
           onReintentar={() => {
             setTutoriaAbierta(false);

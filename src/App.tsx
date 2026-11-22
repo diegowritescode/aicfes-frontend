@@ -16,6 +16,9 @@ import TimeTrial from "./pages/TimeTrial";
 import Test from "./pages/Test";
 import Results from "./pages/Results";
 import Feedback from "./pages/Feedback";
+import SimulacroInicio from "./pages/SimulacroInicio";
+import Simulacro from "./pages/Simulacro";
+import SimulacroResultados from "./pages/SimulacroResultados";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -92,6 +95,33 @@ const App = () => (
                 element={
                   <ProtectedRoute>
                     <Feedback />
+                  </ProtectedRoute>
+                }
+              />
+              {/* The sitting: choosing one, running it, and its report.
+                  Landing and Login have promised simulacros for months
+                  with nothing behind the word. */}
+              <Route
+                path="/simulacro"
+                element={
+                  <ProtectedRoute>
+                    <SimulacroInicio />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/simulacro/:id"
+                element={
+                  <ProtectedRoute>
+                    <Simulacro />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/simulacro/:id/resultados"
+                element={
+                  <ProtectedRoute>
+                    <SimulacroResultados />
                   </ProtectedRoute>
                 }
               />

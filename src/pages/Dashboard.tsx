@@ -397,11 +397,20 @@ export default function Dashboard() {
             duracion="10 a 15 minutos"
             destacado={sinDatos}
           />
+          {/* This card used to point at /generacion-mixta, which is
+              practice with instant feedback — the opposite of a
+              sitting. The word promised one thing and opened another. */}
           <ModeCard
-            titulo="Simulacro"
-            descripcion="Las cinco áreas con el peso que tienen en el examen real."
+            titulo="Práctica mixta"
+            descripcion="Las cinco áreas mezcladas, corrigiendo pregunta por pregunta."
             to="/generacion-mixta"
             duracion="Lo que tengas disponible"
+          />
+          <ModeCard
+            titulo="Simulacro"
+            descripcion="Como el examen real: puedes saltar y volver, y la nota llega al final."
+            to="/simulacro"
+            duracion="Desde 27 minutos"
           />
           <ModeCard
             titulo="Contrarreloj"

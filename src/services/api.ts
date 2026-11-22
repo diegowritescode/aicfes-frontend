@@ -1098,3 +1098,125 @@ export async function getErrorDelDia(): Promise<{
     return { success: false };
   }
 }
+
+/* ── Simulacro ───────────────────────────────────────────────────
+   A sitting that lives on the server. The browser holds nothing that
+   matters: it asks for the state and draws it, so a closed tab, a
+   flat battery or a lost connection cost nothing but the time that
+   passed — which is exactly what they cost in the real exam.
+
+   The clock is the server's. `segundosRestantes` arrives with every
+   response rather than being counted here, because a timer in a
+   background tab is throttled by the browser and would hand out free
+   minutes to anyone who minimised the window. */
+
+export interface PreguntaSimulacro {
+  orden: number;
+  area: Area;
+  itemId: string;
+  contexto: string;
+  pregunta: string;
+  opciones: Record<string, string>;
+  tieneFigura: boolean;
+  /** Their own current choice. Never the correct one. */
+  respuesta: string | null;
+  marcada: boolean;
+}
+
+export interface EstadoSimulacro {
+  id: string;
+  status: 'en_curso' | 'terminado' | 'abandonado';
+  totalPreguntas: number;
+  minutos: number;
+  startedAt: string;
+  segundosRestantes: number;
+  resultados: ResultadosSimulacro | null;
+  preguntas: PreguntaSimulacro[];
+  expirado: boolean;
+}
+
+export interface ResultadosSimulacro {
+  correctas: number;
+  total: number;
+  porcentaje: number;
+  areas: Array<{ area: string; correctas: number; total: number; porcentaje: number }>;
+  recomendacion: string[];
+}
+
+interface RespuestaSimulacro<T> {
+  success: boolean;
+  data?: T;
+  error?: { code: string; message: string };
+}
+
+async function pedirSimulacro<T>(
+  ruta: string,
+  cuerpo?: Record<string, unknown>,
+): Promise<RespuestaSimulacro<T>> {
+  try {
+    const response = cuerpo
+      ? await apiClient.post(ruta, cuerpo)
+      : await apiClient.get(ruta);
+    const data = response.data as {
+      ok?: boolean;
+      data?: T;
+      error?: { code: string; message: string };
+    };
+    if (!data.ok) {
+      return {
+        success: false,
+        error: data.error || { code: 'SIMULACRO_ERROR', message: 'No se pudo cargar el simulacro.' },
+      };
+    }
+    return { success: true, data: data.data };
+  } catch (error) {
+    const fallo = error as AxiosError<{
+      error?: { code: string; message: string };
+      message?: string;
+    }>;
+    /* Nest throws BadRequestException as a plain message, which is how
+       an expired sitting reports itself. Losing that text would leave
+       the learner staring at "algo salió mal". */
+    const mensaje =
+      fallo.response?.data?.error?.message ??
+      fallo.response?.data?.message ??
+      fallo.message ??
+      'No se pudo contactar el simulacro.';
+    return {
+      success: false,
+      error: { code: fallo.response?.data?.error?.code ?? 'SIMULACRO_ERROR', message: mensaje },
+    };
+  }
+}
+
+export function iniciarSimulacro(totalPreguntas: number) {
+  return pedirSimulacro<{ id: string }>('/api/simulacro/start', { totalPreguntas });
+}
+
+export function getSimulacro(id: string) {
+  return pedirSimulacro<EstadoSimulacro>(`/api/simulacro/${id}`);
+}
+
+export function responderSimulacro(id: string, orden: number, respuesta: string) {
+  return pedirSimulacro<{ orden: number; registrada: boolean; segundosRestantes: number }>(
+    `/api/simulacro/${id}/answer`,
+    { orden, respuesta },
+  );
+}
+
+export function marcarPreguntaSimulacro(id: string, orden: number, marcada: boolean) {
+  return pedirSimulacro<{ orden: number; marcada: boolean }>(
+    `/api/simulacro/${id}/marcar`,
+    { orden, marcada },
+  );
+}
+
+export function terminarSimulacro(id: string) {
+  return pedirSimulacro<{ resultados: ResultadosSimulacro }>(`/api/simulacro/${id}/finish`, {});
+}
+
+export function listarSimulacros() {
+  return pedirSimulacro<Array<{ id: string; status: string; startedAt: string; totalPreguntas: number; resultados: ResultadosSimulacro | null }>>(
+    '/api/simulacro',
+  );
+}
