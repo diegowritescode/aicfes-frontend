@@ -28,6 +28,14 @@ export default function Inicio() {
         </View>
 
         <View className="gap-2 rounded-2xl border border-slate-200 bg-white p-5">
+          <Text className="text-[16px] font-bold text-slate-900">Entrenar</Text>
+          <Text className="text-[13.5px] leading-6 text-slate-600">
+            Sabe al instante si acertó, y puede hablar con el tutor cuando no.
+          </Text>
+          <Boton onPress={() => router.push('/entrenar')}>Entrenar ahora</Boton>
+        </View>
+
+        <View className="gap-2 rounded-2xl border border-slate-200 bg-white p-5">
           <Text className="text-[16px] font-bold text-slate-900">Simulacro</Text>
           <Text className="text-[13.5px] leading-6 text-slate-600">
             Como el examen real: puede saltar, volver y cambiar su respuesta. La nota llega al

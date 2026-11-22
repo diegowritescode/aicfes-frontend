@@ -66,6 +66,46 @@ const simulacroIniciado = z.object({
 const respuestaRegistrada = z.object({ orden: z.number(), registrada: z.boolean() });
 const marcaRegistrada = z.object({ orden: z.number(), marcada: z.boolean() });
 
+const itemGenerado = z.object({
+  id: z.string(),
+  area,
+  dificultad: z.enum(['facil', 'media', 'alta']),
+  plantilla: z.string(),
+  contexto: z.string(),
+  pregunta: z.string(),
+  opciones: z.record(z.string(), z.string()),
+  respuesta_correcta: letra,
+  justificacion: z.string(),
+  tags: z.array(z.string()),
+  distractores: z.record(z.string(), z.string()).nullable().optional(),
+  explicaciones: z.record(z.string(), z.string()).nullable().optional(),
+  figura: z.unknown().nullable().optional(),
+});
+
+const sesionIniciada = z.object({ sessionId: z.string(), startedAt: z.string() });
+const sesionCompletada = z.object({
+  sessionId: z.string(),
+  xpAwarded: z.number().optional(),
+  xpDelta: z.number().optional(),
+});
+const respuestasGuardadas = z.object({
+  inserted: z.number(),
+  xpAdjusted: z.number().optional(),
+});
+const estadoTutoria = z.object({
+  id: z.string(),
+  mensajes: z.array(
+    z.object({
+      autor: z.enum(['estudiante', 'tutor']),
+      contenido: z.string(),
+      createdAt: z.string(),
+    }),
+  ),
+  turnosUsados: z.number(),
+  turnosRestantes: z.number(),
+  esperaDefensa: z.boolean(),
+});
+
 const inventarioBanco = z.object({
   porArea: z.array(
     z.object({ area: z.string(), verificados: z.number(), paraExamenCompleto: z.number() }),
@@ -169,6 +209,85 @@ if (iniciado) {
     cuerpo: {},
   });
   comprobar('resultadosSimulacro', resultadosSimulacro, calificado?.resultados);
+}
+
+/* The training path: generating an item, recording a session, saving
+   answers, and opening a tutoring thread. Costs a generation, so it
+   runs only with VERIFICAR_ENTRENAMIENTO=1. */
+if (process.env.VERIFICAR_ENTRENAMIENTO === '1') {
+  console.log('\n— entrenamiento —');
+
+  const generados = await llamar('/api/items/generate', token, {
+    metodo: 'POST',
+    cuerpo: { area: 'MAT', dificultad: 'media', n: 1 },
+  });
+  const item = comprobar('itemGenerado', z.array(itemGenerado), generados)?.[0];
+
+  const sesion = comprobar(
+    'sesionIniciada',
+    sesionIniciada,
+    await llamar('/api/study-sessions/start', token, {
+      metodo: 'POST',
+      cuerpo: { mode: 'generacion_libre', area: 'MAT', startedAt: new Date().toISOString() },
+    }),
+  );
+
+  if (sesion && item) {
+    comprobar(
+      'respuestasGuardadas',
+      respuestasGuardadas,
+      await llamar('/api/answers', token, {
+        metodo: 'POST',
+        cuerpo: [
+          {
+            sessionId: sesion.sessionId,
+            questionIndex: 0,
+            area: 'MAT',
+            dificultad: 'media',
+            selectedAnswer: 'A',
+            isCorrect: false,
+            itemId: item.id,
+            tiempoMs: 4200,
+          },
+        ],
+      }),
+    );
+
+    comprobar(
+      'sesionCompletada',
+      sesionCompletada,
+      await llamar(`/api/study-sessions/${sesion.sessionId}/complete`, token, {
+        metodo: 'POST',
+        cuerpo: {
+          endedAt: new Date().toISOString(),
+          durationSeconds: 42,
+          totalQuestions: 1,
+          correctQuestions: 0,
+          areaBreakdown: { MAT: { correct: 0, total: 1 } },
+        },
+      }),
+    );
+
+    const hilo = comprobar(
+      'estadoTutoria',
+      estadoTutoria,
+      await llamar(`/api/tutoria/${item.id}/abrir`, token, {
+        metodo: 'POST',
+        cuerpo: { opcionElegida: 'A' },
+      }),
+    );
+
+    if (hilo) {
+      const texto = JSON.stringify(hilo);
+      const guarda = !texto.includes(`"${item.respuesta_correcta}" es la correcta`);
+      console.log(
+        guarda
+          ? '  ✓ la apertura de la tutoría no entrega la letra'
+          : '  ✗ la tutoría reveló la respuesta',
+      );
+      if (!guarda) fallos += 1;
+    }
+  }
 }
 
 console.log(fallos === 0 ? '\nTodos los esquemas coinciden.' : `\n${fallos} esquema(s) no coinciden.`);
