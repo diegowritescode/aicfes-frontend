@@ -5,8 +5,6 @@ import { cancelRequest, generateItems, getRequestItems, getRequestStatus } from 
 import { Area, Dificultad, AREA_LABELS, DIFICULTAD_LABELS } from '@/types/icfes';
 import { Layout } from '@/components/Layout';
 import { ErrorAlert } from '@/components/ErrorAlert';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -16,10 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { GraduationCap, Brain, Loader2, Zap, Gauge, Flame } from 'lucide-react';
-import { Progress } from '@/components/ui/progress';
-import { Badge } from '@/components/ui/badge';
-import { GeneratorSkeleton } from '@/components/LoadingSkeleton';
+import { Loader2 } from 'lucide-react';
 
 const AREAS: Area[] = ['MAT', 'LC', 'CN', 'SOC', 'ING'];
 const DIFICULTADES: Dificultad[] = ['facil', 'media', 'alta'];
@@ -39,6 +34,8 @@ export default function GenerateSpecial() {
   const [statusText, setStatusText] = useState<string | null>(null);
   const [error, setError] = useState<{ code: string; message: string } | null>(null);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [cancelado, setCancelado] = useState(false);
+  const [progresoReal, setProgresoReal] = useState(false);
 
   const progressIntervalRef = useRef<number | null>(null);
   const pollTimeoutRef = useRef<number | null>(null);
@@ -104,6 +101,7 @@ export default function GenerateSpecial() {
     clearProgressInterval();
     clearPolling();
     hasRealProgressRef.current = false;
+    setProgresoReal(false);
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
       abortControllerRef.current = null;
@@ -146,6 +144,7 @@ export default function GenerateSpecial() {
       setStatusText(normalizeStatusLabel(statusResult.status));
       if (typeof statusResult.progress === 'number') {
         hasRealProgressRef.current = true;
+        setProgresoReal(true);
         clearProgressInterval();
         const bounded = Math.min(99, Math.max(5, Math.round(statusResult.progress)));
         setProgress(bounded);
@@ -181,8 +180,8 @@ export default function GenerateSpecial() {
         clearPolling();
         resetLoadingState();
         setProgress(0);
-        setStatusText('Cancelado');
-        setError({ code: 'CANCELLED', message: 'La generación fue cancelada.' });
+        setStatusText(null);
+        setCancelado(true);
         return;
       }
 
@@ -211,6 +210,7 @@ export default function GenerateSpecial() {
     setIsLoading(true);
     setRequestId(undefined);
     setStatusText(null);
+    setCancelado(false);
     setProgress(5);
     setElapsedSeconds(0);
     elapsedIntervalRef.current = window.setInterval(() => {
@@ -271,264 +271,222 @@ export default function GenerateSpecial() {
       clearPolling();
       setProgress(0);
       setIsLoading(false);
-      const message = err instanceof Error && err.name === 'CanceledError'
-        ? 'La solicitud fue cancelada.'
-        : 'No se pudo conectar con el servidor. Intenta de nuevo.';
-      setError({ code: 'NETWORK_ERROR', message });
+      if (err instanceof Error && err.name === 'CanceledError') {
+        setCancelado(true);
+        return;
+      }
+      setError({
+        code: 'NETWORK_ERROR',
+        message: 'No pudimos conectar con el servidor. Revise su conexión e intente otra vez.',
+      });
     }
   };
 
   const handleCancel = async () => {
-    if (!requestId) return;
     clearPolling();
     clearProgressInterval();
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
-    const result = await cancelRequest(requestId);
+
+    /* Only the server side needs a request id. Aborting locally works
+       from the first second, which is when someone who changed their
+       mind actually presses this. */
+    const pendiente = requestId;
     resetLoadingState();
     setProgress(0);
+    setStatusText(null);
+    setCancelado(true);
+
+    if (!pendiente) return;
+    const result = await cancelRequest(pendiente);
     if (!result.success) {
       setError(result.error || { code: 'CANCEL_ERROR', message: 'No se pudo cancelar la generación.' });
-      return;
     }
-    setStatusText('Cancelado');
-    setError({ code: 'CANCELLED', message: 'La generación fue cancelada.' });
   };
+
+
+  const listo = Boolean(area && dificultad);
 
   return (
     <Layout>
-      <div className="container mx-auto px-4 py-6 lg:py-10">
-        {/* Hero */}
-        <div className="mb-8 flex flex-col gap-4">
-          <Badge className="w-fit bg-primary/10 text-primary hover:bg-primary/20" variant="secondary">
-            Generación especializada
-          </Badge>
-          <h1 className="text-3xl font-bold text-foreground lg:text-4xl">
-            Enfócate en un solo componente
+      <div className="mx-auto max-w-2xl px-4 py-8 lg:py-10">
+        <header className="mb-7">
+          <h1 className="text-[1.75rem] leading-tight font-extrabold tracking-tight text-slate-900">
+            Practicar un tema a fondo
           </h1>
-          <p className="text-sm text-muted-foreground lg:text-base max-w-2xl">
-            Ideal para reforzar una sola área con profundidad y dificultad controlada.
+          <p className="mt-1.5 text-[14.5px] leading-relaxed text-slate-600">
+            Una sola área y un solo tema, con preguntas escritas para usted. Si quiere
+            mezclar varias áreas, use la práctica mixta.
           </p>
-        </div>
+        </header>
 
-        {/* Main Content */}
-        <div className="grid gap-6 lg:grid-cols-3 mb-12">
-          {/* Generator Form */}
-          {isLoading ? (
-            <div className="lg:col-span-2">
-              <GeneratorSkeleton />
+        {isLoading ? (
+          <section
+            aria-live="polite"
+            className="rounded-3xl border border-brand-soft bg-gradient-to-br from-wash/80 to-white p-8 text-center"
+          >
+            <Loader2 aria-hidden className="mx-auto h-7 w-7 animate-spin text-brand-bright" />
+            <h2 className="mt-4 text-[17px] font-bold text-slate-900">
+              Estamos escribiendo sus preguntas
+            </h2>
+            <p className="mx-auto mt-2 max-w-sm text-[14px] leading-relaxed text-slate-600">
+              Cada pregunta se escribe y se revisa una por una. No cierre esta pestaña.
+            </p>
+
+            <div className="mx-auto mt-6 max-w-sm">
+              <div className="mb-2 flex items-baseline justify-between text-[12.5px] font-semibold text-slate-500">
+                <span>
+                  {statusText ?? 'Preparando'}
+                  {/* The bar runs on a guess until the server reports
+                      real progress, and saying which is which keeps the
+                      number honest. */}
+                  {!progresoReal ? ' (estimado)' : ''}
+                </span>
+                <span className="font-mono tabular-nums">{formatElapsed(elapsedSeconds)}</span>
+              </div>
+              <div
+                role="progressbar"
+                aria-valuenow={progress}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-label="Avance de la generación"
+                className="h-2 overflow-hidden rounded-full bg-slate-100"
+              >
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-brand-bright to-cyan transition-all duration-500"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
             </div>
-          ) : (
-            <Card className="shadow-lg lg:col-span-2">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Zap className="h-4 w-4 text-primary" />
-                Generar
-              </CardTitle>
-              <CardDescription className="text-xs">
-                Crear tu sesión
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-3">
-                <div className="space-y-2">
-                  <div>
-                    <Label htmlFor="area" className="text-xs">Área</Label>
-                    <Select
-                      value={area}
-                      onValueChange={(v) => setArea(v as Area)}
-                      disabled={isLoading}
-                    >
-                      <SelectTrigger id="area">
-                        <SelectValue placeholder="Selecciona un área" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {AREAS.map((a) => (
-                          <SelectItem key={a} value={a}>
-                            {AREA_LABELS[a]}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label htmlFor="dificultad" className="text-xs">Dificultad</Label>
-                    <Select
-                      value={dificultad}
-                      onValueChange={(v) => setDificultad(v as Dificultad)}
-                      disabled={isLoading}
-                    >
-                      <SelectTrigger id="dificultad">
-                        <SelectValue placeholder="Selecciona dificultad" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {DIFICULTADES.map((d) => (
-                          <SelectItem key={d} value={d}>
-                            {DIFICULTAD_LABELS[d]}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+
+            <button
+              type="button"
+              onClick={handleCancel}
+              className="mt-7 rounded-full border border-slate-300 px-6 py-2.5 text-[14px] font-semibold text-slate-700
+                transition-colors hover:bg-slate-50
+                focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-bright"
+            >
+              Cancelar
+            </button>
+          </section>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <fieldset className="rounded-2xl border border-slate-200 bg-white p-6">
+              <legend className="text-[13px] font-bold text-slate-900">
+                Qué quiere practicar
+              </legend>
+
+              <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                <div>
+                  <Label htmlFor="gs-area" className="text-[13px] font-medium text-slate-700">
+                    Área
+                  </Label>
+                  <Select value={area} onValueChange={(value) => setArea(value as Area)}>
+                    <SelectTrigger id="gs-area" className="mt-1.5">
+                      <SelectValue placeholder="Elija un área" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {AREAS.map((a) => (
+                        <SelectItem key={a} value={a}>
+                          {AREA_LABELS[a]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
-                <div className="space-y-1">
-                  <Label htmlFor="tema" className="text-xs">Tema (opcional)</Label>
+                <div>
+                  <Label htmlFor="gs-dif" className="text-[13px] font-medium text-slate-700">
+                    Qué tan difícil
+                  </Label>
+                  <Select
+                    value={dificultad}
+                    onValueChange={(value) => setDificultad(value as Dificultad)}
+                  >
+                    <SelectTrigger id="gs-dif" className="mt-1.5">
+                      <SelectValue placeholder="Elija el nivel" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {DIFICULTADES.map((d) => (
+                        <SelectItem key={d} value={d}>
+                          {DIFICULTAD_LABELS[d]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="sm:col-span-2">
+                  <Label htmlFor="gs-tema" className="text-[13px] font-medium text-slate-700">
+                    Tema <span className="font-normal text-slate-400">(opcional)</span>
+                  </Label>
                   <Input
-                    className="text-sm"
-                    id="tema"
-                    placeholder="Ej: Álgebra, Revolución Francesa, Mitosis..."
+                    id="gs-tema"
+                    className="mt-1.5"
+                    placeholder="Por ejemplo: funciones cuadráticas"
                     value={tema}
                     onChange={(e) => setTema(e.target.value)}
-                    disabled={isLoading}
                   />
+                  <p className="mt-1.5 text-[12px] text-slate-500">
+                    Mientras más concreto el tema, más parecidas entre sí serán las preguntas
+                  </p>
                 </div>
 
-                <div className="space-y-1">
-                  <Label htmlFor="cantidad" className="text-xs">Preguntas (1-20)</Label>
+                <div>
+                  <Label htmlFor="gs-n" className="text-[13px] font-medium text-slate-700">
+                    Cuántas preguntas
+                  </Label>
                   <Input
-                    className="text-sm"
-                    id="cantidad"
+                    id="gs-n"
+                    className="mt-1.5"
                     type="number"
                     min={1}
                     max={20}
                     value={cantidad}
-                    onChange={(e) => setCantidad(Math.min(20, Math.max(1, parseInt(e.target.value) || 1)))}
-                    disabled={isLoading}
+                    onChange={(e) =>
+                      setCantidad(Math.min(20, Math.max(1, parseInt(e.target.value) || 1)))
+                    }
                   />
+                  <p className="mt-1.5 text-[12px] text-slate-500">Hasta 20</p>
                 </div>
+              </div>
+            </fieldset>
 
-                {error && (
-                  <ErrorAlert
-                    title="Error al generar"
-                    message={error.message}
-                    code={error.code}
-                    onRetry={() => setError(null)}
-                  />
-                )}
+            {/* Cancelling is something the learner chose. It used to
+                come back as a red error alert telling them off for it. */}
+            {cancelado ? (
+              <p
+                role="status"
+                className="rounded-2xl bg-slate-100 px-5 py-3.5 text-[13.5px] text-slate-600"
+              >
+                Cancelamos la generación. Puede cambiar lo que quiera y empezar otra vez.
+              </p>
+            ) : null}
 
-                {isLoading && (
-                  <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      <span className="font-medium">
-                        {statusText ? `Generando preguntas · ${statusText}` : 'Generando preguntas...'}
-                      </span>
-                    </div>
-                    <p className="text-blue-700 text-xs">
-                      Esto puede tardar un poco mientras la IA genera las preguntas. Por favor, espera.
-                    </p>
-                    {requestId && (
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        size="sm"
-                        className="mt-3 w-full"
-                        onClick={handleCancel}
-                      >
-                        Cancelar generación
-                      </Button>
-                    )}
-                  </div>
-                )}
+            {error ? (
+              <ErrorAlert
+                title="No pudimos armar la práctica"
+                message={error.message}
+                code={error.code}
+                onRetry={() => setError(null)}
+              />
+            ) : null}
 
-                {progress > 0 && (
-                  <div className="mt-3">
-                    <Progress value={progress} className="h-2" />
-                    {requestId && (
-                      <p className="text-xs text-muted-foreground mt-2">RequestId: <strong>{requestId}</strong></p>
-                    )}
-                    {statusText && (
-                      <p className="text-xs text-muted-foreground mt-1">Estado: {statusText}</p>
-                    )}
-                  </div>
-                )}
-
-                <Button
-                  type="submit"
-                  size="sm"
-                  className="w-full mt-2"
-                  disabled={!area || !dificultad || isLoading}
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                      Generando preguntas...
-                    </>
-                  ) : (
-                    <>
-                      <Brain className="h-5 w-5 mr-2" />
-                      Generar Preguntas
-                    </>
-                  )}
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
-          )}
-
-          {/* Side Info */}
-          <div className="space-y-4">
-            {isLoading ? (
-              <Card className="border-blue-200 bg-blue-50/70">
-                <CardHeader>
-                  <CardTitle className="text-sm flex items-center gap-2 text-blue-800">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Generando preguntas
-                  </CardTitle>
-                  <CardDescription className="text-xs text-blue-700">
-                    {statusText ? `Estado: ${statusText}` : 'La IA está trabajando en tu sesión.'}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  <div className="flex items-center justify-between text-xs text-blue-700">
-                    <span>Tiempo: {formatElapsed(elapsedSeconds)}</span>
-                    <span>{Math.max(5, progress)}%</span>
-                  </div>
-                  <div className="h-2 w-full rounded-full bg-blue-100 overflow-hidden">
-                    <div
-                      className="h-full bg-gradient-to-r from-blue-500 via-indigo-500 to-sky-400 transition-all duration-500"
-                      style={{ width: `${Math.max(5, progress)}%` }}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-            ) : (
-              <>
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Gauge className="h-5 w-5 text-primary" />
-                      Beneficios
-                    </CardTitle>
-                    <CardDescription>Sesiones rápidas y enfocadas.</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-3 text-sm text-muted-foreground">
-                    <p>Genera preguntas sin distracciones.</p>
-                    <p>Enfoque por tema y dificultad.</p>
-                    <p>Retroalimentación al instante.</p>
-                  </CardContent>
-                </Card>
-
-                <Card className="border-primary/20 bg-primary/5">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Flame className="h-5 w-5 text-primary" />
-                      Reto sugerido
-                    </CardTitle>
-                    <CardDescription>Completa 3 sesiones hoy.</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground">
-                      Gana +80 XP y sube tu racha semanal.
-                    </p>
-                  </CardContent>
-                </Card>
-              </>
-            )}
-          </div>
-        </div>
+            <button
+              type="submit"
+              disabled={!listo}
+              className="w-full rounded-full bg-brand-bright px-7 py-3.5 text-[15px] font-semibold text-white
+                shadow-[0_6px_20px_-6px_hsl(var(--brand-bright))] transition-transform hover:scale-[1.01]
+                focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-bright focus-visible:ring-offset-2
+                disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:hover:scale-100"
+            >
+              {!listo
+                ? 'Elija un área y un nivel para empezar'
+                : `Empezar con ${cantidad} ${cantidad === 1 ? 'pregunta' : 'preguntas'}`}
+            </button>
+          </form>
+        )}
       </div>
     </Layout>
   );
