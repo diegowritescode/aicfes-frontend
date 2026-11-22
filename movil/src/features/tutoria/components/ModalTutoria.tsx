@@ -13,7 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Boton } from '@/shared/ui/Boton';
 import { Aviso } from '@/shared/ui/Aviso';
 import { NOMBRE_AREA, type Letra } from '@/shared/model/icfes';
-import type { ItemGenerado } from '@/features/examen/api/esquemas';
+import type { ItemGenerado } from '@/shared/pregunta/api/esquemas';
 import { useTutoria } from '../hooks/useTutoria';
 
 const LETRAS: readonly Letra[] = ['A', 'B', 'C', 'D'];

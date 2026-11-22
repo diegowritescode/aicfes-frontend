@@ -5,7 +5,7 @@ import { Boton } from '@/shared/ui/Boton';
 import { Aviso } from '@/shared/ui/Aviso';
 import { NOMBRE_AREA, type Area } from '@/shared/model/icfes';
 import type { useExamen } from '../hooks/useExamen';
-import { areasMasFlojas } from '../model/reglas';
+import { areasMasFlojas } from '@/shared/pregunta/model/reglas';
 
 /**
  * What a training run came to.

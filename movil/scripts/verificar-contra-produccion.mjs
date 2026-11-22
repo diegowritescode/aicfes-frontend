@@ -114,6 +114,65 @@ const inventarioBanco = z.object({
   simulacroMaximo: z.number(),
 });
 
+const panel = z.object({
+  streak: z.object({
+    currentDays: z.number(),
+    longestDays: z.number(),
+    nextMilestoneDays: z.number(),
+    lastStudyDate: z.string(),
+  }),
+  level: z.object({
+    level: z.number(),
+    totalXp: z.number(),
+    currentXp: z.number(),
+    nextLevelXp: z.number(),
+  }),
+  timeStudied: z.object({ weekMinutes: z.number(), lastSessionAt: z.string() }),
+  missions: z.object({
+    total: z.number(),
+    completed: z.number(),
+    items: z.array(
+      z.object({
+        id: z.string(),
+        title: z.string(),
+        status: z.string(),
+        progress: z.number(),
+        target: z.number(),
+        xpReward: z.number(),
+      }),
+    ),
+  }),
+  areaProgress: z.array(z.object({ area, accuracy: z.number(), questions: z.number() })),
+  suggestedChallenge: z
+    .object({ title: z.string(), description: z.string(), xpReward: z.number() })
+    .nullable()
+    .optional(),
+});
+
+const modoContrarreloj = z.object({
+  id: z.string(),
+  title: z.string(),
+  description: z.string(),
+  timeLimitSeconds: z.number(),
+  questions: z.number(),
+  area: area.nullable(),
+  dificultad: z.enum(['facil', 'media', 'alta']).nullable().optional(),
+  nivel: z.number(),
+  segundosPorPregunta: z.number(),
+  enabled: z.boolean(),
+});
+
+const errorDelDia = z
+  .object({
+    itemId: z.string(),
+    area,
+    pregunta: z.string(),
+    contexto: z.string().nullable().optional(),
+    motivo: z.string(),
+    resueltoHoy: z.boolean(),
+  })
+  .nullable();
+
 let fallos = 0;
 
 function comprobar(nombre, esquema, valor) {
@@ -141,7 +200,12 @@ async function llamar(ruta, token, opciones = {}) {
     signal: AbortSignal.timeout(60_000),
   });
   const cuerpo = await r.json().catch(() => null);
-  return cuerpo?.data ?? cuerpo?.items ?? cuerpo;
+  /* `data: null` is a real answer — "no question for you today" — so
+     `??` would swallow it and hand back the envelope instead. Checking
+     for the key is what tells an absent field from a null one. */
+  if (cuerpo && 'data' in cuerpo) return cuerpo.data;
+  if (cuerpo && 'items' in cuerpo) return cuerpo.items;
+  return cuerpo;
 }
 
 const email = `verif-fase1-${Date.now()}@aicfes.dev`;
@@ -157,6 +221,11 @@ console.log(token ? '  ✓ registro' : '  ✗ registro');
 
 console.log('\n— inventario del banco —');
 comprobar('inventarioBanco', inventarioBanco, await llamar('/api/items/bank/stats', token));
+
+console.log('\n— panel —');
+comprobar('panel', panel, await llamar('/api/dashboard', token));
+comprobar('errorDelDia', errorDelDia, await llamar('/api/error-del-dia', token));
+comprobar('modoContrarreloj', z.array(modoContrarreloj), await llamar('/api/time-trial/modes', token));
 
 console.log('\n— simulacro —');
 const iniciado = comprobar(

@@ -7,9 +7,9 @@ import {
   generarItems,
   guardarRespuestas,
   iniciarSesionEstudio,
-} from '../api/peticiones';
-import type { ItemGenerado } from '../api/esquemas';
-import { esCorrecta, resumirExamen, type RespuestaDada } from '../model/reglas';
+} from '@/shared/pregunta/api/peticiones';
+import type { ItemGenerado } from '@/shared/pregunta/api/esquemas';
+import { esCorrecta, resumirExamen, type RespuestaDada } from '@/shared/pregunta/model/reglas';
 
 /**
  * A training run from start to saved.

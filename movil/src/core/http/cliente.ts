@@ -154,8 +154,20 @@ export async function pedir<T>({
 
   /* Payloads arrive as {data}, as {items}, or bare. Rather than make
      every caller know which, unwrap here and let the schema decide
-     whether what came out is right. */
-  const util = datosApi?.data ?? datosApi?.items ?? crudo;
+     whether what came out is right.
+
+     Checking for the key rather than using `??` is deliberate: `data:
+     null` is a real answer — "no question for you today" is how the
+     error-of-the-day endpoint says there is nothing to show — and `??`
+     would swallow that null and hand the whole envelope to a schema
+     expecting the payload. */
+  const cuerpoCrudo = (crudo ?? {}) as Record<string, unknown>;
+  const util =
+    'data' in cuerpoCrudo
+      ? cuerpoCrudo.data
+      : 'items' in cuerpoCrudo
+        ? cuerpoCrudo.items
+        : crudo;
   const analizado = esquema.safeParse(util);
 
   if (!analizado.success) {

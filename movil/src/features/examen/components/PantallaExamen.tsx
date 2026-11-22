@@ -6,9 +6,9 @@ import { Aviso } from '@/shared/ui/Aviso';
 import type { Letra } from '@/shared/model/icfes';
 import { ModalTutoria } from '@/features/tutoria/components/ModalTutoria';
 import { useExamen } from '../hooks/useExamen';
-import { debeAbrirTutoria, esCorrecta, explicacionDe } from '../model/reglas';
-import { Enunciado } from './Enunciado';
-import { OpcionRespuesta, type EstadoOpcion } from './OpcionRespuesta';
+import { debeAbrirTutoria, esCorrecta, explicacionDe } from '@/shared/pregunta/model/reglas';
+import { Enunciado } from '@/shared/pregunta/components/Enunciado';
+import { OpcionRespuesta, type EstadoOpcion } from '@/shared/pregunta/components/OpcionRespuesta';
 
 const LETRAS: readonly Letra[] = ['A', 'B', 'C', 'D'];
 

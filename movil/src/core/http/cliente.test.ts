@@ -178,3 +178,26 @@ describe('la sesión', () => {
     expect(cabeceras.Authorization).toBeUndefined();
   });
 });
+
+describe('data: null es una respuesta, no una ausencia', () => {
+  it('un null legítimo llega como null, no como el sobre', async () => {
+    /* Found by the production check: the error-of-the-day endpoint
+       answers {ok: true, data: null} to mean "nothing to show today".
+       With `??` that null was swallowed and the whole envelope was
+       handed to the schema, which then failed on every field — so the
+       card would have reported a broken response instead of simply
+       not appearing. */
+    const esquemaNulo = z.object({ itemId: z.string() }).nullable();
+    vi.stubGlobal('fetch', () => responder({ ok: true, data: null }));
+    const r = await pedir({ ruta: '/x', esquema: esquemaNulo });
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.datos).toBeNull();
+  });
+
+  it('una lista vacía tampoco se confunde con el sobre', async () => {
+    vi.stubGlobal('fetch', () => responder({ ok: true, items: [] }));
+    const r = await pedir({ ruta: '/x', esquema: z.array(z.string()) });
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.datos).toEqual([]);
+  });
+});
