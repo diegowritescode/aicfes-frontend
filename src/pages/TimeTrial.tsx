@@ -1,8 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Layout } from '@/components/Layout';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import {
@@ -17,7 +14,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTest } from '@/context/TestContext';
 import { Area, Dificultad, AREA_LABELS, DIFICULTAD_LABELS } from '@/types/icfes';
 import { getTimeTrialModes, startTimeTrial, TimeTrialMode } from '@/services/api';
-import { Flame, Gauge, Timer, Zap, Loader2 } from 'lucide-react';
+import { Timer } from 'lucide-react';
 import { TimeTrialModesSkeleton } from '@/components/LoadingSkeleton';
 
 const AREAS: Area[] = ['MAT', 'LC', 'CN', 'SOC', 'ING'];
@@ -37,23 +34,21 @@ export default function TimeTrial() {
   const [customTime, setCustomTime] = useState(10);
   const [customQuestions, setCustomQuestions] = useState(10);
 
-  useEffect(() => {
-    let isMounted = true;
-    const load = async () => {
-      const result = await getTimeTrialModes();
-      if (!isMounted) return;
-      setIsLoadingModes(false);
-      if (!result.success || !result.data) {
-        setError(result.error || { message: 'No se pudieron cargar los retos.' });
-        return;
-      }
-      setModes(result.data);
-    };
-    load();
-    return () => {
-      isMounted = false;
-    };
+  const cargarModos = useCallback(async () => {
+    setError(null);
+    setIsLoadingModes(true);
+    const result = await getTimeTrialModes();
+    setIsLoadingModes(false);
+    if (!result.success || !result.data) {
+      setError(result.error || { message: 'No se pudieron cargar los retos.' });
+      return;
+    }
+    setModes(result.data);
   }, []);
+
+  useEffect(() => {
+    void cargarModos();
+  }, [cargarModos]);
 
   const handleStartMode = async (mode: TimeTrialMode) => {
     setError(null);
@@ -104,162 +99,214 @@ export default function TimeTrial() {
     navigate('/test');
   };
 
-  const customTimeLabel = useMemo(() => {
-    return `${customTime} min`;
-  }, [customTime]);
+  /* How long each question gets is the number that decides whether a
+     challenge is hard. The learner had to work it out themselves. */
+  const segundosPorPregunta = useMemo(() => {
+    if (customQuestions < 1) return null;
+    return Math.round((customTime * 60) / customQuestions);
+  }, [customTime, customQuestions]);
+
+
+  const formatoPorPregunta = (segundos: number | null) => {
+    if (segundos === null) return null;
+    if (segundos < 60) return `${segundos} s por pregunta`;
+    const min = Math.floor(segundos / 60);
+    const resto = segundos % 60;
+    return resto === 0
+      ? `${min} min por pregunta`
+      : `${min} min ${resto} s por pregunta`;
+  };
 
   return (
     <Layout>
-      <div className="container mx-auto px-4 py-6 lg:py-10">
-        <div className="mb-8 flex flex-col gap-4">
-          <Badge className="w-fit bg-amber-500/10 text-amber-700 hover:bg-amber-500/20" variant="secondary">
-            Modo Contrarreloj
-          </Badge>
-          <h1 className="text-3xl font-bold text-foreground lg:text-4xl">
-            Entrena con presión real
+      <div className="mx-auto max-w-3xl px-4 py-8 lg:py-10">
+        <header className="mb-6">
+          <h1 className="text-[1.75rem] leading-tight font-extrabold tracking-tight text-slate-900">
+            Contrarreloj
           </h1>
-          <p className="text-sm text-muted-foreground lg:text-base max-w-2xl">
-            Elige un reto rápido o crea tu propio desafío con tiempo fijo.
+          <p className="mt-1.5 max-w-xl text-[14.5px] leading-relaxed text-slate-600">
+            Responda contra el reloj, como el día del examen. Si se acaba el tiempo, la
+            práctica termina donde iba.
           </p>
-        </div>
+        </header>
 
-        {error && (
+        {/* The exam screen plays a ticking clock in this mode. Starting
+            audio the learner did not ask for is a WCAG 1.4.2 problem;
+            the least we can do is say so before they start. */}
+        <p className="mb-6 flex items-start gap-2 rounded-2xl bg-amber/10 px-4 py-3 text-[13px] leading-relaxed text-slate-700">
+          <Timer aria-hidden className="mt-0.5 h-4 w-4 shrink-0 text-amber" />
+          Este modo lleva un tic-tac que se oye mientras responde. Baje el volumen si
+          prefiere practicar en silencio.
+        </p>
+
+        {error ? (
           <div className="mb-6">
-            <ErrorAlert title="No pudimos iniciar" message={error.message} code={error.code} onRetry={() => setError(null)} />
+            <ErrorAlert
+              title="No pudimos iniciar"
+              message={error.message}
+              code={error.code}
+              onRetry={() => void cargarModos()}
+            />
           </div>
-        )}
+        ) : null}
 
-        <div className="grid gap-6 lg:grid-cols-3">
-          <Card className="lg:col-span-2">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Timer className="h-5 w-5 text-amber-600" />
-                Retos predefinidos
-              </CardTitle>
-              <CardDescription>Modos listos para jugar.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {isLoadingModes ? (
-                <TimeTrialModesSkeleton />
-              ) : (
-                modes.map((mode) => (
-                  <div
-                    key={mode.id}
-                    className="flex flex-col gap-2 rounded-xl border border-border bg-card p-4 sm:flex-row sm:items-center sm:justify-between"
-                  >
-                    <div>
-                      <h3 className="text-sm font-semibold text-foreground">{mode.title}</h3>
-                      <p className="text-xs text-muted-foreground">{mode.description}</p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {Math.round(mode.timeLimitSeconds / 60)} min · {mode.questions} preguntas
-                      </p>
+        <section>
+          <h2 className="mb-3 text-[16px] font-bold tracking-tight text-slate-900">
+            Retos listos
+          </h2>
+
+          {isLoadingModes ? (
+            <TimeTrialModesSkeleton />
+          ) : modes.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50/60 px-6 py-10 text-center">
+              <p className="text-[14px] text-slate-600">
+                No hay retos disponibles en este momento.
+              </p>
+              <button
+                type="button"
+                onClick={() => void cargarModos()}
+                className="mt-4 rounded-full border border-slate-300 px-5 py-2 text-[13.5px] font-semibold text-slate-700
+                  transition-colors hover:bg-slate-50
+                  focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-bright"
+              >
+                Volver a buscar
+              </button>
+            </div>
+          ) : (
+            <ul className="space-y-3">
+              {modes.map((mode) => {
+                const porPregunta = Math.round(mode.timeLimitSeconds / mode.questions);
+                return (
+                  <li key={mode.id}>
+                    <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-5 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="min-w-0">
+                        <h3 className="text-[15px] font-bold text-slate-900">{mode.title}</h3>
+                        <p className="mt-0.5 text-[13.5px] leading-relaxed text-slate-600">
+                          {mode.description}
+                        </p>
+                        <p className="mt-2 text-[12.5px] font-semibold text-slate-500">
+                          {Math.round(mode.timeLimitSeconds / 60)} min ·{' '}
+                          {mode.questions} preguntas · {formatoPorPregunta(porPregunta)}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleStartMode(mode)}
+                        disabled={isStarting}
+                        className="shrink-0 rounded-full bg-brand-bright px-6 py-2.5 text-[14px] font-semibold text-white
+                          shadow-[0_6px_20px_-6px_hsl(var(--brand-bright))] transition-transform hover:scale-[1.02]
+                          focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-bright focus-visible:ring-offset-2
+                          disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:hover:scale-100"
+                      >
+                        {isStarting ? 'Preparando…' : 'Empezar'}
+                      </button>
                     </div>
-                    <Button size="sm" onClick={() => handleStartMode(mode)} disabled={isStarting}>
-                      {isStarting ? (
-                        <>
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          Iniciando
-                        </>
-                      ) : (
-                        'Iniciar'
-                      )}
-                    </Button>
-                  </div>
-                ))
-              )}
-            </CardContent>
-          </Card>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </section>
 
-          <div className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Gauge className="h-5 w-5 text-primary" />
-                  Contrarreloj personalizado
-                </CardTitle>
-                <CardDescription>Configura tu propio reto.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="space-y-2">
-                  <Label>Área</Label>
-                  <Select value={customArea} onValueChange={(value) => setCustomArea(value as Area)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecciona un área" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {AREAS.map((area) => (
-                        <SelectItem key={area} value={area}>
-                          {AREA_LABELS[area]}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Dificultad</Label>
-                  <Select value={customDifficulty} onValueChange={(value) => setCustomDifficulty(value as Dificultad)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecciona dificultad" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {DIFICULTADES.map((d) => (
-                        <SelectItem key={d} value={d}>
-                          {DIFICULTAD_LABELS[d]}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                  <Label>Tiempo (min)</Label>
-                  <Input
-                    type="number"
-                    min={1}
-                    value={customTime}
-                    onChange={(event) => setCustomTime(parseInt(event.target.value) || 1)}
-                  />
-                    <p className="text-xs text-muted-foreground mt-1">{customTimeLabel}</p>
-                  </div>
-                  <div>
-                    <Label>Preguntas</Label>
-                    <Input
-                      type="number"
-                      min={1}
-                      value={customQuestions}
-                      onChange={(event) => setCustomQuestions(parseInt(event.target.value) || 1)}
-                    />
-                  </div>
-                </div>
-                <Button className="w-full" onClick={handleStartCustom} disabled={isStarting}>
-                  {isStarting ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Iniciando
-                    </>
-                  ) : (
-                    'Iniciar personalizado'
-                  )}
-                </Button>
-              </CardContent>
-            </Card>
+        <section className="mt-8 rounded-2xl border border-slate-200 bg-white p-6">
+          <h2 className="text-[16px] font-bold tracking-tight text-slate-900">
+            O arme el suyo
+          </h2>
+          <p className="mt-1 text-[13px] text-slate-500">
+            Elija cuánto tiempo y cuántas preguntas.
+          </p>
 
-            <Card className="border-amber-500/30 bg-amber-500/5">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Flame className="h-5 w-5 text-amber-600" />
-                  Bonus de velocidad
-                </CardTitle>
-                <CardDescription>Responde rápido y preciso.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground">
-                  Ganas XP extra si terminas antes del límite con buena precisión.
-                </p>
-              </CardContent>
-            </Card>
+          <div className="mt-5 grid gap-4 sm:grid-cols-2">
+            <div>
+              <Label htmlFor="tt-area" className="text-[13px] font-medium text-slate-700">
+                Área
+              </Label>
+              <Select value={customArea} onValueChange={(value) => setCustomArea(value as Area)}>
+                <SelectTrigger id="tt-area" className="mt-1.5">
+                  <SelectValue placeholder="Elija un área" />
+                </SelectTrigger>
+                <SelectContent>
+                  {AREAS.map((area) => (
+                    <SelectItem key={area} value={area}>
+                      {AREA_LABELS[area]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="tt-dif" className="text-[13px] font-medium text-slate-700">
+                Qué tan difícil
+              </Label>
+              <Select
+                value={customDifficulty}
+                onValueChange={(value) => setCustomDifficulty(value as Dificultad)}
+              >
+                <SelectTrigger id="tt-dif" className="mt-1.5">
+                  <SelectValue placeholder="Elija el nivel" />
+                </SelectTrigger>
+                <SelectContent>
+                  {DIFICULTADES.map((d) => (
+                    <SelectItem key={d} value={d}>
+                      {DIFICULTAD_LABELS[d]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="tt-min" className="text-[13px] font-medium text-slate-700">
+                Minutos en total
+              </Label>
+              <Input
+                id="tt-min"
+                className="mt-1.5"
+                type="number"
+                min={1}
+                value={customTime}
+                onChange={(event) => setCustomTime(parseInt(event.target.value) || 1)}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="tt-n" className="text-[13px] font-medium text-slate-700">
+                Cuántas preguntas
+              </Label>
+              <Input
+                id="tt-n"
+                className="mt-1.5"
+                type="number"
+                min={1}
+                value={customQuestions}
+                onChange={(event) => setCustomQuestions(parseInt(event.target.value) || 1)}
+              />
+            </div>
           </div>
-        </div>
+
+          {/* The pace, worked out for them. This is the number that
+              decides whether the challenge is hard. */}
+          <p aria-live="polite" className="mt-4 text-[13.5px] font-semibold text-slate-600">
+            {segundosPorPregunta !== null ? `Le quedan ${formatoPorPregunta(segundosPorPregunta)}` : ''}
+          </p>
+
+          <button
+            type="button"
+            onClick={handleStartCustom}
+            disabled={isStarting || !customArea || !customDifficulty}
+            className="mt-5 w-full rounded-full bg-brand-bright px-7 py-3.5 text-[15px] font-semibold text-white
+              shadow-[0_6px_20px_-6px_hsl(var(--brand-bright))] transition-transform hover:scale-[1.01]
+              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-bright focus-visible:ring-offset-2
+              disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:hover:scale-100"
+          >
+            {isStarting
+              ? 'Preparando…'
+              : !customArea || !customDifficulty
+                ? 'Elija un área y un nivel'
+                : `Empezar: ${customQuestions} preguntas en ${customTime} min`}
+          </button>
+        </section>
       </div>
     </Layout>
   );
