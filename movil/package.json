@@ -35,7 +35,8 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "verificar:api": "node scripts/verificar-contra-produccion.mjs"
   },
   "private": true
 }

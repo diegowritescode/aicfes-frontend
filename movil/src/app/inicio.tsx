@@ -1,6 +1,6 @@
 import { ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Redirect } from 'expo-router';
+import { Redirect, useRouter } from 'expo-router';
 import { Boton } from '@/shared/ui/Boton';
 import { useAccionesSesion, useSesion } from '@/features/sesion/hooks/useSesion';
 
@@ -10,6 +10,7 @@ import { useAccionesSesion, useSesion } from '@/features/sesion/hooks/useSesion'
  * that is proven would be building on an unchecked floor.
  */
 export default function Inicio() {
+  const router = useRouter();
   const { sesion, cargando, autenticado } = useSesion();
   const { salir } = useAccionesSesion();
 
@@ -26,11 +27,13 @@ export default function Inicio() {
           <Text className="text-[24px] font-bold text-slate-900">{sesion?.email}</Text>
         </View>
 
-        <View className="rounded-2xl border border-slate-200 bg-white p-5">
-          <Text className="text-[14px] leading-relaxed text-slate-600">
-            El andamiaje funciona: la sesión viaja cifrada en el llavero del teléfono y la
-            pantalla la lee desde una sola caché.
+        <View className="gap-2 rounded-2xl border border-slate-200 bg-white p-5">
+          <Text className="text-[16px] font-bold text-slate-900">Simulacro</Text>
+          <Text className="text-[13.5px] leading-6 text-slate-600">
+            Como el examen real: puede saltar, volver y cambiar su respuesta. La nota llega al
+            final.
           </Text>
+          <Boton onPress={() => router.push('/simulacro')}>Ir al simulacro</Boton>
         </View>
 
         <Boton variante="contorno" onPress={() => void salir()}>
