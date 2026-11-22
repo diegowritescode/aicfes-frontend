@@ -39,7 +39,13 @@ export default function RutaEntrenar() {
   }
 
   if (examen.estado === 'terminado') {
-    return <PantallaResultados examen={examen} alSalir={() => router.replace('/inicio')} />;
+    return (
+      <PantallaResultados
+        examen={examen}
+        alSalir={() => router.replace('/inicio')}
+        alVerPlan={(sessionId) => router.replace(`/plan/${sessionId}`)}
+      />
+    );
   }
 
   return (

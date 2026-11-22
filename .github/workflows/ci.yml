@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, movil]
   pull_request:
 
 concurrency:
@@ -27,3 +27,29 @@ jobs:
       - run: npm run build
         env:
           VITE_API_URL: https://aicfes-backend.deviego.xyz
+
+  # The React Native rewrite. A separate job because it is a separate
+  # toolchain — Metro and Expo rather than Vite — and because the web
+  # app in src/ stays in production until this replaces it.
+  movil:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: movil
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: movil/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      # These include the layering checks. A rule in a README is a rule
+      # until the first deadline; a failing build is one that holds.
+      - run: npm test
+      # Both targets, because the point of the rewrite is one source
+      # for Android and web: a change that builds for one and not the
+      # other has to fail here, not on a device.
+      - run: npx expo export --platform android
+      - run: npx expo export --platform web

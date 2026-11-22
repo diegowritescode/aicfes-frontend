@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import { Boton } from '@/shared/ui/Boton';
 import { Campo } from '@/shared/ui/Campo';
 import { Aviso } from '@/shared/ui/Aviso';
@@ -18,6 +19,7 @@ import { useAccionesSesion } from '@/features/sesion/hooks/useSesion';
  * becomes unusable on exactly the devices this app is for.
  */
 export default function Entrar() {
+  const router = useRouter();
   const { entrar } = useAccionesSesion();
   const [email, setEmail] = useState('');
   const [clave, setClave] = useState('');
@@ -74,6 +76,17 @@ export default function Entrar() {
           >
             {entrar.isPending ? 'Entrando…' : 'Entrar'}
           </Boton>
+
+          <Pressable
+            onPress={() => router.push('/registro')}
+            accessibilityRole="link"
+            className="min-h-[44px] justify-center"
+          >
+            <Text className="text-center text-[14px] text-slate-600">
+              ¿No tiene cuenta?{' '}
+              <Text className="font-semibold text-brand-bright">Crear una</Text>
+            </Text>
+          </Pressable>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

@@ -18,9 +18,12 @@ import { areasMasFlojas } from '@/shared/pregunta/model/reglas';
 export function PantallaResultados({
   examen,
   alSalir,
+  alVerPlan,
 }: {
   examen: ReturnType<typeof useExamen>;
   alSalir: () => void;
+  /** Offered only when the session was recorded: a plan needs one. */
+  alVerPlan?: (sessionId: string) => void;
 }) {
   const resumen = examen.resumen();
   const guardar = examen.guardar;
@@ -82,9 +85,19 @@ export function PantallaResultados({
           </View>
         ) : null}
 
-        <Boton onPress={alSalir} ancho>
-          Volver al inicio
-        </Boton>
+        <View className="gap-2">
+          {/* Only when the session exists and was saved: a plan is
+              written from a session, and offering one that cannot be
+              written is a promise we would break on the next tap. */}
+          {examen.sessionId && alVerPlan && !guardar.isError ? (
+            <Boton onPress={() => alVerPlan(examen.sessionId!)} ancho>
+              Ver mi plan de estudio
+            </Boton>
+          ) : null}
+          <Boton variante="contorno" onPress={alSalir} ancho>
+            Volver al inicio
+          </Boton>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
