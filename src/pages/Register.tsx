@@ -65,7 +65,7 @@ export default function Register() {
       }
     >
       <form onSubmit={handleSubmit} className="space-y-5">
-        {error ? <ErrorAlert error={error} /> : null}
+        {error ? <ErrorAlert message={error.message} code={error.code} /> : null}
 
         <div className="space-y-2">
           <Label htmlFor="email" className="text-[13.5px] font-semibold text-slate-700">

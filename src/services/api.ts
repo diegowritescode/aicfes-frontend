@@ -282,7 +282,8 @@ apiClient.interceptors.request.use((config) => {
   if (config.headers?.Authorization) return config;
   const stored = getStoredAuth();
   if (stored?.token) {
-    config.headers = config.headers || {};
+    // Axios v1 always provides headers here; the `|| {}` fallback
+    // widened the type to something without the header methods.
     config.headers.Authorization = `Bearer ${stored.token}`;
     if (stored.user?.userId) {
       config.headers['X-User-Id'] = stored.user.userId;

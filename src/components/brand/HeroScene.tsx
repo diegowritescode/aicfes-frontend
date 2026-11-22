@@ -1,3 +1,7 @@
+// Type-only: erased at build time, so the runtime import below
+// still does the code splitting that keeps Three.js out of the
+// entry bundle.
+import type * as THREE from 'three';
 import { useEffect, useRef } from 'react';
 
 /**

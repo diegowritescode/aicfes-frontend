@@ -20,7 +20,10 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run lint
-      - run: npx tsc --noEmit
+      # Bare `tsc --noEmit` resolves no files against the root
+      # config, so it always passed. It let an undefined component
+      # reach production and hid ten real errors behind it.
+      - run: npm run typecheck
       - run: npm run build
         env:
           VITE_API_URL: https://aicfes-backend.deviego.xyz

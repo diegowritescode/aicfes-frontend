@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Layout } from '@/components/Layout';
+import { TarjetaErrorDelDia } from '@/components/dashboard/TarjetaErrorDelDia';
 import {
   EmptyState,
   ModeCard,
@@ -219,7 +220,19 @@ export default function Dashboard() {
   return (
     <Layout>
       <div className="mx-auto max-w-6xl px-5 py-8">
-        {error ? <ErrorAlert error={error} className="mb-6" /> : null}
+        {/* It was passed `error={...}` against a component that takes
+            `message`, so a failed dashboard load drew an empty box.
+            Nothing caught it: the typecheck command in use was
+            resolving no files at all. */}
+        {error ? (
+          <div className="mb-6">
+            <ErrorAlert
+              title="No pudimos cargar tu progreso"
+              message={error.message}
+              code={error.code}
+            />
+          </div>
+        ) : null}
 
         <PageHeader
           titulo={sinDatos ? 'Empecemos' : 'Tu progreso'}
@@ -305,9 +318,13 @@ export default function Dashboard() {
                         key={area.area}
                         etiqueta={area.label}
                         porcentaje={Math.round(area.accuracy)}
+                        /* The API sends `questions`; this read
+                           `answered` and `correct`, which are
+                           undefined, so every area said "sin preguntas
+                           todavía" however many had been answered. */
                         detalle={
-                          area.answered > 0
-                            ? `${area.correct} de ${area.answered} preguntas`
+                          area.questions > 0
+                            ? `${Math.round((area.accuracy / 100) * area.questions)} de ${area.questions} preguntas`
                             : 'Sin preguntas todavía'
                         }
                       />
@@ -331,16 +348,16 @@ export default function Dashboard() {
                           <p className="truncate text-[13.5px] font-medium text-slate-800">
                             {m.title}
                           </p>
-                          <p className="text-[12px] text-slate-500">+{m.xp} XP</p>
+                          <p className="text-[12px] text-slate-500">+{m.xpReward} XP</p>
                         </div>
                         <span
                           className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold ${
-                            m.status === 'completed'
+                            m.status === 'done'
                               ? 'bg-lime/15 text-lime'
                               : 'bg-slate-100 text-slate-500'
                           }`}
                         >
-                          {m.status === 'completed' ? 'Lista' : 'Pendiente'}
+                          {m.status === 'done' ? 'Lista' : 'Pendiente'}
                         </span>
                       </li>
                     ))}
