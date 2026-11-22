@@ -6,6 +6,8 @@ import { Aviso } from '@/shared/ui/Aviso';
 import { NOMBRE_AREA } from '@/shared/model/icfes';
 import { useAccionesSesion, useSesion } from '@/features/sesion/hooks/useSesion';
 import { useErrorDelDia, usePanel } from '@/features/panel/hooks/usePanel';
+import { TarjetaErrorDelDia } from '@/features/panel/components/TarjetaErrorDelDia';
+import { esRespondible } from '@/features/panel/model/errorDelDia';
 import {
   avanceDeNivel,
   filasDeArea,
@@ -25,7 +27,7 @@ export default function RutaInicio() {
   const { sesion, cargando: cargandoSesion, autenticado } = useSesion();
   const { salir } = useAccionesSesion();
   const { panel, cargando, fallo, recargar } = usePanel();
-  const { pregunta } = useErrorDelDia();
+  const { pregunta, registrar } = useErrorDelDia();
 
   if (cargandoSesion) return null;
   if (!autenticado) return <Redirect href="/entrar" />;
@@ -87,17 +89,16 @@ export default function RutaInicio() {
 
             {/* Nothing to say is said by saying nothing: an empty card
                 takes the same room as a useful one. */}
-            {pregunta && !pregunta.resueltoHoy ? (
-              <View className="gap-3 rounded-2xl border border-alerta/40 bg-amber-50/60 p-5">
-                <Text className="text-[12px] font-bold uppercase tracking-widest text-slate-600">
-                  Su pregunta de hoy
-                </Text>
-                <Text className="text-[13px] text-slate-600">{pregunta.motivo}</Text>
-                <Text className="text-[15px] font-semibold leading-6 text-slate-900">
-                  {pregunta.pregunta}
-                </Text>
-                <Boton onPress={() => router.push('/entrenar')}>Responderla</Boton>
-              </View>
+            {/* Answerable only when the server sent the options and the
+                right answer. An older backend sends neither, and a card
+                with four blank buttons is worse than a card that waits. */}
+            {pregunta && !pregunta.resueltoHoy && esRespondible(pregunta) ? (
+              <TarjetaErrorDelDia
+                pregunta={pregunta}
+                alResponder={(elegida, acerto) =>
+                  registrar.mutate({ elegida, acerto, pregunta })
+                }
+              />
             ) : null}
 
             <View className="gap-3">
@@ -176,7 +177,16 @@ export default function RutaInicio() {
           />
         </View>
 
-        <Boton variante="suave" onPress={() => void salir()}>
+        <Boton
+          variante="suave"
+          onPress={() => {
+            /* Navigate explicitly rather than waiting for the session
+               query to re-render this screen into its own `<Redirect>`.
+               Leaving is an action the learner took; it should not
+               depend on a cache notification arriving. */
+            void salir().then(() => router.replace('/entrar'));
+          }}
+        >
           Cerrar sesión
         </Boton>
       </ScrollView>

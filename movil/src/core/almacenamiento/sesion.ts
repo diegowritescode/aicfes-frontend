@@ -29,6 +29,7 @@ export interface Sesion {
 }
 
 const esWeb = Platform.OS === 'web';
+const esProduccion = process.env.NODE_ENV === 'production';
 
 async function leerCrudo(clave: string): Promise<string | null> {
   try {
@@ -46,9 +47,24 @@ async function escribirCrudo(clave: string, valor: string): Promise<void> {
       return;
     }
     await SecureStore.setItemAsync(clave, valor);
-  } catch {
-    /* A session that cannot be persisted still works for this run.
-       Failing the sign-in over it would be worse than forgetting it. */
+  } catch (error) {
+    /* This used to swallow the error entirely, on the theory that a
+       session which cannot be persisted still works for this run.
+       That reasoning was wrong here: the very next thing that happens
+       after a sign-in is a navigation to a screen that re-reads the
+       store, so a write that silently failed sends the learner
+       straight back to the form with their typing gone and nothing on
+       screen to explain it.
+     *
+       It still does not fail the sign-in — but it says so, loudly in
+       development, and it rethrows so the caller can decide. */
+    if (!esProduccion) {
+      console.error(
+        `No se pudo guardar "${clave}" en el almacén seguro:`,
+        error instanceof Error ? error.message : error,
+      );
+    }
+    throw error;
   }
 }
 
@@ -82,6 +98,17 @@ export const almacenSesion = {
 
   async guardar(sesion: Sesion): Promise<void> {
     await escribirCrudo(CLAVE_SESION, JSON.stringify(sesion));
+
+    /* Read it back. A keystore that accepts a write and returns
+       nothing is not hypothetical — it is what a failed write looks
+       like from the outside, and the failure only surfaces one screen
+       later as a redirect nobody can explain. Better to know here. */
+    const confirmado = await leerCrudo(CLAVE_SESION);
+    if (!confirmado) {
+      throw new Error(
+        'La sesión no quedó guardada: el almacén aceptó la escritura pero devolvió vacío.',
+      );
+    }
   },
 
   async borrar(): Promise<void> {

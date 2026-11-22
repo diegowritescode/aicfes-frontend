@@ -26,7 +26,14 @@ export default function Entrar() {
 
   const enviar = () => {
     if (!email.trim() || !clave) return;
-    entrar.mutate({ email: email.trim(), password: clave });
+    entrar.mutate(
+      { email: email.trim(), password: clave },
+      /* Navigating here rather than in the hook: the mutation is about
+         the session, and where to go next is this screen's business.
+         Omitting it left a successful sign-in sitting on the sign-in
+         form with nothing on screen to explain why. */
+      { onSuccess: () => router.replace('/inicio') },
+    );
   };
 
   return (
