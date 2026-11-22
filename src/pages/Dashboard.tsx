@@ -245,6 +245,14 @@ export default function Dashboard() {
           ) : null}
         </PageHeader>
 
+        {/* Above the numbers, because it is the one thing to *do* here
+            today. Statistics describe the past; this is the next
+            thirty seconds. It renders nothing when there is no honest
+            question to show. */}
+        <div className="mb-6">
+          <TarjetaErrorDelDia />
+        </div>
+
         {sinDatos ? (
           <EmptyState
             titulo="Todavía no hay nada que medir"

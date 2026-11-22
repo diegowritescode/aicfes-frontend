@@ -1063,3 +1063,37 @@ export function enviarMensajeTutoria(itemId: string, mensaje: string) {
 export function marcarTutoriaResuelta(itemId: string) {
   return pedirTutoria(`/api/tutoria/${itemId}/resuelto`, {});
 }
+
+/* ── El error del día ────────────────────────────────────────────
+   One question taken from what this learner already got wrong. Its
+   own call rather than part of the dashboard: the card is the least
+   important thing on the page and must never delay the rest of it. */
+
+export interface ErrorDelDia {
+  itemId: string;
+  area: Area;
+  pregunta: string;
+  contexto: string | null;
+  opciones: Record<string, string>;
+  /** Why this one was picked, in the learner's words. */
+  motivo: string;
+  resueltoHoy: boolean;
+}
+
+export async function getErrorDelDia(): Promise<{
+  success: boolean;
+  data?: ErrorDelDia | null;
+}> {
+  try {
+    const zona = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+    const response = await apiClient.get('/api/error-del-dia', {
+      params: { timeZone: zona },
+    });
+    const data = response.data as { ok?: boolean; data?: ErrorDelDia | null };
+    if (!data.ok) return { success: false };
+    return { success: true, data: data.data ?? null };
+  } catch {
+    // No card is fine. It is an extra, not part of the page working.
+    return { success: false };
+  }
+}
