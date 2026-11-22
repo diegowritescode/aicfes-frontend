@@ -141,16 +141,6 @@ export function ModalTutoria({
             <p className="text-[14px] text-slate-500">Abriendo…</p>
           ) : null}
 
-          {esperaDefensa && estado ? (
-            <div className="rounded-2xl bg-wash/70 p-5">
-              <p className="text-[14.5px] leading-relaxed text-slate-700">
-                Antes de explicarle nada: <strong>¿por qué eligió la {opcionElegida}?</strong>{' '}
-                Escríbalo como lo pensó, aunque haya sido una corazonada. Eso es lo que nos
-                deja ver dónde se desvió.
-              </p>
-            </div>
-          ) : null}
-
           {estado?.mensajes.map((m, i) => (
             <div
               key={i}
@@ -209,7 +199,9 @@ export function ModalTutoria({
                 rows={2}
                 disabled={enviando || !estado}
                 placeholder={
-                  esperaDefensa ? 'Porque pensé que…' : 'Escriba su duda'
+                  esperaDefensa
+                    ? `Porque pensé que la ${opcionElegida}…`
+                    : 'Escriba su duda'
                 }
                 aria-label={esperaDefensa ? 'Por qué eligió esa opción' : 'Su mensaje'}
                 className="flex-1 resize-none rounded-2xl border border-slate-200 px-4 py-3 text-[14px] text-slate-800
