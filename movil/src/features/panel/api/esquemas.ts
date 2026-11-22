@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { area } from '@/shared/model/icfes';
+import { area, letra } from '@/shared/model/icfes';
 
 /**
  * The dashboard, read from the running server.
@@ -69,6 +69,22 @@ export const errorDelDia = z
     area,
     pregunta: z.string(),
     contexto: z.string().nullable().optional(),
+    /* Optional only until the server carrying them is deployed. The
+       card renders read-only without them rather than disappearing,
+       so an app running against an older backend degrades instead of
+       breaking. */
+    opciones: z.record(z.string(), z.string()).optional(),
+    /* Sent for this card, and deliberately not for a sitting. The
+       difference is the contract: this is practice with immediate
+       feedback, so the learner answers and finds out at once — the
+       same deal as training. A sitting withholds it because the
+       payload reaches a device where anything sent can be read.
+     *
+       Leaving these out is what forced the card to send the learner
+       to `/entrenar` instead of letting them answer the question it
+       had just shown them. */
+    respuesta_correcta: letra.optional(),
+    explicaciones: z.record(z.string(), z.string()).nullable().optional(),
     motivo: z.string(),
     resueltoHoy: z.boolean(),
   })

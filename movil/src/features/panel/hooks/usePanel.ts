@@ -1,6 +1,8 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Fallo } from '@/core/http/cliente';
 import { leerErrorDelDia, leerPanel } from '../api/peticiones';
+import { guardarRespuestas } from '@/shared/pregunta/api/peticiones';
+import type { ErrorDelDia } from '../api/esquemas';
 
 /**
  * The dashboard.
@@ -45,5 +47,47 @@ export function useErrorDelDia() {
     retry: 1,
   });
 
-  return { pregunta: consulta.data ?? null, cargando: consulta.isPending };
+  const clienteConsultas = useQueryClient();
+
+  /**
+   * Record the attempt.
+   *
+   * Fire-and-forget on purpose: the learner has already seen whether
+   * they got it right, because that was decided locally from the
+   * payload. A failed write costs them a row in their history, not
+   * the answer they just read — so it must not produce an error
+   * message over a question they already finished.
+   */
+  const registrar = useMutation({
+    mutationFn: async ({
+      elegida,
+      acerto,
+      pregunta,
+    }: {
+      elegida: string;
+      acerto: boolean;
+      pregunta: NonNullable<ErrorDelDia>;
+    }) => {
+      await guardarRespuestas([
+        {
+          sessionId: `error-del-dia-${new Date().toISOString().slice(0, 10)}`,
+          questionIndex: 0,
+          area: pregunta.area,
+          dificultad: 'media',
+          selectedAnswer: elegida,
+          isCorrect: acerto,
+          itemId: pregunta.itemId,
+        },
+      ]);
+    },
+    onSuccess: () => {
+      /* The dashboard counts this answer, and the card is done for
+         today once it was right. Both come from the server, so both
+         get re-read rather than guessed at here. */
+      void clienteConsultas.invalidateQueries({ queryKey: ['panel'] });
+      void clienteConsultas.invalidateQueries({ queryKey: ['error-del-dia'] });
+    },
+  });
+
+  return { pregunta: consulta.data ?? null, cargando: consulta.isPending, registrar };
 }
