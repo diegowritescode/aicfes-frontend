@@ -20,6 +20,8 @@ import { PantallaResultados } from '@/features/examen/components/PantallaResulta
  */
 
 const AREAS: readonly Area[] = ['MAT', 'LC', 'CN', 'SOC', 'ING'];
+/** Null means "all five, mixed", at the exam's own proportions. */
+type Seleccion = Area | 'MIXTO';
 const CANTIDADES = [5, 10, 15] as const;
 
 export default function RutaEntrenar() {
@@ -27,7 +29,7 @@ export default function RutaEntrenar() {
   const { cargando, autenticado } = useSesion();
   const examen = useExamen();
 
-  const [area, setArea] = useState<Area>('MAT');
+  const [area, setArea] = useState<Seleccion>('MIXTO');
   const [dificultad] = useState<Dificultad>('media');
   const [cantidad, setCantidad] = useState<number>(5);
 
@@ -63,6 +65,24 @@ export default function RutaEntrenar() {
             Área
           </Text>
           <View className="flex-row flex-wrap gap-2">
+            <Pressable
+              onPress={() => setArea('MIXTO')}
+              accessibilityRole="radio"
+              accessibilityState={{ checked: area === 'MIXTO' }}
+              className={`min-h-[44px] justify-center rounded-full border px-4 ${
+                area === 'MIXTO'
+                  ? 'border-brand-bright bg-brand-soft/40'
+                  : 'border-slate-200 bg-white'
+              }`}
+            >
+              <Text
+                className={`text-[13.5px] font-semibold ${
+                  area === 'MIXTO' ? 'text-brand' : 'text-slate-600'
+                }`}
+              >
+                Las cinco mezcladas
+              </Text>
+            </Pressable>
             {AREAS.map((a) => (
               <Pressable
                 key={a}

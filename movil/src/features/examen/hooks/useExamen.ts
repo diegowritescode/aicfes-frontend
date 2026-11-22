@@ -5,11 +5,13 @@ import type { Area, Dificultad, Letra } from '@/shared/model/icfes';
 import {
   completarSesionEstudio,
   generarItems,
+  generarMixto,
   guardarRespuestas,
   iniciarSesionEstudio,
 } from '@/shared/pregunta/api/peticiones';
 import type { ItemGenerado } from '@/shared/pregunta/api/esquemas';
 import { esCorrecta, resumirExamen, type RespuestaDada } from '@/shared/pregunta/model/reglas';
+import { repartirMixto } from '../model/mixto';
 
 /**
  * A training run from start to saved.
@@ -43,10 +45,16 @@ export function useExamen() {
   const preparar = useMutation<
     { items: ItemGenerado[]; sessionId: string | null },
     Fallo,
-    { area: Area; dificultad: Dificultad; n: number; modo?: string }
+    { area: Area | 'MIXTO'; dificultad: Dificultad; n: number; modo?: string }
   >({
     mutationFn: async ({ area, dificultad, n, modo = 'generacion_libre' }) => {
-      const generados = await generarItems({ area, dificultad, n });
+      /* Mixed practice splits the request across the five areas at
+         roughly the exam's own weights, which is the whole point of
+         practising mixed rather than one area at a time. */
+      const generados =
+        area === 'MIXTO'
+          ? await generarMixto(repartirMixto(n, dificultad))
+          : await generarItems({ area, dificultad, n });
       if (!generados.ok) throw generados.fallo;
 
       /* The session is opened after the items exist. Opening it first

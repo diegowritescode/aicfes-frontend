@@ -66,6 +66,25 @@ describe('las capas', () => {
     expect(malas).toEqual([]);
   });
 
+  it('model/ no toca react ni react-native', () => {
+    /* The rules have to be testable on Node, which means they cannot
+       sit behind an import of react-native — Vitest cannot parse its
+       Flow types, so a pure function living in a hook is a function
+       nobody can test. That is how repartirMixto was written first,
+       and the failing suite is what moved it here. */
+    const malas: string[] = [];
+    for (const raiz of ['features', 'shared']) {
+      for (const archivo of archivos(path.join(RAIZ, raiz))) {
+        if (!archivo.includes(`${path.sep}model${path.sep}`)) continue;
+        const texto = readFileSync(archivo, 'utf-8');
+        if (/from 'react(-native)?'/.test(texto)) {
+          malas.push(path.relative(RAIZ, archivo));
+        }
+      }
+    }
+    expect(malas).toEqual([]);
+  });
+
   it('shared no importa de features', () => {
     const malas: string[] = [];
     for (const archivo of archivos(path.join(RAIZ, 'shared'))) {

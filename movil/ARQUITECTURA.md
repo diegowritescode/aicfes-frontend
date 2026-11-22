@@ -87,12 +87,31 @@ No es ceremonia: el backend evoluciona, y un campo que cambió de forma
 debe fallar en la frontera con un mensaje claro, no tres pantallas
 después con `undefined is not an object`.
 
-**3. Las reglas de negocio no viven en los componentes.**
+**3. Las reglas de negocio no viven en los componentes ni en los hooks.**
 
 Si se puede probar sin renderizar, va en `model/`. Calcular el tiempo
 restante, decidir si una pregunta cuenta como respondida, ordenar áreas
 por debilidad — eso es lógica, y la lógica se prueba sin montar una
 pantalla.
+
+Y hay una razón mecánica además de la estética: un archivo que importa
+`react-native` no se puede parsear en Node, porque trae tipos Flow. Una
+función pura escondida en un hook es una función que **nadie puede
+probar**. Eso pasó con `repartirMixto`: la suite falló, y por eso vive
+en `model/`.
+
+## Esto se verifica, no se promete
+
+`src/shared/arquitectura/capas.test.ts` falla la compilación si:
+
+- una feature importa de otra feature (con una excepción nombrada:
+  `examen -> tutoria`, que es composición)
+- `core/` mira hacia arriba
+- `shared/` importa de `features/`
+- algo en `model/` importa `react` o `react-native`
+
+Escribir esas pruebas encontró **seis violaciones reales** el primer
+día. Una regla en un README es una regla hasta el primer afán.
 
 ## Por qué NativeWind y no StyleSheet
 
