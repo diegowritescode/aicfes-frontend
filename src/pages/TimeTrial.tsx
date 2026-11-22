@@ -130,6 +130,18 @@ export default function TimeTrial() {
           </p>
         </header>
 
+        {/* The speed bonus is real: the backend pays
+            speedFactor * preguntas * 4 extra XP, but only once accuracy
+            reaches half. The old card said "si terminas antes del
+            límite con buena precisión", which hid the threshold — a
+            learner could race through, score 40% and wonder where the
+            bonus went. */}
+        <p className="mb-4 rounded-2xl bg-lime/12 px-4 py-3 text-[13px] leading-relaxed text-slate-700">
+          <span className="font-semibold">Bono por velocidad:</span> si acierta al menos la
+          mitad, gana XP extra por cada minuto que le sobre. Por debajo de la mitad no hay
+          bono, así que corra solo hasta donde pueda responder bien.
+        </p>
+
         {/* The exam screen plays a ticking clock in this mode. Starting
             audio the learner did not ask for is a WCAG 1.4.2 problem;
             the least we can do is say so before they start. */}

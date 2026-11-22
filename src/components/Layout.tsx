@@ -259,7 +259,11 @@ export function Layout({ children }: LayoutProps) {
         {!isTestPage && !isAuthPage && !isLandingPage && (
           <footer className="border-t border-border bg-card py-6">
             <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
-              <p>© 2024 AICFES - Plataforma de preparación para el examen Saber 11</p>
+              <p>
+                {/* Was hardcoded to 2024, so the footer advertised a
+                    two-year-old product to anyone who looked. */}
+                © {new Date().getFullYear()} AICFES · Preparación para el examen Saber 11
+              </p>
               <p className="mt-1">Preguntas generadas con inteligencia artificial</p>
             </div>
           </footer>
