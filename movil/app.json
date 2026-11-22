@@ -2,6 +2,7 @@
   "expo": {
     "name": "AICFES",
     "slug": "aicfes",
+    "owner": "diegowritescode",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -29,7 +30,15 @@
     ],
     "scheme": "aicfes",
     "extra": {
-      "apiUrl": "https://aicfes-backend.deviego.xyz"
+      "apiUrl": "https://aicfes-backend.deviego.xyz",
+      "router": {
+        "asyncRoutes": {
+          "web": true
+        }
+      },
+      "eas": {
+        "projectId": "906c0723-4993-4f4f-b834-8d114e7bd1e6"
+      }
     }
   }
 }
