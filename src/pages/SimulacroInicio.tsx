@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Clock, FileText } from 'lucide-react';
-import { iniciarSimulacro, listarSimulacros } from '@/services/api';
+import { getInventarioBanco, iniciarSimulacro, listarSimulacros } from '@/services/api';
 import { Button } from '@/components/ui/button';
 
 /**
@@ -25,6 +25,10 @@ export default function SimulacroInicio() {
   const [iniciando, setIniciando] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [abierto, setAbierto] = useState<{ id: string; totalPreguntas: number } | null>(null);
+  /* How big a sitting the bank can actually fill. Offering one it
+     cannot is worse than not offering it: the learner picks a length,
+     waits, and gets a 400 explaining that an area ran out. */
+  const [maximo, setMaximo] = useState<number | null>(null);
 
   useEffect(() => {
     let vivo = true;
@@ -33,6 +37,20 @@ export default function SimulacroInicio() {
       if (!vivo || !r.success) return;
       const enCurso = (r.data ?? []).find((s) => s.status === 'en_curso');
       if (enCurso) setAbierto({ id: enCurso.id, totalPreguntas: enCurso.totalPreguntas });
+    })();
+    return () => {
+      vivo = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let vivo = true;
+    void (async () => {
+      const r = await getInventarioBanco();
+      if (!vivo) return;
+      // Unknown rather than zero if the call fails: a transient error
+      // should not hide every option.
+      setMaximo(r.success ? (r.data?.simulacroMaximo ?? null) : null);
     })();
     return () => {
       vivo = false;
@@ -72,9 +90,15 @@ export default function SimulacroInicio() {
       ) : null}
 
       <ul className="mt-6 grid gap-3 sm:grid-cols-2">
-        {LARGOS.map((largo) => (
+        {LARGOS.map((largo) => {
+          const alcanza = maximo === null || largo.preguntas <= maximo;
+          return (
           <li key={largo.preguntas}>
-            <div className="flex h-full flex-col rounded-2xl border border-slate-200 bg-white p-5">
+            <div
+              className={`flex h-full flex-col rounded-2xl border p-5 ${
+                alcanza ? 'border-slate-200 bg-white' : 'border-slate-200 bg-slate-50'
+              }`}
+            >
               <p className="text-[15px] font-bold text-slate-900">{largo.titulo}</p>
               <p className="mt-1 flex items-center gap-3 text-[12.5px] font-semibold text-slate-500">
                 <span className="inline-flex items-center gap-1">
@@ -87,17 +111,27 @@ export default function SimulacroInicio() {
                 </span>
               </p>
               <p className="mt-2 flex-1 text-[13.5px] leading-relaxed text-slate-600">{largo.para}</p>
-              <Button
-                className="mt-4"
-                variant="outline"
-                disabled={iniciando !== null}
-                onClick={() => void empezar(largo.preguntas)}
-              >
-                {iniciando === largo.preguntas ? 'Preparando…' : 'Empezar'}
-              </Button>
+              {alcanza ? (
+                <Button
+                  className="mt-4"
+                  variant="outline"
+                  disabled={iniciando !== null}
+                  onClick={() => void empezar(largo.preguntas)}
+                >
+                  {iniciando === largo.preguntas ? 'Preparando…' : 'Empezar'}
+                </Button>
+              ) : (
+                /* Said plainly, because the reason is ours and not
+                   theirs: the bank is still being filled. */
+                <p className="mt-4 rounded-xl bg-white px-3 py-2.5 text-[12.5px] leading-relaxed text-slate-500">
+                  Todavía no hay preguntas suficientes para este largo. Estamos llenando el
+                  banco.
+                </p>
+              )}
             </div>
           </li>
-        ))}
+          );
+        })}
       </ul>
 
       {error ? (

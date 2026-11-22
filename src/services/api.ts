@@ -1220,3 +1220,14 @@ export function listarSimulacros() {
     '/api/simulacro',
   );
 }
+
+export interface InventarioBanco {
+  porArea: Array<{ area: string; verificados: number; paraExamenCompleto: number }>;
+  total: number;
+  /** The biggest sitting the bank can fill right now. */
+  simulacroMaximo: number;
+}
+
+export function getInventarioBanco() {
+  return pedirSimulacro<InventarioBanco>('/api/items/bank/stats');
+}
