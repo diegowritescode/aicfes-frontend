@@ -99,7 +99,15 @@ export function PantallaPeaje({
       <SafeAreaView className="flex-1 bg-wash">
         <View className="flex-1 justify-center gap-4 px-5">
           <Text className="text-[26px] font-bold tracking-tight text-slate-900">
-            Listo. Tienes {MINUTOS_DESBLOQUEO} minutos.
+            Listo. {MINUTOS_DESBLOQUEO} minutos de uso.
+          </Text>
+          {/* "De uso" is load-bearing: the native budget only runs down
+              while the blocked app is in the foreground, so closing it
+              pauses the clock. Saying "15 minutos" would read as a
+              deadline and make the app look broken when there is time
+              left an hour later. */}
+          <Text className="text-[13px] leading-5 text-slate-400">
+            El tiempo corre solo mientras la tengas abierta.
           </Text>
           <Text className="text-[14.5px] leading-6 text-slate-600">
             {r.acertadas} de {r.total} correctas.{' '}

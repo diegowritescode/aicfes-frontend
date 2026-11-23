@@ -14,7 +14,20 @@ import type { PreguntaDelLote } from '../api/esquemas';
  * arguable from a test rather than from a screenshot.
  */
 
-/** Minutes of access a cleared block buys. */
+/**
+ * Minutes of access a cleared block buys.
+ *
+ * **Minutes of use, not of clock.** Verified in the native module's
+ * own source (`expo-screen-time@0.3.0`,
+ * `src/ExpoScreenTimeModule.ts:111`): "The budget is usage-based, not
+ * wall-clock: it is only spent while a blocked app is actually in the
+ * foreground — it pauses when the user leaves and resumes when they
+ * come back."
+ *
+ * That is more generous than a timer and has to be said that way, or
+ * a learner who closes Instagram after three minutes and comes back to
+ * find twelve left will think the app is broken.
+ */
 export const MINUTOS_DESBLOQUEO = 15;
 
 export interface IntentoDelPeaje {
@@ -65,7 +78,15 @@ export function estaPagado(estado: EstadoDelPeaje): boolean {
   return estado.preguntas.length > 0 && estado.intentos.length >= estado.preguntas.length;
 }
 
-/** When access expires, from the moment the block was cleared. */
+/**
+ * When access would expire if the learner used it continuously.
+ *
+ * An upper bound, not a deadline: the real budget only runs down while
+ * the blocked app is in the foreground, and the native layer is what
+ * meters it. This exists for the screen to show something honest
+ * before the native layer is wired up, and should be replaced by
+ * `getRemainingUnlockSeconds()` once it is.
+ */
 export function venceEn(pagadoEn: Date, minutos = MINUTOS_DESBLOQUEO): Date {
   return new Date(pagadoEn.getTime() + minutos * 60_000);
 }
