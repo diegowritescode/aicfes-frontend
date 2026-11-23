@@ -7,6 +7,7 @@ import { Aviso } from '@/shared/ui/Aviso';
 import { AvisoConexion } from '@/shared/conexion/AvisoConexion';
 import { useConexion } from '@/shared/conexion/useConexion';
 import { useLote } from '@/features/offline/hooks/useLote';
+import { useCola } from '@/features/offline/hooks/useCola';
 import { NOMBRE_AREA } from '@/shared/model/icfes';
 import { useAccionesSesion, useSesion } from '@/features/sesion/hooks/useSesion';
 import { useErrorDelDia, useLogros, usePanel } from '@/features/panel/hooks/usePanel';
@@ -36,6 +37,7 @@ export default function RutaInicio() {
   const { logros } = useLogros();
   const conexion = useConexion();
   const lote = useLote();
+  const cola = useCola();
 
   /* Top the offline pool up here, on the screen the learner opens
      most, and only with a connection. The toll runs when there is no
@@ -46,6 +48,15 @@ export default function RutaInicio() {
     if (!lote.necesitaRelleno) return;
     void lote.rellenar();
   }, [conexion, lote.necesitaRelleno, lote.rellenar]);
+
+  /* And send whatever was answered offline. Same trigger, different
+     direction: a toll block cleared without data has to reach the
+     server, or the learner's streak disagrees with what they did. */
+  useEffect(() => {
+    if (conexion !== 'con-red') return;
+    if (cola.pendientes === 0) return;
+    void cola.sincronizar();
+  }, [conexion, cola.pendientes, cola.sincronizar]);
 
   if (cargandoSesion) return null;
   if (!autenticado) return <Redirect href="/entrar" />;
@@ -191,6 +202,16 @@ export default function RutaInicio() {
             texto="Sabes al instante si acertaste, y puedes hablar con el tutor cuando no."
             accion="Entrenar ahora"
             onPress={() => router.push('/entrenar')}
+          />
+          <Tarjeta
+            titulo="Modo intensivo"
+            texto={
+              lote.listo
+                ? `${lote.disponibles} preguntas listas para usar sin internet.`
+                : 'Conéctate un momento para descargar preguntas.'
+            }
+            accion="Probar el peaje"
+            onPress={() => router.push('/peaje')}
           />
           <Tarjeta
             titulo="Contrarreloj"
