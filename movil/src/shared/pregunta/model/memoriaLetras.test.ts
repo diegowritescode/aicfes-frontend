@@ -1,5 +1,10 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { letraAnterior, olvidarLetras, recordarLetra } from './memoriaLetras';
+import {
+  letraAnterior,
+  olvidarLetras,
+  recordarLetra,
+  repeticionesSeguidas,
+} from './memoriaLetras';
 
 /**
  * Remembering where the answer was shown.
@@ -58,5 +63,41 @@ describe('olvidar', () => {
     recordarLetra('i1', 'A');
     olvidarLetras();
     expect(letraAnterior('i1')).toBeNull();
+  });
+});
+
+describe('contar la racha', () => {
+  it('una pregunta nueva no lleva ninguna', () => {
+    expect(repeticionesSeguidas('i1')).toBe(0);
+  });
+
+  it('la primera vez cuenta como una', () => {
+    recordarLetra('i1', 'C');
+    expect(repeticionesSeguidas('i1')).toBe(1);
+  });
+
+  it('la misma letra otra vez suma', () => {
+    /* This is what the shuffle reads to decide whether a run has gone
+       on long enough to cut. */
+    recordarLetra('i1', 'C');
+    recordarLetra('i1', 'C');
+    recordarLetra('i1', 'C');
+    expect(repeticionesSeguidas('i1')).toBe(3);
+  });
+
+  it('cambiar de letra reinicia la cuenta', () => {
+    recordarLetra('i1', 'C');
+    recordarLetra('i1', 'C');
+    recordarLetra('i1', 'A');
+    expect(repeticionesSeguidas('i1')).toBe(1);
+    expect(letraAnterior('i1')).toBe('A');
+  });
+
+  it('cada pregunta lleva su propia racha', () => {
+    recordarLetra('i1', 'A');
+    recordarLetra('i1', 'A');
+    recordarLetra('i2', 'A');
+    expect(repeticionesSeguidas('i1')).toBe(2);
+    expect(repeticionesSeguidas('i2')).toBe(1);
   });
 });

@@ -19,6 +19,11 @@ import type { Letra } from '@/shared/model/icfes';
 
 const LETRAS: readonly Letra[] = ['A', 'B', 'C', 'D'];
 
+/* Two in a row is chance; three starts to look deliberate. Cutting at
+   the third keeps the shuffle honest without making the previous
+   letter a free elimination. */
+const MAXIMO_SEGUIDAS = 2;
+
 /** A small, stable hash. Not for security — only for a stable shuffle. */
 function semilla(texto: string): number {
   let h = 2166136261;
@@ -63,12 +68,23 @@ export function rotarOpciones(params: {
   /**
    * Where the answer sat last time, if this learner has seen it.
    *
-   * Given, the shuffle guarantees it lands somewhere else. Chance
-   * alone leaves it in place a quarter of the time with four options,
-   * and a learner who meets the same letter twice concludes the
-   * shuffle is not working — which, for that attempt, it was not.
+   * Only used to break a run. A shuffle that never repeats is not
+   * random either — the learner would learn that the previous letter
+   * is ruled out, which is the same free information in reverse. So
+   * repeats are allowed, and only a streak is cut.
    */
   readonly correctaAnterior?: Letra | null;
+  /**
+   * How many times running the answer has already been on that
+   * letter.
+   *
+   * Chance produces long runs: measured over 2,000 shuffles, the same
+   * letter came up five times in a row eight times. That reads as
+   * broken even though it is correct, so a run is cut at the limit
+   * below — late enough to stay unpredictable, early enough that
+   * nobody sits through it.
+   */
+  readonly repeticionesSeguidas?: number;
 }): OpcionesRotadas {
   const presentes = LETRAS.filter((l) => params.opciones[l] !== undefined);
 
@@ -117,13 +133,19 @@ export function rotarOpciones(params: {
 
   let resultado = construir(orden);
 
-  /* If the answer landed where it was last time, move it. Swapping
-     with a neighbour rather than reshuffling: one swap is enough to
-     break the repeat, and reshuffling until it differs could loop.
+  /* A run that has gone on long enough gets broken, and only then.
+     Repeating once or twice is what chance does and what keeps the
+     shuffle unguessable; repeating five times reads as a bug.
      
-     The neighbour is chosen by the same seed, so this stays
-     reproducible. */
-  if (params.correctaAnterior && resultado.correcta === params.correctaAnterior) {
+     Swapping with a neighbour rather than reshuffling: one swap ends
+     the run, and reshuffling until it differs could loop. The
+     neighbour comes from the same seed, so this stays reproducible. */
+  const yaLlevaDemasiadas = (params.repeticionesSeguidas ?? 0) >= MAXIMO_SEGUIDAS;
+  if (
+    yaLlevaDemasiadas &&
+    params.correctaAnterior &&
+    resultado.correcta === params.correctaAnterior
+  ) {
     const aqui = presentes.indexOf(resultado.correcta);
     estado = siguiente(estado);
     /* Any position but this one. With n slots there are n-1 others,

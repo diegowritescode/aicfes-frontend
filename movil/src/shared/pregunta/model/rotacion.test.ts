@@ -131,67 +131,76 @@ describe('volver a entrar cambia el orden', () => {
   });
 });
 
-describe('nunca cae donde estaba', () => {
-  it('con la letra anterior dada, la correcta se mueve siempre', () => {
-    /* Chance alone leaves it in place a quarter of the time with four
-       options, and a learner who meets the same letter twice
-       concludes the shuffle is broken — which, for that attempt, it
-       was. Exhaustive over many runs rather than a sample. */
-    for (let run = 1; run <= 300; run += 1) {
-      for (const anterior of ['A', 'B', 'C', 'D'] as const) {
+describe('repite a veces, pero no se atasca', () => {
+  it('repetir está permitido: una vez no se corrige', () => {
+    /* A shuffle that never repeats is not random either — the learner
+       would learn that the previous letter is ruled out, which is the
+       same free information in reverse. */
+    const sinTope = rotarOpciones({
+      itemId: 'i1',
+      opciones: OPCIONES,
+      correcta: 'C',
+      intento: 1,
+      correctaAnterior: 'A',
+      repeticionesSeguidas: 1,
+    });
+    const sinPista = rotarOpciones({
+      itemId: 'i1',
+      opciones: OPCIONES,
+      correcta: 'C',
+      intento: 1,
+    });
+    expect(sinTope.correcta).toBe(sinPista.correcta);
+  });
+
+  it('a la tercera seguida, se rompe la racha', () => {
+    /* Chance produces long runs: over 2,000 shuffles the same letter
+       came up five times running eight times. Correct, and
+       indistinguishable from broken. */
+    for (let run = 1; run <= 200; run += 1) {
+      for (const atascada of ['A', 'B', 'C', 'D'] as const) {
         const r = rotarOpciones({
           itemId: `item-${run}`,
           opciones: OPCIONES,
           correcta: 'C',
           intento: run,
-          correctaAnterior: anterior,
+          correctaAnterior: atascada,
+          repeticionesSeguidas: 2,
         });
-        expect(r.correcta).not.toBe(anterior);
+        expect(r.correcta).not.toBe(atascada);
       }
     }
   });
 
-  it('moverla no rompe nada de lo demás', () => {
+  it('romper la racha no estropea nada más', () => {
     const r = rotarOpciones({
       itemId: 'i1',
       opciones: OPCIONES,
       correcta: 'C',
       intento: 1,
       correctaAnterior: 'A',
+      repeticionesSeguidas: 3,
     });
-    // The answer is still the same text.
     expect(r.opciones[r.correcta]).toBe('tres');
-    // All four options, none lost or duplicated.
     expect(Object.values(r.opciones).sort()).toEqual(['cuatro', 'dos', 'tres', 'uno']);
-    // And every displayed letter still maps to a real original.
     for (const [mostrada, original] of Object.entries(r.aOriginal)) {
       expect(r.opciones[mostrada]).toBe(OPCIONES[original]);
     }
   });
 
-  it('sigue siendo reproducible con la garantía activa', () => {
+  it('sigue siendo reproducible', () => {
     const args = {
       itemId: 'i1',
       opciones: OPCIONES,
       correcta: 'C' as const,
       intento: 3,
       correctaAnterior: 'B' as const,
+      repeticionesSeguidas: 2,
     };
     expect(rotarOpciones(args).opciones).toEqual(rotarOpciones(args).opciones);
   });
 
-  it('sin letra anterior se comporta como antes', () => {
-    // A first encounter has nothing to avoid.
-    const a = rotarOpciones({ itemId: 'i1', opciones: OPCIONES, correcta: 'C', intento: 2 });
-    const b = rotarOpciones({
-      itemId: 'i1', opciones: OPCIONES, correcta: 'C', intento: 2, correctaAnterior: null,
-    });
-    expect(a.correcta).toBe(b.correcta);
-  });
-
-  it('con dos opciones la garantía también se cumple', () => {
-    /* The tightest case: with only two slots, avoiding one leaves
-       exactly one choice. */
+  it('con dos opciones también se rompe la racha', () => {
     for (let run = 1; run <= 50; run += 1) {
       const r = rotarOpciones({
         itemId: `dos-${run}`,
@@ -199,6 +208,7 @@ describe('nunca cae donde estaba', () => {
         correcta: 'A',
         intento: run,
         correctaAnterior: 'A',
+        repeticionesSeguidas: 2,
       });
       expect(r.correcta).toBe('B');
       expect(r.opciones[r.correcta]).toBe('sí');

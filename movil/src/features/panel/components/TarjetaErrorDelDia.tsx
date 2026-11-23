@@ -2,7 +2,11 @@ import { useEffect, useMemo, useState } from 'react';
 import { Text, View } from 'react-native';
 import { OpcionRespuesta } from '@/shared/pregunta/components/OpcionRespuesta';
 import { rotarOpciones } from '@/shared/pregunta/model/rotacion';
-import { letraAnterior, recordarLetra } from '@/shared/pregunta/model/memoriaLetras';
+import {
+  letraAnterior,
+  recordarLetra,
+  repeticionesSeguidas,
+} from '@/shared/pregunta/model/memoriaLetras';
 import type { Letra } from '@/shared/model/icfes';
 import type { ErrorDelDia } from '../api/esquemas';
 import { estadoDeOpcion, explicacionAMostrar, letrasDisponibles } from '../model/errorDelDia';
@@ -50,6 +54,7 @@ export function TarjetaErrorDelDia({
         /* This question is one they already missed, so the letter
            they saw then is exactly the one to avoid. */
         correctaAnterior: letraAnterior(pregunta.itemId) as Letra | null,
+        repeticionesSeguidas: repeticionesSeguidas(pregunta.itemId),
       }),
     [pregunta, semillaDeHoy],
   );

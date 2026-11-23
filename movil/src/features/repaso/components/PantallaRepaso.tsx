@@ -4,7 +4,11 @@ import { Boton } from '@/shared/ui/Boton';
 import { NOMBRE_AREA, type Letra } from '@/shared/model/icfes';
 import { OpcionRespuesta, type EstadoOpcion } from '@/shared/pregunta/components/OpcionRespuesta';
 import { rotarOpciones } from '@/shared/pregunta/model/rotacion';
-import { letraAnterior, recordarLetra } from '@/shared/pregunta/model/memoriaLetras';
+import {
+  letraAnterior,
+  recordarLetra,
+  repeticionesSeguidas,
+} from '@/shared/pregunta/model/memoriaLetras';
 import type { ErrorPendiente } from '../api/esquemas';
 import {
   cierre,
@@ -79,6 +83,7 @@ export function PantallaRepaso({
          learner who sees the same letter twice concludes the shuffle
          is broken. */
       correctaAnterior: letraAnterior(actual.itemId) as Letra | null,
+        repeticionesSeguidas: repeticionesSeguidas(actual.itemId),
     });
   }, [actual, semillaDeSesion]);
 
