@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { RefreshControl, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Redirect, useRouter } from 'expo-router';
@@ -5,6 +6,7 @@ import { Boton } from '@/shared/ui/Boton';
 import { Aviso } from '@/shared/ui/Aviso';
 import { AvisoConexion } from '@/shared/conexion/AvisoConexion';
 import { useConexion } from '@/shared/conexion/useConexion';
+import { useLote } from '@/features/offline/hooks/useLote';
 import { NOMBRE_AREA } from '@/shared/model/icfes';
 import { useAccionesSesion, useSesion } from '@/features/sesion/hooks/useSesion';
 import { useErrorDelDia, useLogros, usePanel } from '@/features/panel/hooks/usePanel';
@@ -33,6 +35,17 @@ export default function RutaInicio() {
   const { pregunta, registrar } = useErrorDelDia();
   const { logros } = useLogros();
   const conexion = useConexion();
+  const lote = useLote();
+
+  /* Top the offline pool up here, on the screen the learner opens
+     most, and only with a connection. The toll runs when there is no
+     network, so the questions have to arrive before then — and this is
+     the moment we know we can fetch them. */
+  useEffect(() => {
+    if (conexion !== 'con-red') return;
+    if (!lote.necesitaRelleno) return;
+    void lote.rellenar();
+  }, [conexion, lote.necesitaRelleno, lote.rellenar]);
 
   if (cargandoSesion) return null;
   if (!autenticado) return <Redirect href="/entrar" />;
