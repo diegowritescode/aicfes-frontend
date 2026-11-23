@@ -16,6 +16,10 @@ export const racha = z.object({
   longestDays: z.number(),
   nextMilestoneDays: z.number(),
   lastStudyDate: z.string(),
+  /* Whether a missed day is being forgiven. Optional because an older
+     server does not send it, and a streak without the flag still
+     renders — it just says nothing about the forgiveness. */
+  perdonUsado: z.boolean().optional(),
 });
 
 export const nivel = z.object({

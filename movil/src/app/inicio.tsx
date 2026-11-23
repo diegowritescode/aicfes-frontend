@@ -142,6 +142,14 @@ export default function RutaInicio() {
                   <Text className="text-[12px] text-slate-500">
                     {panel.streak.currentDays === 1 ? 'día seguido' : 'días seguidos'}
                   </Text>
+                  {/* Said out loud, because a learner who knows they
+                      skipped yesterday and sees the streak unbroken
+                      would otherwise think the number is wrong. */}
+                  {panel.streak.perdonUsado ? (
+                    <Text className="text-[11px] leading-4 text-emerald-700">
+                      Te perdonamos un día
+                    </Text>
+                  ) : null}
                 </View>
               ) : null}
             </View>
