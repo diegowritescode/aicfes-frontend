@@ -48,6 +48,11 @@ export const ENTRADAS: readonly EntradaDeMenu[] = [
     titulo: 'Simulacro',
     descripcion: 'El examen completo, con su nota al final.',
   },
+  {
+    ruta: '/duelos',
+    titulo: 'Duelos',
+    descripcion: 'Rete a un compañero a las mismas 5 preguntas.',
+  },
 ];
 
 /** Whether a route is one of the menu's own, for highlighting it. */

@@ -33,6 +33,7 @@ const PANTALLAS = [
   'features/offline/components/PantallaPeaje.tsx',
   'features/examen/components/PantallaExamen.tsx',
   'app/contrarreloj.tsx',
+  'features/duelos/components/PantallaRondaDeDuelo.tsx',
 ];
 
 describe('una pregunta en pantalla no se recarga sola', () => {
@@ -50,6 +51,39 @@ describe('una pregunta en pantalla no se recarga sola', () => {
        anyway. */
     const fuente = leer('features/repaso/components/PantallaRepaso.tsx');
     expect(fuente).toMatch(/useState<readonly ErrorPendiente\[\]>\(\(\) => errores\)/);
+  });
+
+  it('la ronda de duelo congela sus preguntas y no las vuelve a pedir', () => {
+    /* A duel is the worst place for this defect: both players are
+       scored on the same five questions, so a question that changes
+       mid-round costs the duel for a reason the learner cannot see.
+
+       The screen gets its questions from a hook, so the freeze has to
+       be asserted there — the screen passing the `useQuery` check is
+       not enough on its own. */
+    const fuente = leer('features/duelos/hooks/useRondaDeDuelo.ts');
+    expect(fuente).toMatch(/setCongeladas\(llegaron\)/);
+    /* And the query itself must not refetch underneath the freeze: a
+       refetch that lands between mount and freeze would seed the
+       round from a different list. */
+    expect(fuente).toMatch(/staleTime:\s*Infinity/);
+    expect(fuente).toMatch(/refetchOnMount:\s*false/);
+    expect(fuente).toMatch(/refetchOnWindowFocus:\s*false/);
+  });
+
+  it('el duelo no recibe la respuesta correcta', () => {
+    /* Not a stability property but the same kind of defect: something
+       on screen that must not be there. Both players are scored on
+       these questions, so a client that knows the answer decides the
+       duel by reading a response body. The server omits it; this
+       asserts the client never learned to expect it. */
+    const esquemas = leer('features/duelos/api/esquemas.ts');
+    const preguntaDeDuelo = esquemas.slice(
+      esquemas.indexOf('export const preguntaDeDuelo'),
+      esquemas.indexOf('export const preguntasDeDuelo'),
+    );
+    expect(preguntaDeDuelo).not.toMatch(/respuesta_correcta/);
+    expect(preguntaDeDuelo).not.toMatch(/explicaciones/);
   });
 
   it('la pregunta del día se congela al montar', () => {
