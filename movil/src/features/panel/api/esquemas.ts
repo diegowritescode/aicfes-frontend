@@ -116,3 +116,28 @@ export type Logro = z.infer<typeof logro>;
 export type Panel = z.infer<typeof panel>;
 export type Mision = z.infer<typeof mision>;
 export type ErrorDelDia = z.infer<typeof errorDelDia>;
+
+/**
+ * Where the learner's XP came from, grouped by source.
+ *
+ * The ledger has recorded a reason for every award since it was built
+ * and the app only ever showed a total. A number with no source is a
+ * reward; the same number with its source is feedback, and that is the
+ * difference between d = −0.36 and d = +0.33 for this age group.
+ */
+export const filaDesglose = z.object({
+  razon: z.string(),
+  /** Written for a learner, not a log. The server does the wording. */
+  etiqueta: z.string(),
+  xp: z.number(),
+  veces: z.number(),
+});
+
+export const desgloseXp = z.object({
+  filas: z.array(filaDesglose),
+  /** One sentence, or null when no source dominates. */
+  frase: z.string().nullable(),
+});
+
+export type FilaDesglose = z.infer<typeof filaDesglose>;
+export type DesgloseXp = z.infer<typeof desgloseXp>;

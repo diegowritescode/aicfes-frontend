@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Fallo } from '@/core/http/cliente';
-import { leerErrorDelDia, leerLogros, leerPanel } from '../api/peticiones';
+import { leerDesgloseXp, leerErrorDelDia, leerLogros, leerPanel } from '../api/peticiones';
 import { guardarRespuestas } from '@/shared/pregunta/api/peticiones';
 import type { ErrorDelDia } from '../api/esquemas';
 
@@ -117,4 +117,27 @@ export function useLogros() {
     logros: consulta.data ?? null,
     cargando: consulta.isPending,
   };
+}
+
+/**
+ * Where the XP came from.
+ *
+ * Fails quietly, like the achievements: this explains a number the
+ * panel already showed, so losing it should cost the explanation and
+ * not the number.
+ *
+ * Ten minutes, because it only moves when a session ends.
+ */
+export function useDesgloseXp() {
+  const consulta = useQuery({
+    queryKey: ['xp-desglose'],
+    queryFn: async () => {
+      const r = await leerDesgloseXp();
+      return r.ok ? r.datos : null;
+    },
+    staleTime: 10 * 60_000,
+    retry: 1,
+  });
+
+  return { desglose: consulta.data ?? null, cargando: consulta.isPending };
 }

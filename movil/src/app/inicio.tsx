@@ -13,9 +13,10 @@ import { TarjetaRecordatorio } from '@/features/recordatorio/components/TarjetaR
 import { temaMasFlojo } from '@/features/recordatorio/model/mensaje';
 import { NOMBRE_AREA } from '@/shared/model/icfes';
 import { useAccionesSesion, useSesion } from '@/features/sesion/hooks/useSesion';
-import { useErrorDelDia, useLogros, usePanel } from '@/features/panel/hooks/usePanel';
+import { useDesgloseXp, useErrorDelDia, useLogros, usePanel } from '@/features/panel/hooks/usePanel';
 import { TarjetaErrorDelDia } from '@/features/panel/components/TarjetaErrorDelDia';
 import { SeccionLogros } from '@/features/panel/components/SeccionLogros';
+import { DesgloseXp } from '@/features/panel/components/DesgloseXp';
 import { esRespondible } from '@/features/panel/model/errorDelDia';
 import {
   avanceDeNivel,
@@ -38,6 +39,7 @@ export default function RutaInicio() {
   const { panel, cargando, fallo, recargar } = usePanel();
   const { pregunta, registrar } = useErrorDelDia();
   const { logros } = useLogros();
+  const { desglose } = useDesgloseXp();
   const conexion = useConexion();
   const lote = useLote();
   const cola = useCola();
@@ -174,6 +176,10 @@ export default function RutaInicio() {
                 </View>
               ))}
             </View>
+
+            {/* Right after the level, because that is the number it
+                explains. */}
+            <DesgloseXp datos={desglose} />
 
             {misiones.length > 0 ? (
               <View className="gap-3">

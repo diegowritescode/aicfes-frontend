@@ -1,6 +1,6 @@
 import { pedir } from '@/core/http/cliente';
 import { z } from 'zod';
-import { errorDelDia, logro, panel } from './esquemas';
+import { desgloseXp, errorDelDia, logro, panel } from './esquemas';
 
 export function leerPanel() {
   return pedir({ ruta: '/api/dashboard', esquema: panel });
@@ -17,4 +17,11 @@ export function leerErrorDelDia() {
    a failure here should cost the section, not the screen. */
 export function leerLogros() {
   return pedir({ ruta: '/api/achievements', esquema: z.array(logro) });
+}
+
+/* Its own call, like the card and the achievements: the breakdown is
+   an explanation of a number the panel already showed, so its failure
+   should cost the explanation and not the number. */
+export function leerDesgloseXp() {
+  return pedir({ ruta: '/api/xp-desglose', esquema: desgloseXp });
 }
