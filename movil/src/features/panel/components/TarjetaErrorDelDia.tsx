@@ -53,7 +53,7 @@ export function TarjetaErrorDelDia({
   return (
     <View className="gap-3 rounded-2xl border border-alerta/40 bg-amber-50/60 p-5">
       <Text className="text-[12px] font-bold uppercase tracking-widest text-slate-600">
-        Su pregunta de hoy
+        Tu pregunta de hoy
       </Text>
       <Text className="text-[13px] text-slate-600">{pregunta.motivo}</Text>
 

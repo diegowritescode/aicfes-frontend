@@ -54,7 +54,10 @@ export function PantallaSimulacro({
   if (fallo || !pregunta) {
     return (
       <SafeAreaView className="flex-1 justify-center bg-wash px-6">
-        <Aviso mensaje={fallo?.mensaje ?? 'Este simulacro no tiene preguntas.'} />
+        <Aviso
+          mensaje={fallo?.mensaje ?? 'Este simulacro no tiene preguntas.'}
+          detalle={fallo?.detalle}
+        />
         <View className="mt-4">
           <Boton variante="contorno" onPress={alTerminar}>
             Volver
@@ -219,7 +222,7 @@ export function PantallaSimulacro({
             <Text className="text-[14px] leading-6 text-slate-600">
               {avance.sinResponder > 0
                 ? `Le quedan ${avance.sinResponder} preguntas sin responder. Las no respondidas cuentan como malas, igual que en el examen real.`
-                : 'Respondió todas. Al entregar verá su calificación y el informe por área.'}
+                : 'Respondiste todas. Al entregar ves tu calificación y el informe por área.'}
             </Text>
             <View className="gap-2">
               <Boton onPress={entregar} cargando={calificar.isPending} ancho>

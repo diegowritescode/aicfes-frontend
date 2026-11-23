@@ -93,7 +93,7 @@ export function ModalTutoria({
             </Text>
             <Text className="mt-0.5 text-[13px] text-slate-500">
               {esperaDefensa
-                ? 'Primero cuénteme qué pensó usted'
+                ? 'Primero cuéntame qué pensaste'
                 : `Le quedan ${estado?.turnosRestantes ?? 0} mensajes`}
             </Text>
           </View>
@@ -173,7 +173,7 @@ export function ModalTutoria({
                         {item.opciones[letra]}
                         {suya ? (
                           <Text className="text-[12px] font-semibold text-brand-bright">
-                            {'  · su respuesta'}
+                            {'  · tu respuesta'}
                           </Text>
                         ) : null}
                       </Text>
@@ -189,7 +189,7 @@ export function ModalTutoria({
               onContentSizeChange={() => finRef.current?.scrollToEnd({ animated: true })}
             >
               {cargando ? <Text className="text-[14px] text-slate-500">Abriendo…</Text> : null}
-              {fallo ? <Aviso mensaje={fallo.mensaje} /> : null}
+              {fallo ? <Aviso mensaje={fallo.mensaje} detalle={fallo.detalle} /> : null}
 
               {estado?.mensajes.map((m, i) => (
                 <View
@@ -216,14 +216,14 @@ export function ModalTutoria({
                   Pensando…
                 </Text>
               ) : null}
-              {falloEnvio ? <Aviso mensaje={falloEnvio.mensaje} /> : null}
+              {falloEnvio ? <Aviso mensaje={falloEnvio.mensaje} detalle={falloEnvio.detalle} /> : null}
             </ScrollView>
           )}
 
           <View className="gap-3 border-t border-slate-200 px-5 py-4">
             {sinTurnos ? (
               <Text className="rounded-xl bg-slate-100 px-4 py-3 text-[13.5px] leading-5 text-slate-600">
-                Hasta aquí llega esta conversación. Vuelva a intentar la pregunta con lo que
+                Hasta aquí llega esta conversación. Intenta la pregunta otra vez con lo que
                 acaban de hablar.
               </Text>
             ) : (
@@ -234,7 +234,7 @@ export function ModalTutoria({
                   editable={!enviando && Boolean(estado)}
                   multiline
                   placeholder={
-                    esperaDefensa ? `Porque pensé que la ${opcionElegida}…` : 'Escriba su duda'
+                    esperaDefensa ? `Porque pensé que la ${opcionElegida}…` : 'Escribe tu duda'
                   }
                   placeholderTextColor="#94a3b8"
                   accessibilityLabel={
@@ -271,8 +271,8 @@ export function ModalTutoria({
               {/* True, and reassurance rather than warning: the point is
                   to make leaving safe, not frightening. */}
               <Text className="text-[13.5px] leading-6 text-slate-600">
-                Su conversación se guarda. Si vuelve a fallar esta pregunta, la retoma donde la
-                dejó.
+                Tu conversación se guarda. Si vuelves a fallar esta pregunta, la retomas donde
+                la dejaste.
               </Text>
               <View className="gap-2">
                 <Boton onPress={() => setConfirmandoSalida(false)} ancho>

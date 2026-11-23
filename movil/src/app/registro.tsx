@@ -53,7 +53,7 @@ export default function RutaRegistro() {
               Crear cuenta
             </Text>
             <Text className="text-[15px] leading-6 text-slate-600">
-              Guardamos su progreso para que no empiece de cero cada vez.
+              Guardamos tu progreso para que no empieces de cero cada vez.
             </Text>
           </View>
 
@@ -76,7 +76,7 @@ export default function RutaRegistro() {
             />
           </View>
 
-          {registrar.isError ? <Aviso mensaje={registrar.error.mensaje} /> : null}
+          {registrar.isError ? <Aviso mensaje={registrar.error.mensaje} detalle={registrar.error.detalle} /> : null}
 
           <Boton onPress={enviar} cargando={registrar.isPending} tamano="grande" ancho>
             {registrar.isPending ? 'Creando…' : 'Crear cuenta'}

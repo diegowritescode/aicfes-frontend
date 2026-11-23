@@ -1,5 +1,6 @@
 import { pedir } from '@/core/http/cliente';
-import { errorDelDia, panel } from './esquemas';
+import { z } from 'zod';
+import { errorDelDia, logro, panel } from './esquemas';
 
 export function leerPanel() {
   return pedir({ ruta: '/api/dashboard', esquema: panel });
@@ -10,4 +11,10 @@ export function leerPanel() {
    take the whole panel down with it. */
 export function leerErrorDelDia() {
   return pedir({ ruta: '/api/error-del-dia', esquema: errorDelDia });
+}
+
+/* Also its own call. Achievements are encouragement, not the panel:
+   a failure here should cost the section, not the screen. */
+export function leerLogros() {
+  return pedir({ ruta: '/api/achievements', esquema: z.array(logro) });
 }

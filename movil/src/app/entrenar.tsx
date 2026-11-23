@@ -56,7 +56,7 @@ export default function RutaEntrenar() {
         <View className="gap-2">
           <Text className="text-[26px] font-bold tracking-tight text-slate-900">Entrenar</Text>
           <Text className="text-[14.5px] leading-6 text-slate-600">
-            Sabe al instante si acertó, y puede hablar con el tutor cuando no.
+            Sabes al instante si acertaste, y puedes hablar con el tutor cuando no.
           </Text>
         </View>
 
@@ -134,7 +134,10 @@ export default function RutaEntrenar() {
           </View>
         </View>
 
-        {examen.preparar.isError ? <Aviso mensaje={examen.preparar.error.mensaje} /> : null}
+        {examen.preparar.isError ? <Aviso
+            mensaje={examen.preparar.error.mensaje}
+            detalle={examen.preparar.error.detalle}
+          /> : null}
 
         <Boton
           onPress={() => examen.preparar.mutate({ area, dificultad, n: cantidad })}
@@ -149,7 +152,7 @@ export default function RutaEntrenar() {
           /* Generating takes minutes, and a spinner with no explanation
              reads as a hang. Saying why is what keeps them waiting. */
           <Text className="text-center text-[13px] leading-5 text-slate-500">
-            Estamos escribiendo preguntas nuevas para usted. Puede tardar un minuto.
+            Estamos escribiendo preguntas nuevas para ti. Puede tardar un minuto.
           </Text>
         ) : null}
       </ScrollView>

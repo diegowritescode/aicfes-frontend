@@ -15,7 +15,7 @@ export function validarRegistro(email: string, password: string): ErroresRegistr
   const errores: ErroresRegistro = {};
 
   const limpio = email.trim();
-  if (!limpio) errores.email = 'Escriba su correo.';
+  if (!limpio) errores.email = 'Escribe tu correo.';
   /* Deliberately loose: the only authority on whether an address
      works is the server, and a stricter pattern rejects real
      addresses — which costs a signup to prevent a typo. */
@@ -23,7 +23,7 @@ export function validarRegistro(email: string, password: string): ErroresRegistr
     errores.email = 'Ese correo no se ve completo.';
   }
 
-  if (!password) errores.password = 'Escriba una contraseña.';
+  if (!password) errores.password = 'Escribe una contraseña.';
   else if (password.length < 8) {
     errores.password = 'La contraseña necesita al menos 8 caracteres.';
   }

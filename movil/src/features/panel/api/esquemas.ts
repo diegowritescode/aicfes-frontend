@@ -60,7 +60,7 @@ export const panel = z.object({
  * One question a day, from what this learner already got wrong.
  *
  * Null when there is no honest question to show — a new learner has no
- * mistakes yet, and a random question labelled "su error de hoy" is a
+ * mistakes yet, and a random question labelled "tu error de hoy" is a
  * lie they notice immediately.
  */
 export const errorDelDia = z
@@ -89,6 +89,29 @@ export const errorDelDia = z
     resueltoHoy: z.boolean(),
   })
   .nullable();
+
+/**
+ * An achievement and how close it is.
+ *
+ * The server computes progress rather than sending raw counts, because
+ * the rule that decides "a day of study" (five minutes AND three
+ * questions) lives there and has to stay in one place.
+ *
+ * `achievedAt` arrives as an empty string when unearned, not as null —
+ * the backend builds it with a ternary. Normalised here so a screen
+ * never has to know that.
+ */
+export const logro = z.object({
+  id: z.string(),
+  title: z.string(),
+  description: z.string(),
+  target: z.number(),
+  progress: z.number(),
+  achieved: z.boolean(),
+  achievedAt: z.string().transform((v) => (v === '' ? null : v)),
+});
+
+export type Logro = z.infer<typeof logro>;
 
 export type Panel = z.infer<typeof panel>;
 export type Mision = z.infer<typeof mision>;

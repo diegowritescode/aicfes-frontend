@@ -51,7 +51,7 @@ export default function Entrar() {
               Entrar
             </Text>
             <Text className="text-[15px] leading-relaxed text-slate-600">
-              Siga donde quedó.
+              Sigue donde quedaste.
             </Text>
           </View>
 
@@ -72,7 +72,7 @@ export default function Entrar() {
             />
           </View>
 
-          {entrar.isError ? <Aviso mensaje={entrar.error.mensaje} /> : null}
+          {entrar.isError ? <Aviso mensaje={entrar.error.mensaje} detalle={entrar.error.detalle} /> : null}
 
           <Boton
             onPress={enviar}

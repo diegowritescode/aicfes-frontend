@@ -32,11 +32,11 @@ export default function RutaPlan() {
             Después de la sesión
           </Text>
           <Text className="text-[26px] font-bold tracking-tight text-slate-900">
-            Su plan de estudio
+            Tu plan de estudio
           </Text>
         </View>
 
-        {cargando ? <Text className="text-[14px] text-slate-500">Buscando su plan…</Text> : null}
+        {cargando ? <Text className="text-[14px] text-slate-500">Buscando tu plan…</Text> : null}
 
         {!cargando && !plan ? (
           <View className="gap-3 rounded-2xl border border-slate-200 bg-white p-5">
@@ -50,7 +50,7 @@ export default function RutaPlan() {
           </View>
         ) : null}
 
-        {generar.isError ? <Aviso mensaje={generar.error.mensaje} /> : null}
+        {generar.isError ? <Aviso mensaje={generar.error.mensaje} detalle={generar.error.detalle} /> : null}
 
         {plan ? (
           <View className="gap-5">

@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { entorno } from '@/core/config/entorno';
 import { almacenSesion } from '@/core/almacenamiento/sesion';
+import { limiteDe } from './model/limite';
 
 /**
  * The one place that talks to the server.
@@ -54,27 +55,41 @@ export interface Fallo {
   readonly mensaje: string;
   /** The API's own code, when it sent one, for branching on specifics. */
   readonly codigoApi?: string;
+  /* What actually went wrong, for us rather than for the learner.
+     A phone reports "sin conexión" for a dropped connection, a refused
+     TLS handshake and a DNS failure alike, and on a device there is no
+     console to tell them apart. Without this, diagnosing a field
+     report means guessing. Never rendered as the primary message. */
+  readonly detalle?: string;
 }
 
 export type Resultado<T> =
   | { readonly ok: true; readonly datos: T }
   | { readonly ok: false; readonly fallo: Fallo };
 
-const MILISEGUNDOS_LIMITE = 30_000;
+
 
 /** Messages a learner reads. Written for them, not for a log. */
 const MENSAJES: Record<CodigoFallo, string> = {
-  sin_sesion: 'Su sesión expiró. Vuelva a entrar.',
-  sin_cuota: 'Llegó al límite de práctica de hoy. Vuelva mañana para seguir.',
-  sin_red: 'Sin conexión. Revise su internet e intente de nuevo.',
-  tiempo_agotado: 'El servidor está tardando demasiado. Intente de nuevo.',
-  respuesta_invalida: 'Recibimos una respuesta que no entendimos. Intente de nuevo.',
-  servidor: 'Algo falló de nuestro lado. Intente en un momento.',
-  desconocido: 'Algo salió mal. Intente de nuevo.',
+  sin_sesion: 'Tu sesión expiró. Entra otra vez.',
+  sin_cuota: 'Llegaste al límite de práctica de hoy. Mañana sigues.',
+  sin_red: 'Sin conexión. Revisa tu internet e intenta de nuevo.',
+  tiempo_agotado: 'El servidor está tardando demasiado. Intenta de nuevo.',
+  respuesta_invalida: 'Recibimos una respuesta que no entendimos. Intenta de nuevo.',
+  servidor: 'Algo falló de nuestro lado. Intenta en un momento.',
+  desconocido: 'Algo salió mal. Intenta de nuevo.',
 };
 
-function fallo(codigo: CodigoFallo, mensaje?: string, codigoApi?: string): Resultado<never> {
-  return { ok: false, fallo: { codigo, mensaje: mensaje ?? MENSAJES[codigo], codigoApi } };
+function fallo(
+  codigo: CodigoFallo,
+  mensaje?: string,
+  codigoApi?: string,
+  detalle?: string,
+): Resultado<never> {
+  return {
+    ok: false,
+    fallo: { codigo, mensaje: mensaje ?? MENSAJES[codigo], codigoApi, detalle },
+  };
 }
 
 function codigoPorEstado(estado: number): CodigoFallo {
@@ -109,7 +124,7 @@ export async function pedir<T>({
   }
 
   const abortador = new AbortController();
-  const temporizador = setTimeout(() => abortador.abort(), MILISEGUNDOS_LIMITE);
+  const temporizador = setTimeout(() => abortador.abort(), limiteDe(ruta));
 
   let respuesta: Response;
   try {
@@ -122,9 +137,24 @@ export async function pedir<T>({
   } catch (error) {
     /* AbortError means our own deadline fired; anything else at this
        point is the network, because the request never reached a
-       server that could answer. */
+       server that could answer.
+
+       The detail carries the real error. On a phone this catch covers
+       a refused handshake, a DNS miss, a captive portal and a dropped
+       connection, and they need different advice — but there is no
+       console on a device to tell them apart after the fact. */
     const agotado = error instanceof Error && error.name === 'AbortError';
-    return fallo(agotado ? 'tiempo_agotado' : 'sin_red');
+    const detalle =
+      error instanceof Error
+        ? `${error.name}: ${error.message}`
+        : `no-Error: ${String(error)}`;
+    const limite = limiteDe(ruta);
+    return fallo(
+      agotado ? 'tiempo_agotado' : 'sin_red',
+      undefined,
+      undefined,
+      agotado ? `${detalle} (límite ${limite} ms en ${ruta})` : `${detalle} (${ruta})`,
+    );
   } finally {
     clearTimeout(temporizador);
   }

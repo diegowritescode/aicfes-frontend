@@ -42,7 +42,7 @@ const DICHO: Record<EstadoOpcion, string> = {
   pendiente: '',
   elegida: 'seleccionada',
   correcta: 'correcta',
-  fallada: 'su respuesta, incorrecta',
+  fallada: 'tu respuesta, incorrecta',
   descartada: '',
 };
 

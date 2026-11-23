@@ -4,8 +4,8 @@ import { tieneErrores, validarRegistro } from './validacion';
 describe('validar el registro', () => {
   it('pide lo que falta, no dice "inválido"', () => {
     // A message that names the fix is the only kind worth showing.
-    expect(validarRegistro('', '').email).toBe('Escriba su correo.');
-    expect(validarRegistro('a@b.co', '').password).toBe('Escriba una contraseña.');
+    expect(validarRegistro('', '').email).toBe('Escribe tu correo.');
+    expect(validarRegistro('a@b.co', '').password).toBe('Escribe una contraseña.');
   });
 
   it('rechaza una contraseña corta diciendo cuánto falta', () => {

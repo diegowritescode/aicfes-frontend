@@ -20,7 +20,7 @@ export default function NoEncontrado() {
           Esta página no existe
         </Text>
         <Text className="text-[15px] leading-6 text-slate-600">
-          El enlace puede estar viejo o mal escrito.
+          El enlace está viejo o mal escrito.
         </Text>
         <Boton onPress={() => router.replace('/inicio')}>Ir al inicio</Boton>
       </View>

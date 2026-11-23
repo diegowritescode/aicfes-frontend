@@ -122,7 +122,10 @@ export function PantallaExamen({
           </Boton>
         )}
 
-        {examen.guardar.isError ? <Aviso mensaje={examen.guardar.error.mensaje} /> : null}
+        {examen.guardar.isError ? <Aviso
+            mensaje={examen.guardar.error.mensaje}
+            detalle={examen.guardar.error.detalle}
+          /> : null}
       </ScrollView>
 
       {elegida && !acerto ? (

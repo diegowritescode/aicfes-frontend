@@ -5,8 +5,9 @@ import { Boton } from '@/shared/ui/Boton';
 import { Aviso } from '@/shared/ui/Aviso';
 import { NOMBRE_AREA } from '@/shared/model/icfes';
 import { useAccionesSesion, useSesion } from '@/features/sesion/hooks/useSesion';
-import { useErrorDelDia, usePanel } from '@/features/panel/hooks/usePanel';
+import { useErrorDelDia, useLogros, usePanel } from '@/features/panel/hooks/usePanel';
 import { TarjetaErrorDelDia } from '@/features/panel/components/TarjetaErrorDelDia';
+import { SeccionLogros } from '@/features/panel/components/SeccionLogros';
 import { esRespondible } from '@/features/panel/model/errorDelDia';
 import {
   avanceDeNivel,
@@ -28,6 +29,7 @@ export default function RutaInicio() {
   const { salir } = useAccionesSesion();
   const { panel, cargando, fallo, recargar } = usePanel();
   const { pregunta, registrar } = useErrorDelDia();
+  const { logros } = useLogros();
 
   if (cargandoSesion) return null;
   if (!autenticado) return <Redirect href="/entrar" />;
@@ -45,12 +47,12 @@ export default function RutaInicio() {
       >
         <View className="gap-1">
           <Text className="text-[12px] font-bold uppercase tracking-widest text-slate-400">
-            Su progreso
+            Tu progreso
           </Text>
           <Text className="text-[22px] font-bold text-slate-900">{sesion?.email}</Text>
         </View>
 
-        {fallo ? <Aviso mensaje={fallo.mensaje} /> : null}
+        {fallo ? <Aviso mensaje={fallo.mensaje} detalle={fallo.detalle} /> : null}
 
         {panel ? (
           <>
@@ -153,13 +155,17 @@ export default function RutaInicio() {
                 ))}
               </View>
             ) : null}
+
+            {/* After the day's missions: those are for today, these are
+                what the weeks add up to. */}
+            <SeccionLogros logros={logros} />
           </>
         ) : null}
 
         <View className="gap-3">
           <Tarjeta
             titulo="Entrenar"
-            texto="Sabe al instante si acertó, y puede hablar con el tutor cuando no."
+            texto="Sabes al instante si acertaste, y puedes hablar con el tutor cuando no."
             accion="Entrenar ahora"
             onPress={() => router.push('/entrenar')}
           />
@@ -171,7 +177,7 @@ export default function RutaInicio() {
           />
           <Tarjeta
             titulo="Simulacro"
-            texto="Como el examen real: puede saltar, volver y cambiar. La nota llega al final."
+            texto="Como el examen real: puedes saltar, volver y cambiar. La nota llega al final."
             accion="Ir al simulacro"
             onPress={() => router.push('/simulacro')}
           />

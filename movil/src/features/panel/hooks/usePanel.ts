@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Fallo } from '@/core/http/cliente';
-import { leerErrorDelDia, leerPanel } from '../api/peticiones';
+import { leerErrorDelDia, leerLogros, leerPanel } from '../api/peticiones';
 import { guardarRespuestas } from '@/shared/pregunta/api/peticiones';
 import type { ErrorDelDia } from '../api/esquemas';
 
@@ -90,4 +90,31 @@ export function useErrorDelDia() {
   });
 
   return { pregunta: consulta.data ?? null, cargando: consulta.isPending, registrar };
+}
+
+/**
+ * Achievements, with their progress.
+ *
+ * Fails quietly, like the card: encouragement that cannot load is
+ * better absent than announced as broken. The progress is computed
+ * server-side, because the rule that decides what counts as a day of
+ * study lives there and must not be duplicated here.
+ *
+ * Ten minutes: these move after a finished session, not during one.
+ */
+export function useLogros() {
+  const consulta = useQuery({
+    queryKey: ['logros'],
+    queryFn: async () => {
+      const r = await leerLogros();
+      return r.ok ? r.datos : null;
+    },
+    staleTime: 10 * 60_000,
+    retry: 1,
+  });
+
+  return {
+    logros: consulta.data ?? null,
+    cargando: consulta.isPending,
+  };
 }

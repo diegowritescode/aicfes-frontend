@@ -54,7 +54,8 @@ export function PantallaResultados({
         {guardar.isError ? (
           <Aviso
             tono="aviso"
-            mensaje="No pudimos guardar esta sesión. Su progreso de hoy puede no aparecer en el panel."
+            mensaje="No pudimos guardar esta sesión. Tu progreso de hoy puede no aparecer en el panel."
+            detalle={guardar.error?.detalle}
           />
         ) : null}
 

@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Redirect, useRouter } from 'expo-router';
 import { Boton } from '@/shared/ui/Boton';
 import { Aviso } from '@/shared/ui/Aviso';
+import type { Fallo } from '@/core/http/cliente';
 import { useSesion } from '@/features/sesion/hooks/useSesion';
 import {
   useCapacidadBanco,
@@ -35,7 +36,7 @@ export default function RutaInicioSimulacro() {
   const { maximo } = useCapacidadBanco();
 
   const [iniciando, setIniciando] = useState<number | null>(null);
-  const [fallo, setFallo] = useState<string | null>(null);
+  const [fallo, setFallo] = useState<Fallo | null>(null);
 
   if (cargandoSesion) return null;
   if (!autenticado) return <Redirect href="/entrar" />;
@@ -46,7 +47,7 @@ export default function RutaInicioSimulacro() {
     const r = await iniciarSimulacro(preguntas);
     setIniciando(null);
     if (!r.ok) {
-      setFallo(r.fallo.mensaje);
+      setFallo(r.fallo);
       return;
     }
     router.push(`/simulacro/${r.datos.id}`);
@@ -58,8 +59,8 @@ export default function RutaInicioSimulacro() {
         <View className="gap-2">
           <Text className="text-[26px] font-bold tracking-tight text-slate-900">Simulacro</Text>
           <Text className="text-[14.5px] leading-6 text-slate-600">
-            Como el examen real: puede saltar preguntas, volver atrás y cambiar lo que
-            respondió. No sabrá si acertó hasta entregar.
+            Como el examen real: puedes saltar preguntas, volver atrás y cambiar lo que
+            respondiste. No sabes si acertaste hasta entregar.
           </Text>
         </View>
 
@@ -78,7 +79,7 @@ export default function RutaInicioSimulacro() {
           </View>
         ) : null}
 
-        {fallo ? <Aviso mensaje={fallo} /> : null}
+        {fallo ? <Aviso mensaje={fallo.mensaje} detalle={fallo.detalle} /> : null}
 
         <View className="gap-3">
           {LARGOS.map((largo) => {

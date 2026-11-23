@@ -52,7 +52,7 @@ export default function RutaContrarreloj() {
             <Text className="text-[15px] text-slate-600">
               {run.seAcaboElTiempo
                 ? 'Se acabó el tiempo. Así es el examen real.'
-                : 'Respondió todas a tiempo.'}
+                : 'Respondiste todas a tiempo.'}
             </Text>
           </View>
           <Boton onPress={() => router.replace('/inicio')} ancho>
@@ -129,12 +129,12 @@ export default function RutaContrarreloj() {
             Contrarreloj
           </Text>
           <Text className="text-[14.5px] leading-6 text-slate-600">
-            El examen real da 64 segundos por pregunta. Suba la escalera a su ritmo.
+            En el examen real tienes 64 segundos por pregunta. Sube la escalera a tu ritmo.
           </Text>
         </View>
 
-        {fallo ? <Aviso mensaje={fallo.mensaje} /> : null}
-        {run.fallo ? <Aviso mensaje={run.fallo.mensaje} /> : null}
+        {fallo ? <Aviso mensaje={fallo.mensaje} detalle={fallo.detalle} /> : null}
+        {run.fallo ? <Aviso mensaje={run.fallo.mensaje} detalle={run.fallo.detalle} /> : null}
 
         {modos.map((m) => (
           <View key={m.id} className="gap-2 rounded-2xl border border-slate-200 bg-white p-5">
@@ -145,7 +145,7 @@ export default function RutaContrarreloj() {
             <Text className="text-[13.5px] leading-6 text-slate-600">{m.description}</Text>
             <Text className="text-[12.5px] font-semibold text-slate-500">
               {m.questions} preguntas · {m.segundosPorPregunta}s cada una ·{' '}
-              {m.area ? NOMBRE_AREA[m.area] : 'su área más floja'}
+              {m.area ? NOMBRE_AREA[m.area] : 'tu área más floja'}
             </Text>
             <Boton
               variante="contorno"
@@ -160,7 +160,7 @@ export default function RutaContrarreloj() {
 
         {run.empezar.isPending ? (
           <Text className="text-center text-[13px] leading-5 text-slate-500">
-            Preparando sus preguntas. Puede tardar un minuto.
+            Preparando tus preguntas. Puede tardar un minuto.
           </Text>
         ) : null}
       </ScrollView>
