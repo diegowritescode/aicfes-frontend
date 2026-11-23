@@ -1,6 +1,8 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Text, View } from 'react-native';
 import { OpcionRespuesta } from '@/shared/pregunta/components/OpcionRespuesta';
+import { rotarOpciones } from '@/shared/pregunta/model/rotacion';
+import type { Letra } from '@/shared/model/icfes';
 import type { ErrorDelDia } from '../api/esquemas';
 import { estadoDeOpcion, explicacionAMostrar, letrasDisponibles } from '../model/errorDelDia';
 
@@ -32,20 +34,41 @@ export function TarjetaErrorDelDia({
   /** Told once, so the dashboard can record it and mark the day done. */
   alResponder: (elegida: string, acerto: boolean) => void;
 }) {
+  /* Shuffled, because this question is by definition one they got
+     wrong before — they have seen the right letter highlighted. The
+     seed is fixed when the card mounts, so the options do not move
+     while they read. */
+  const [semillaDeHoy] = useState(() => Date.now());
+  const barajado = useMemo(
+    () =>
+      rotarOpciones({
+        itemId: `${pregunta.itemId}:${semillaDeHoy}`,
+        opciones: pregunta.opciones,
+        correcta: pregunta.respuesta_correcta as Letra,
+        intento: 1,
+      }),
+    [pregunta, semillaDeHoy],
+  );
+
   const [elegida, setElegida] = useState<string | null>(null);
   const respondida = elegida !== null;
-  const acerto = elegida === pregunta.respuesta_correcta;
+  const acerto = elegida === barajado.correcta;
 
   const responder = (letra: string) => {
     /* One attempt. Letting them keep trying until the border turns
        green teaches the border, not the question. */
     if (respondida) return;
     setElegida(letra);
-    alResponder(letra, letra === pregunta.respuesta_correcta);
+    /* Judged against the displayed correct letter, but reported with
+       the original one: the server's history has to survive the
+       shuffle. */
+    alResponder(barajado.aOriginal[letra] ?? letra, letra === barajado.correcta);
   };
 
   const explicacion = explicacionAMostrar({
-    elegida,
+    /* Looked up by the ORIGINAL letter: the explanations are keyed to
+       the question as written, not to where the shuffle put it. */
+    elegida: elegida ? (barajado.aOriginal[elegida] ?? elegida) : null,
     correcta: pregunta.respuesta_correcta,
     explicaciones: pregunta.explicaciones,
   });
@@ -66,15 +89,15 @@ export function TarjetaErrorDelDia({
       </Text>
 
       <View className="gap-2">
-        {letrasDisponibles(pregunta.opciones).map((l) => (
+        {letrasDisponibles(barajado.opciones).map((l) => (
           <OpcionRespuesta
             key={l}
             letra={l}
-            texto={pregunta.opciones[l] ?? ''}
+            texto={barajado.opciones[l] ?? ''}
             estado={estadoDeOpcion({
               letra: l,
               elegida,
-              correcta: pregunta.respuesta_correcta,
+              correcta: barajado.correcta,
             })}
             bloqueada={respondida}
             onElegir={() => responder(l)}
@@ -87,7 +110,11 @@ export function TarjetaErrorDelDia({
           <Text
             className={`text-[14px] font-bold ${acerto ? 'text-emerald-700' : 'text-rose-700'}`}
           >
-            {acerto ? 'Correcta.' : `La correcta era ${pregunta.respuesta_correcta}.`}
+            {/* Naming the text, not the letter: after a shuffle the
+                letter means nothing outside this card. */}
+            {acerto
+              ? 'Correcta.'
+              : `Era: ${barajado.opciones[barajado.correcta] ?? ''}`}
           </Text>
           {explicacion ? (
             <Text className="text-[13.5px] leading-6 text-slate-700">{explicacion}</Text>

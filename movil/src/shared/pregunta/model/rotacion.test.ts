@@ -113,3 +113,20 @@ describe('casos raros', () => {
     expect(r.correcta).toBe('A');
   });
 });
+
+describe('volver a entrar cambia el orden', () => {
+  it('dos sesiones distintas de la misma pregunta barajan distinto', () => {
+    /* The bug, reported from a phone: fail a question, see that the
+       answer was A, leave, come back, tap A without reading — and it
+       was still A.
+
+       The first version seeded on `veces`, the number of times the
+       question had been MISSED. Reviewing without missing it again
+       leaves that number unchanged, so the arrangement was identical.
+       The seed has to change per attempt at answering, not per
+       failure. */
+    const base = { itemId: 'i1', opciones: OPCIONES, correcta: 'C' as const };
+    const letras = [1, 2, 3, 4].map((sesion) => rotarOpciones({ ...base, intento: sesion }).correcta);
+    expect(new Set(letras).size).toBeGreaterThan(1);
+  });
+});

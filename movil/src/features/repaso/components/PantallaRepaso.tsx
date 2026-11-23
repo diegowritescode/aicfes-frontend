@@ -47,21 +47,33 @@ export function PantallaRepaso({
   const sesion: SesionDeRepaso = { errores, intentos, avanzadas };
   const actual = errorActual(sesion);
 
+  /* One number per review run, fixed when the screen mounts.
+     
+     It seeds the shuffle, and getting this wrong was a real defect:
+     the first version used `veces`, the number of times the question
+     had been MISSED. Reviewing without missing it again leaves that
+     unchanged, so a learner could fail, see that the answer was A,
+     leave, come back and tap A without reading. Reported from a
+     phone, exactly like that.
+     
+     The run is what has to differ, not the failure count. */
+  const [semillaDeSesion] = useState(() => Date.now());
+
   /* Shuffled once per question, not on every render: recomputing
      while the learner reads would move the options under their
      finger. */
   const barajado = useMemo(() => {
     if (!actual) return null;
     return rotarOpciones({
-      itemId: actual.itemId,
+      /* The item and the run together: the same question shuffles
+         differently each time it comes up, and two questions in one
+         run do not share an arrangement. */
+      itemId: `${actual.itemId}:${semillaDeSesion}`,
       opciones: actual.opciones,
       correcta: actual.respuesta_correcta,
-      /* They have already seen this one, so it is always a repeat.
-         `veces` makes the arrangement differ between a question
-         missed once and one missed four times. */
       intento: Math.max(1, actual.veces),
     });
-  }, [actual]);
+  }, [actual, semillaDeSesion]);
 
   const responder = useCallback(
     (mostrada: Letra) => {
