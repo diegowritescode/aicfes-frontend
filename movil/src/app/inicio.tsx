@@ -8,6 +8,9 @@ import { AvisoConexion } from '@/shared/conexion/AvisoConexion';
 import { useConexion } from '@/shared/conexion/useConexion';
 import { useLote } from '@/features/offline/hooks/useLote';
 import { useCola } from '@/features/offline/hooks/useCola';
+import { useRecordatorio } from '@/features/recordatorio/hooks/useRecordatorio';
+import { TarjetaRecordatorio } from '@/features/recordatorio/components/TarjetaRecordatorio';
+import { temaMasFlojo } from '@/features/recordatorio/model/mensaje';
 import { NOMBRE_AREA } from '@/shared/model/icfes';
 import { useAccionesSesion, useSesion } from '@/features/sesion/hooks/useSesion';
 import { useErrorDelDia, useLogros, usePanel } from '@/features/panel/hooks/usePanel';
@@ -38,6 +41,10 @@ export default function RutaInicio() {
   const conexion = useConexion();
   const lote = useLote();
   const cola = useCola();
+  /* The route reads the dashboard and hands the topic down, because a
+     feature may not import another feature. */
+  const temaDeHoy = temaMasFlojo(panel?.areaProgress ?? []);
+  const recordatorio = useRecordatorio(temaDeHoy);
 
   /* Top the offline pool up here, on the screen the learner opens
      most, and only with a connection. The toll runs when there is no
@@ -193,6 +200,16 @@ export default function RutaInicio() {
             {/* After the day's missions: those are for today, these are
                 what the weeks add up to. */}
             <SeccionLogros logros={logros} />
+
+            {/* Last, because it is a setting and not today's work. */}
+            <TarjetaRecordatorio
+              activo={recordatorio.activo}
+              hora={recordatorio.hora}
+              permiso={recordatorio.permiso}
+              temaDeHoy={recordatorio.temaDeHoy}
+              onActivar={(h) => void recordatorio.activar(h)}
+              onCancelar={() => void recordatorio.cancelar()}
+            />
           </>
         ) : null}
 
