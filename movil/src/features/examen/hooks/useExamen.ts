@@ -12,6 +12,7 @@ import {
 import type { ItemGenerado } from '@/shared/pregunta/api/esquemas';
 import { esCorrecta, resumirExamen, type RespuestaDada } from '@/shared/pregunta/model/reglas';
 import { repartirMixto } from '../model/mixto';
+import { areaDeSesion } from '@/shared/pregunta/model/areaDeSesion';
 
 /**
  * A training run from start to saved.
@@ -60,7 +61,14 @@ export function useExamen() {
       /* The session is opened after the items exist. Opening it first
          would record a session for a request that then failed on
          quota, which inflates every streak and average built on it. */
-      const sesion = await iniciarSesionEstudio({ mode: modo, area });
+      /* `MIXTO` is not one of the five areas the server accepts, so
+         passing it through meant every mixed run failed to open a
+         session — silently, since nothing read the result. Verified
+         against production: it answers VALIDATION_ERROR. */
+      const sesion = await iniciarSesionEstudio({
+        mode: modo,
+        area: areaDeSesion(area, generados.datos),
+      });
 
       return {
         items: generados.datos,
