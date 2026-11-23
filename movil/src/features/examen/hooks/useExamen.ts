@@ -5,6 +5,7 @@ import type { Area, Dificultad, Letra } from '@/shared/model/icfes';
 import {
   completarSesionEstudio,
   generarItems,
+  pedirDelBanco,
   generarMixto,
   guardarRespuestas,
   iniciarSesionEstudio,
@@ -52,11 +53,35 @@ export function useExamen() {
       /* Mixed practice splits the request across the five areas at
          roughly the exam's own weights, which is the whole point of
          practising mixed rather than one area at a time. */
+      /* The bank first. Generating takes minutes and costs money, and
+         the bank already holds hundreds of verified questions — a
+         learner who waits three minutes for something that already
+         existed is waiting for nothing.
+
+         It also rescues an interrupted session: what was generated is
+         saved to the bank before the request returns, so questions
+         paid for yesterday come back from here instead of being
+         generated again. */
+      const delBanco = await pedirDelBanco({ total: n });
+      const listas = delBanco.ok ? delBanco.datos : [];
+      const faltan = n - listas.length;
+
+      /* Mixed practice splits the request across the five areas at
+         roughly the exam's own weights, which is the whole point of
+         practising mixed rather than one area at a time. */
       const generados =
-        area === 'MIXTO'
-          ? await generarMixto(repartirMixto(n, dificultad))
-          : await generarItems({ area, dificultad, n });
-      if (!generados.ok) throw generados.fallo;
+        faltan <= 0
+          ? null
+          : area === 'MIXTO'
+            ? await generarMixto(repartirMixto(faltan, dificultad))
+            : await generarItems({ area, dificultad, n: faltan });
+
+      /* A generation failure with questions already in hand is not a
+         failure: fifteen is a session, and refusing it over the
+         missing ten would be the wrong trade. */
+      if (generados && !generados.ok && listas.length === 0) throw generados.fallo;
+
+      const items = [...listas, ...(generados?.ok ? generados.datos : [])];
 
       /* The session is opened after the items exist. Opening it first
          would record a session for a request that then failed on
@@ -67,11 +92,13 @@ export function useExamen() {
          against production: it answers VALIDATION_ERROR. */
       const sesion = await iniciarSesionEstudio({
         mode: modo,
-        area: areaDeSesion(area, generados.datos),
+        /* From every item in the run, bank and generated alike: the
+           session is filed under the area it drew most from. */
+        area: areaDeSesion(area, items),
       });
 
       return {
-        items: generados.datos,
+        items,
         sessionId: sesion.ok ? sesion.datos.sessionId : null,
       };
     },

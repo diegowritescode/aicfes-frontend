@@ -15,13 +15,19 @@ export const itemGenerado = z.object({
   id: z.string(),
   area,
   dificultad,
-  plantilla: z.string(),
-  contexto: z.string(),
+  /* Optional because the bank serves the same questions without
+     them, and nothing reads them: a session can be filled from
+     `/api/items/lote-offline` instead of waiting minutes for a
+     generation. Required here, the two sources could never mix. */
+  plantilla: z.string().optional(),
+  contexto: z.string().nullable().default(''),
   pregunta: z.string(),
   opciones: z.record(z.string(), z.string()),
   respuesta_correcta: letra,
-  justificacion: z.string(),
-  tags: z.array(z.string()),
+  /* The per-option explanations say the same thing in a more useful
+     shape, so a question without this is still answerable. */
+  justificacion: z.string().optional(),
+  tags: z.array(z.string()).optional(),
   /** What kind of mistake each wrong option represents. */
   distractores: z.record(z.string(), z.string()).nullable().optional(),
   /** One explanation per option, written when the item was generated. */

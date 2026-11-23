@@ -35,7 +35,15 @@ export function esCorrecta(item: ItemGenerado, elegida: Letra): boolean {
  */
 export function explicacionDe(item: ItemGenerado, elegida: Letra): string {
   const propia = item.explicaciones?.[elegida];
-  return propia ?? item.justificacion;
+  if (propia) return propia;
+  if (item.justificacion) return item.justificacion;
+
+  /* A bank question may carry neither — nothing requires both. Saying
+     which one was right is still true and still useful; an empty box
+     is neither. */
+  const deLaCorrecta = item.explicaciones?.[item.respuesta_correcta];
+  if (deLaCorrecta) return deLaCorrecta;
+  return `La correcta es ${item.respuesta_correcta}.`;
 }
 
 export interface ResumenExamen {

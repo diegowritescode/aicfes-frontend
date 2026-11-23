@@ -13,7 +13,10 @@ import type { ItemGenerado } from '../api/esquemas';
  */
 export function Enunciado({ item }: { item: ItemGenerado }) {
   const [abierto, setAbierto] = useState(false);
-  const largo = item.contexto.length > 420;
+  /* A bank question can arrive without a stimulus, so this reads the
+     length defensively rather than assuming one exists. */
+  const contexto = item.contexto ?? '';
+  const largo = contexto.length > 420;
 
   return (
     <View className="gap-4">
@@ -28,7 +31,7 @@ export function Enunciado({ item }: { item: ItemGenerado }) {
               numberOfLines={largo && !abierto ? 8 : undefined}
               className="text-[14.5px] leading-7 text-slate-700"
             >
-              {item.contexto}
+              {contexto}
             </Text>
           </View>
           {largo ? (

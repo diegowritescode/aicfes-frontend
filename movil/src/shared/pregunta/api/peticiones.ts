@@ -100,3 +100,25 @@ export function guardarRespuestas(
     esquema: respuestasGuardadas,
   });
 }
+
+/**
+ * Questions from the verified bank, without generating any.
+ *
+ * Here rather than in a feature because two already need it and a
+ * third will: it is a source of questions like `generarItems`, not
+ * something that belongs to whoever asked first.
+ *
+ * Costs no model request, so a screen can fill a session from this
+ * before paying minutes to generate what the bank already holds.
+ */
+export function pedirDelBanco(params: { total?: number; excluir?: readonly string[] }) {
+  const busqueda = new URLSearchParams();
+  if (params.total) busqueda.set('total', String(params.total));
+  if (params.excluir?.length) busqueda.set('excluir', params.excluir.join(','));
+  const cola = busqueda.toString();
+
+  return pedir({
+    ruta: `/api/items/lote-offline${cola ? `?${cola}` : ''}`,
+    esquema: z.array(itemGenerado),
+  });
+}
