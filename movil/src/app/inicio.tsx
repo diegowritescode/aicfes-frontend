@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { RefreshControl, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Redirect, useRouter } from 'expo-router';
@@ -6,6 +6,8 @@ import { Boton } from '@/shared/ui/Boton';
 import { Aviso } from '@/shared/ui/Aviso';
 import { AvisoConexion } from '@/shared/conexion/AvisoConexion';
 import { useConexion } from '@/shared/conexion/useConexion';
+import { Menu } from '@/shared/navegacion/Menu';
+import { BotonMenu } from '@/shared/navegacion/BotonMenu';
 import { useLote } from '@/features/offline/hooks/useLote';
 import { useCola } from '@/features/offline/hooks/useCola';
 import { useRecordatorio } from '@/features/recordatorio/hooks/useRecordatorio';
@@ -41,6 +43,7 @@ export default function RutaInicio() {
   const { logros } = useLogros();
   const { desglose } = useDesgloseXp();
   const conexion = useConexion();
+  const [menuAbierto, setMenuAbierto] = useState(false);
   const lote = useLote();
   const cola = useCola();
   /* The route reads the dashboard and hands the topic down, because a
@@ -75,6 +78,14 @@ export default function RutaInicio() {
 
   return (
     <SafeAreaView className="flex-1 bg-wash">
+      {/* The dashboard says how you are doing; where to go next lives
+          behind this button. It had grown four navigation cards on top
+          of the level, the streak, the missions, the achievements, the
+          XP breakdown and a reminder. */}
+      <View className="flex-row items-center justify-between px-5 pt-3">
+        <BotonMenu onPress={() => setMenuAbierto(true)} />
+      </View>
+
       <ScrollView
         contentContainerClassName="gap-5 px-5 py-6"
         refreshControl={
@@ -224,72 +235,27 @@ export default function RutaInicio() {
           </>
         ) : null}
 
-        <View className="gap-3">
-          <Tarjeta
-            titulo="Entrenar"
-            texto="Sabes al instante si acertaste, y puedes hablar con el tutor cuando no."
-            accion="Entrenar ahora"
-            onPress={() => router.push('/entrenar')}
-          />
-          <Tarjeta
-            titulo="Modo intensivo"
-            texto={
-              lote.listo
-                ? `${lote.disponibles} preguntas listas para usar sin internet.`
-                : 'Conéctate un momento para descargar preguntas.'
-            }
-            accion="Probar el peaje"
-            onPress={() => router.push('/peaje')}
-          />
-          <Tarjeta
-            titulo="Contrarreloj"
-            texto="Con el cronómetro corriendo, porque en el examen el tiempo cuenta."
-            accion="Ir a contrarreloj"
-            onPress={() => router.push('/contrarreloj')}
-          />
-          <Tarjeta
-            titulo="Simulacro"
-            texto="Como el examen real: puedes saltar, volver y cambiar. La nota llega al final."
-            accion="Ir al simulacro"
-            onPress={() => router.push('/simulacro')}
-          />
-        </View>
-
-        <Boton
-          variante="suave"
-          onPress={() => {
-            /* Navigate explicitly rather than waiting for the session
-               query to re-render this screen into its own `<Redirect>`.
-               Leaving is an action the learner took; it should not
-               depend on a cache notification arriving. */
-            void salir().then(() => router.replace('/entrar'));
-          }}
-        >
-          Cerrar sesión
-        </Boton>
       </ScrollView>
+
+      <Menu
+        abierto={menuAbierto}
+        rutaActual="/inicio"
+        email={sesion?.email}
+        onCerrar={() => setMenuAbierto(false)}
+        onIr={(ruta) => {
+          setMenuAbierto(false);
+          router.push(ruta as never);
+        }}
+        onSalir={() => {
+          setMenuAbierto(false);
+          /* Navigate explicitly rather than waiting for the session
+             query to re-render this screen into its own `<Redirect>`.
+             Leaving is an action the learner took; it should not
+             depend on a cache notification arriving. */
+          void salir().then(() => router.replace('/entrar'));
+        }}
+      />
     </SafeAreaView>
   );
 }
 
-function Tarjeta({
-  titulo,
-  texto,
-  accion,
-  onPress,
-}: {
-  titulo: string;
-  texto: string;
-  accion: string;
-  onPress: () => void;
-}) {
-  return (
-    <View className="gap-2 rounded-2xl border border-slate-200 bg-white p-5">
-      <Text className="text-[16px] font-bold text-slate-900">{titulo}</Text>
-      <Text className="text-[13.5px] leading-6 text-slate-600">{texto}</Text>
-      <Boton variante="contorno" onPress={onPress}>
-        {accion}
-      </Boton>
-    </View>
-  );
-}
