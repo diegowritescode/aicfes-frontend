@@ -3,6 +3,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 import { Boton } from '@/shared/ui/Boton';
 import { Aviso } from '@/shared/ui/Aviso';
+import { EsqueletoLista } from '@/shared/ui/Esqueleto';
 import { useSesion } from '@/features/sesion/hooks/useSesion';
 import { useRetroalimentacion } from '@/features/feedback/hooks/useRetroalimentacion';
 
@@ -36,7 +37,7 @@ export default function RutaPlan() {
           </Text>
         </View>
 
-        {cargando ? <Text className="text-[14px] text-slate-500">Buscando tu plan…</Text> : null}
+        {cargando ? <EsqueletoLista filas={3} /> : null}
 
         {!cargando && !plan ? (
           <View className="gap-3 rounded-2xl border border-slate-200 bg-white p-5">

@@ -5,6 +5,7 @@ import { Redirect, useRouter } from 'expo-router';
 import { Boton } from '@/shared/ui/Boton';
 import { Aviso } from '@/shared/ui/Aviso';
 import { AvisoConexion } from '@/shared/conexion/AvisoConexion';
+import { EsqueletoPanel } from '@/shared/ui/Esqueleto';
 import { useConexion } from '@/shared/conexion/useConexion';
 import { Menu } from '@/shared/navegacion/Menu';
 import { BotonMenu } from '@/shared/navegacion/BotonMenu';
@@ -107,6 +108,8 @@ export default function RutaInicio() {
         {fallo && conexion !== 'sin-red' ? (
           <Aviso mensaje={fallo.mensaje} detalle={fallo.detalle} />
         ) : null}
+
+        {cargando && !panel ? <EsqueletoPanel /> : null}
 
         {panel ? (
           <>

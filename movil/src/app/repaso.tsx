@@ -4,20 +4,25 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Redirect, useRouter } from 'expo-router';
 import { Boton } from '@/shared/ui/Boton';
 import { Aviso } from '@/shared/ui/Aviso';
+import { EsqueletoLista } from '@/shared/ui/Esqueleto';
 import { NOMBRE_AREA, type Area, type Letra } from '@/shared/model/icfes';
-import { OpcionRespuesta, type EstadoOpcion } from '@/shared/pregunta/components/OpcionRespuesta';
 import { useSesion } from '@/features/sesion/hooks/useSesion';
 import { useRepaso } from '@/features/repaso/hooks/useRepaso';
 import { useRegistrarRepaso } from '@/features/repaso/hooks/useRegistrarRepaso';
+import { PantallaRepaso } from '@/features/repaso/components/PantallaRepaso';
+import { ModalTutoria } from '@/features/tutoria/components/ModalTutoria';
 import type { ErrorPendiente } from '@/features/repaso/api/esquemas';
 
 /**
- * Working through what you got wrong.
+ * Reviewing mistakes.
  *
- * The question of the day is a nudge — one thing, today. This is the
- * tool: how many are left, in which areas, and whether the number is
- * going down. A learner who wants to clear their mistakes cannot do
- * it one card at a time with no sense of an end.
+ * Two screens in one route. The first is a choice — how many are left
+ * and in which area — and the second is the review itself, one
+ * question at a time with nothing else on screen.
+ *
+ * They are separate because they are different activities: deciding
+ * what to work on, and working on it. The listed version mixed them
+ * and was reported as hard to concentrate in.
  */
 export default function RutaRepaso() {
   const router = useRouter();
@@ -25,30 +30,56 @@ export default function RutaRepaso() {
   const { datos, cargando, fallo, area, setArea, recargar } = useRepaso();
   const registrar = useRegistrarRepaso(recargar);
 
-  const [abierta, setAbierta] = useState<string | null>(null);
-  const [elegida, setElegida] = useState<Letra | null>(null);
-
-  const responder = useCallback(
-    (error: ErrorPendiente, letra: Letra) => {
-      if (elegida !== null) return;
-      setElegida(letra);
-      registrar.mutate({
-        itemId: error.itemId,
-        area: error.area,
-        elegida: letra,
-        acerto: letra === error.respuesta_correcta,
-      });
-    },
-    [elegida, registrar],
+  const [enSesion, setEnSesion] = useState(false);
+  const [tutor, setTutor] = useState<{ error: ErrorPendiente; elegida: Letra } | null>(
+    null,
   );
 
-  const abrir = useCallback((itemId: string) => {
-    setAbierta((previo) => (previo === itemId ? null : itemId));
-    setElegida(null);
-  }, []);
+  const volver = useCallback(() => router.replace('/inicio'), [router]);
+
+  const terminar = useCallback(() => {
+    setEnSesion(false);
+    recargar();
+  }, [recargar]);
 
   if (cargandoSesion) return null;
   if (!autenticado) return <Redirect href="/entrar" />;
+
+  const errores = datos?.pendientes ?? [];
+
+  if (enSesion && errores.length > 0) {
+    return (
+      <SafeAreaView className="flex-1 bg-wash">
+        <PantallaRepaso
+          errores={errores}
+          onResponder={(intento) =>
+            registrar.mutate({
+              itemId: intento.itemId,
+              area:
+                errores.find((e) => e.itemId === intento.itemId)?.area ?? 'MAT',
+              elegida: intento.elegida as Letra,
+              acerto: intento.correcta,
+            })
+          }
+          onPedirTutor={(error, elegida) => setTutor({ error, elegida })}
+          onTerminar={terminar}
+        />
+
+        {/* Assembled here rather than inside the feature: a feature may
+            not import another feature, and the route is what composes
+            them. */}
+        {tutor ? (
+          <ModalTutoria
+            item={aItemDeTutoria(tutor.error)}
+            opcionElegida={tutor.elegida}
+            visible
+            onSalir={() => setTutor(null)}
+            onReintentar={() => setTutor(null)}
+          />
+        ) : null}
+      </SafeAreaView>
+    );
+  }
 
   const resumen = datos?.resumen;
   const total = (resumen?.pendientes ?? 0) + (resumen?.corregidos ?? 0);
@@ -65,16 +96,13 @@ export default function RutaRepaso() {
           </Text>
         </View>
 
-        {cargando ? (
-          <Text className="text-[14px] text-slate-500">Buscando tus errores…</Text>
-        ) : null}
+        {cargando ? <EsqueletoLista filas={3} /> : null}
 
         {fallo ? <Aviso mensaje={fallo.mensaje} detalle={fallo.detalle} /> : null}
 
         {/* Progress, so the list has a visible end. A count going down
             is the only reward this screen offers, and it is the honest
-            kind: it reports what happened rather than granting a
-            point. */}
+            kind: it reports what happened. */}
         {resumen && total > 0 ? (
           <View className="gap-2 rounded-2xl border border-slate-200 bg-white p-4">
             <View className="flex-row items-baseline justify-between">
@@ -94,27 +122,34 @@ export default function RutaRepaso() {
           </View>
         ) : null}
 
-        {/* The filter only appears when there is something to filter:
-            one area's worth of mistakes does not need a chooser. */}
         {resumen && resumen.porArea.length > 1 ? (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerClassName="gap-2 pr-2"
-          >
-            <Chip activo={area === null} texto="Todas" onPress={() => setArea(null)} />
-            {resumen.porArea.map((fila) => (
+          <View className="gap-2">
+            <Text className="text-[12px] font-bold uppercase tracking-widest text-slate-400">
+              ¿Qué repasas?
+            </Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerClassName="gap-2 pr-2"
+            >
               <Chip
-                key={fila.area}
-                activo={area === fila.area}
-                texto={`${NOMBRE_AREA[fila.area]} · ${fila.pendientes}`}
-                onPress={() => setArea(fila.area as Area)}
+                activo={area === null}
+                texto={`Todas · ${resumen.pendientes}`}
+                onPress={() => setArea(null)}
               />
-            ))}
-          </ScrollView>
+              {resumen.porArea.map((fila) => (
+                <Chip
+                  key={fila.area}
+                  activo={area === fila.area}
+                  texto={`${NOMBRE_AREA[fila.area]} · ${fila.pendientes}`}
+                  onPress={() => setArea(fila.area as Area)}
+                />
+              ))}
+            </ScrollView>
+          </View>
         ) : null}
 
-        {!cargando && datos && datos.pendientes.length === 0 ? (
+        {!cargando && errores.length === 0 ? (
           <View className="gap-3 rounded-2xl border border-slate-200 bg-white p-5">
             <Text className="text-[15px] font-semibold text-slate-900">
               {resumen && resumen.corregidos > 0
@@ -129,18 +164,21 @@ export default function RutaRepaso() {
           </View>
         ) : null}
 
-        {datos?.pendientes.map((error) => (
-          <TarjetaError
-            key={error.itemId}
-            error={error}
-            abierta={abierta === error.itemId}
-            elegida={abierta === error.itemId ? elegida : null}
-            onAbrir={() => abrir(error.itemId)}
-            onResponder={(letra) => responder(error, letra)}
-          />
-        ))}
+        {errores.length > 0 ? (
+          <View className="gap-2">
+            <Boton onPress={() => setEnSesion(true)} ancho>
+              {errores.length === 1
+                ? 'Repasar la que queda'
+                : `Repasar ${errores.length}`}
+            </Boton>
+            <Text className="text-[12px] leading-5 text-slate-400">
+              Una a la vez. Las opciones cambian de orden, así que no vale
+              acordarse de la letra.
+            </Text>
+          </View>
+        ) : null}
 
-        <Boton variante="contorno" onPress={() => router.replace('/inicio')} ancho>
+        <Boton variante="contorno" onPress={volver} ancho>
           Volver al inicio
         </Boton>
       </ScrollView>
@@ -177,110 +215,23 @@ function Chip({
   );
 }
 
-const LETRAS: readonly Letra[] = ['A', 'B', 'C', 'D'];
-
 /**
- * One mistake, collapsed until tapped.
+ * A pending mistake in the shape the tutor expects.
  *
- * Collapsed because a Lectura Crítica item carries its stimulus, and
- * twenty of those expanded is a wall nobody reads. The header says
- * enough to choose: the area, how many times it was missed.
+ * The tutor was built for a generated item and needs the fields it
+ * reads; the rest are absent from a review row because nothing needs
+ * them. Casting here rather than widening the tutor's own type, which
+ * would loosen a contract for one caller.
  */
-function TarjetaError({
-  error,
-  abierta,
-  elegida,
-  onAbrir,
-  onResponder,
-}: {
-  error: ErrorPendiente;
-  abierta: boolean;
-  elegida: Letra | null;
-  onAbrir: () => void;
-  onResponder: (letra: Letra) => void;
-}) {
-  const respondida = elegida !== null;
-  const acerto = respondida && elegida === error.respuesta_correcta;
-  const letras = LETRAS.filter((l) => error.opciones[l] !== undefined);
-
-  return (
-    <View className="gap-3 rounded-2xl border border-slate-200 bg-white p-4">
-      <Pressable
-        onPress={onAbrir}
-        accessibilityRole="button"
-        accessibilityState={{ expanded: abierta }}
-        className="gap-1"
-      >
-        <View className="flex-row items-center justify-between gap-3">
-          <Text className="text-[12px] font-bold uppercase tracking-widest text-slate-400">
-            {NOMBRE_AREA[error.area]}
-          </Text>
-          <Text className="text-[12px] font-semibold text-slate-400">
-            {error.veces === 1 ? 'fallada 1 vez' : `fallada ${error.veces} veces`}
-          </Text>
-        </View>
-        <Text
-          className="text-[14px] leading-5 text-slate-800"
-          numberOfLines={abierta ? undefined : 2}
-        >
-          {error.pregunta}
-        </Text>
-      </Pressable>
-
-      {abierta ? (
-        <>
-          {error.contexto ? (
-            <View className="rounded-xl bg-slate-50 p-3">
-              <Text className="text-[13px] leading-6 text-slate-700">{error.contexto}</Text>
-            </View>
-          ) : null}
-
-          <View className="gap-2.5">
-            {letras.map((letra) => (
-              <OpcionRespuesta
-                key={letra}
-                letra={letra}
-                texto={error.opciones[letra]!}
-                estado={estadoDe(error, letra, elegida)}
-                bloqueada={respondida}
-                onElegir={() => onResponder(letra)}
-              />
-            ))}
-          </View>
-
-          {respondida ? (
-            <View
-              className={`gap-2 rounded-xl p-3.5 ${
-                acerto ? 'bg-emerald-50' : 'bg-slate-50'
-              }`}
-            >
-              <Text
-                className={`text-[12.5px] font-bold uppercase tracking-wide ${
-                  acerto ? 'text-emerald-700' : 'text-slate-500'
-                }`}
-              >
-                {acerto ? 'Ahora sí' : `Era ${error.respuesta_correcta}`}
-              </Text>
-              <Text className="text-[13px] leading-6 text-slate-700">
-                {error.explicaciones?.[elegida] ??
-                  error.explicaciones?.[error.respuesta_correcta] ??
-                  `La correcta es ${error.respuesta_correcta}.`}
-              </Text>
-            </View>
-          ) : null}
-        </>
-      ) : null}
-    </View>
-  );
-}
-
-function estadoDe(
-  error: ErrorPendiente,
-  letra: Letra,
-  elegida: Letra | null,
-): EstadoOpcion {
-  if (elegida === null) return 'pendiente';
-  if (letra === error.respuesta_correcta) return 'correcta';
-  if (letra === elegida) return 'fallada';
-  return 'descartada';
+function aItemDeTutoria(error: ErrorPendiente) {
+  return {
+    id: error.itemId,
+    area: error.area,
+    dificultad: 'media',
+    contexto: error.contexto ?? '',
+    pregunta: error.pregunta,
+    opciones: error.opciones,
+    respuesta_correcta: error.respuesta_correcta,
+    explicaciones: error.explicaciones,
+  } as never;
 }

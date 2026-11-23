@@ -3,6 +3,7 @@ import { ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Redirect, useRouter } from 'expo-router';
 import { Boton } from '@/shared/ui/Boton';
+import { EsqueletoPregunta } from '@/shared/ui/Esqueleto';
 import { useSesion } from '@/features/sesion/hooks/useSesion';
 import { useErrorDelDia } from '@/features/panel/hooks/usePanel';
 import { TarjetaErrorDelDia } from '@/features/panel/components/TarjetaErrorDelDia';
@@ -28,9 +29,7 @@ export default function RutaPreguntaDelDia() {
   return (
     <SafeAreaView className="flex-1 bg-wash">
       <ScrollView contentContainerClassName="gap-5 px-5 py-6">
-        {cargando ? (
-          <Text className="text-[14px] text-slate-500">Buscando tu pregunta…</Text>
-        ) : null}
+        {cargando ? <EsqueletoPregunta /> : null}
 
         {!cargando && !esRespondible(pregunta) ? (
           <View className="gap-3">

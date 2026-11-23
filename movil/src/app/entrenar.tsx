@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Redirect, useRouter } from 'expo-router';
 import { Boton } from '@/shared/ui/Boton';
 import { Aviso } from '@/shared/ui/Aviso';
+import { EsqueletoPregunta } from '@/shared/ui/Esqueleto';
 import { NOMBRE_AREA, type Area, type Dificultad } from '@/shared/model/icfes';
 import { useSesion } from '@/features/sesion/hooks/useSesion';
 import { useExamen } from '@/features/examen/hooks/useExamen';
@@ -149,11 +150,18 @@ export default function RutaEntrenar() {
         </Boton>
 
         {examen.preparar.isPending ? (
-          /* Generating takes minutes, and a spinner with no explanation
-             reads as a hang. Saying why is what keeps them waiting. */
-          <Text className="text-center text-[13px] leading-5 text-slate-500">
-            Estamos escribiendo preguntas nuevas para ti. Puede tardar un minuto.
-          </Text>
+          /* The bank answers in under a second when it has enough, and
+             generating the rest takes minutes. The learner cannot tell
+             which is happening, so the skeleton shows the shape of
+             what is coming and the line below explains the slow case
+             without promising the fast one. */
+          <View className="gap-4">
+            <EsqueletoPregunta />
+            <Text className="text-center text-[13px] leading-5 text-slate-500">
+              Si nos faltan preguntas, las escribimos ahora. Eso sí puede tardar
+              un par de minutos.
+            </Text>
+          </View>
         ) : null}
       </ScrollView>
     </SafeAreaView>
