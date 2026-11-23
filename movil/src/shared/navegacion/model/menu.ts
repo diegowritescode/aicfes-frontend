@@ -52,11 +52,17 @@ export const ENTRADAS: readonly EntradaDeMenu[] = [
 
 /** Whether a route is one of the menu's own, for highlighting it. */
 /**
- * The bench for the native blocking module, in development only.
+ * The bench for the native blocking module, outside the store build.
  *
- * `__DEV__` is false in a release build, so it never reaches a
- * learner. It is here rather than typed by hand into the URL bar
- * because a development build has no URL bar.
+ * It is here rather than typed into a URL bar because a built APK has
+ * no URL bar.
+ *
+ * It used to be gated on `__DEV__`, which was wrong in the one case
+ * that matters: `__DEV__` is false in a preview APK, so the bench
+ * disappeared from the exact build handed to someone to test the
+ * native module with. `esDePrueba` keys off the EAS profile instead,
+ * so it shows in development and preview and is absent only from the
+ * store build.
  */
 const BANCO: EntradaDeMenu = {
   ruta: '/bloqueo-prueba',
@@ -64,12 +70,17 @@ const BANCO: EntradaDeMenu = {
   descripcion: 'Prueba el módulo nativo. No es una función.',
 };
 
-/* `__DEV__` is React Native's, so Node does not have it — reading it
-   directly broke this file's own test. Checked defensively, which
-   also means the entry simply does not appear anywhere it cannot be
-   determined. */
-export const ENTRADAS_DE_PRUEBA: readonly EntradaDeMenu[] =
-  typeof __DEV__ !== 'undefined' && __DEV__ ? [BANCO] : [];
+/**
+ * Takes the flag rather than reading it.
+ *
+ * Reading `entorno` here would pull `expo-constants` and from there
+ * `react-native` into this file, and this file's test runs in Node
+ * where neither parses. The caller passes `entorno.esDePrueba`; the
+ * decision stays testable and the layer stays importable from a test.
+ */
+export function entradasDePrueba(esDePrueba: boolean): readonly EntradaDeMenu[] {
+  return esDePrueba ? [BANCO] : [];
+}
 
 export function esDelMenu(ruta: string): boolean {
   return ENTRADAS.some((e) => ruta.startsWith(e.ruta));

@@ -1,6 +1,7 @@
 import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ENTRADAS, ENTRADAS_DE_PRUEBA, entradaActiva } from './model/menu';
+import { ENTRADAS, entradasDePrueba, entradaActiva } from './model/menu';
+import { entorno } from '@/core/config/entorno';
 
 /**
  * The menu, as a sheet over the screen.
@@ -61,7 +62,7 @@ export function Menu({
           </View>
 
           <ScrollView contentContainerClassName="gap-2 px-5 pb-4">
-            {[...ENTRADAS, ...ENTRADAS_DE_PRUEBA].map((entrada) => {
+            {[...ENTRADAS, ...entradasDePrueba(entorno.esDePrueba)].map((entrada) => {
               const aqui = activa?.ruta === entrada.ruta;
               return (
                 <Pressable

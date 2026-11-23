@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ENTRADAS, entradaActiva, esDelMenu } from './menu';
+import { ENTRADAS, entradaActiva, entradasDePrueba, esDelMenu } from './menu';
 
 /**
  * What the menu offers.
@@ -49,5 +49,20 @@ describe('saber dónde estás', () => {
 
   it('una ruta ajena no marca nada', () => {
     expect(entradaActiva('/inicio')).toBeNull();
+  });
+});
+
+/**
+ * The bench used to be gated on `__DEV__`, which is false in a preview
+ * APK — so it vanished from the one build handed to someone to test
+ * the native module with. These two assertions are the regression.
+ */
+describe('banco de pruebas', () => {
+  it('aparece en un build de prueba', () => {
+    expect(entradasDePrueba(true).map((e) => e.ruta)).toEqual(['/bloqueo-prueba']);
+  });
+
+  it('no aparece en el build de tienda', () => {
+    expect(entradasDePrueba(false)).toEqual([]);
   });
 });
