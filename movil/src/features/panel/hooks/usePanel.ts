@@ -1,7 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Fallo } from '@/core/http/cliente';
 import { leerDesgloseXp, leerErrorDelDia, leerLogros, leerPanel } from '../api/peticiones';
-import { guardarRespuestas } from '@/shared/pregunta/api/peticiones';
+import {
+  completarSesionEstudio,
+  guardarRespuestas,
+  iniciarSesionEstudio,
+} from '@/shared/pregunta/api/peticiones';
 import type { ErrorDelDia } from '../api/esquemas';
 
 /**
@@ -52,11 +56,21 @@ export function useErrorDelDia() {
   /**
    * Record the attempt.
    *
-   * Fire-and-forget on purpose: the learner has already seen whether
-   * they got it right, because that was decided locally from the
-   * payload. A failed write costs them a row in their history, not
-   * the answer they just read — so it must not produce an error
-   * message over a question they already finished.
+   * Quiet on failure, because the learner has already seen whether
+   * they got it right — that was decided locally from the payload. A
+   * failed write costs a row in their history, not the answer they
+   * just read.
+   *
+   * Quiet is not the same as never working, which is what this used
+   * to be: it made up a `sessionId` like `error-del-dia-2026-11-23`,
+   * and the server answered INVALID_SESSION to every single one. So
+   * no answer to the question of the day was ever recorded — the area
+   * never moved, and the card never went away, because both are
+   * computed from answers that were never stored.
+   *
+   * A session is opened for real now. It costs one request on a
+   * screen the learner is already on, and it is what makes the
+   * question count.
    */
   const registrar = useMutation({
     mutationFn: async ({
@@ -68,9 +82,15 @@ export function useErrorDelDia() {
       acerto: boolean;
       pregunta: NonNullable<ErrorDelDia>;
     }) => {
-      await guardarRespuestas([
+      const sesion = await iniciarSesionEstudio({
+        mode: 'test',
+        area: pregunta.area,
+      });
+      if (!sesion.ok) throw sesion.fallo;
+
+      const guardado = await guardarRespuestas([
         {
-          sessionId: `error-del-dia-${new Date().toISOString().slice(0, 10)}`,
+          sessionId: sesion.datos.sessionId,
           questionIndex: 0,
           area: pregunta.area,
           dificultad: 'media',
@@ -79,6 +99,17 @@ export function useErrorDelDia() {
           itemId: pregunta.itemId,
         },
       ]);
+      if (!guardado.ok) throw guardado.fallo;
+
+      /* Closing it is what awards the time XP and lets the day count
+         toward the streak. One question is a short session and that is
+         honest: it was one question. */
+      await completarSesionEstudio(sesion.datos.sessionId, {
+        durationSeconds: 60,
+        totalQuestions: 1,
+        correctQuestions: acerto ? 1 : 0,
+        areaBreakdown: { [pregunta.area]: { correct: acerto ? 1 : 0, total: 1 } },
+      });
     },
     onSuccess: () => {
       /* The dashboard counts this answer, and the card is done for

@@ -14,7 +14,7 @@ import { temaMasFlojo } from '@/features/recordatorio/model/mensaje';
 import { NOMBRE_AREA } from '@/shared/model/icfes';
 import { useAccionesSesion, useSesion } from '@/features/sesion/hooks/useSesion';
 import { useDesgloseXp, useErrorDelDia, useLogros, usePanel } from '@/features/panel/hooks/usePanel';
-import { TarjetaErrorDelDia } from '@/features/panel/components/TarjetaErrorDelDia';
+import { ResumenErrorDelDia } from '@/features/panel/components/ResumenErrorDelDia';
 import { SeccionLogros } from '@/features/panel/components/SeccionLogros';
 import { DesgloseXp } from '@/features/panel/components/DesgloseXp';
 import { esRespondible } from '@/features/panel/model/errorDelDia';
@@ -37,7 +37,7 @@ export default function RutaInicio() {
   const { sesion, cargando: cargandoSesion, autenticado } = useSesion();
   const { salir } = useAccionesSesion();
   const { panel, cargando, fallo, recargar } = usePanel();
-  const { pregunta, registrar } = useErrorDelDia();
+  const { pregunta } = useErrorDelDia();
   const { logros } = useLogros();
   const { desglose } = useDesgloseXp();
   const conexion = useConexion();
@@ -134,15 +134,20 @@ export default function RutaInicio() {
 
             {/* Nothing to say is said by saying nothing: an empty card
                 takes the same room as a useful one. */}
-            {/* Answerable only when the server sent the options and the
-                right answer. An older backend sends neither, and a card
-                with four blank buttons is worse than a card that waits. */}
+            {/* One line, not the whole question. A Lectura Crítica item
+                carries its stimulus — an email, a paragraph — and
+                answering it here pushed everything else off the
+                screen. The dashboard summarises; the question gets its
+                own route.
+
+                Answerable only when the server sent the options and
+                the right answer: an older backend sends neither, and
+                an invitation to a question that cannot be answered is
+                worse than no invitation. */}
             {pregunta && !pregunta.resueltoHoy && esRespondible(pregunta) ? (
-              <TarjetaErrorDelDia
+              <ResumenErrorDelDia
                 pregunta={pregunta}
-                alResponder={(elegida, acerto) =>
-                  registrar.mutate({ elegida, acerto, pregunta })
-                }
+                onAbrir={() => router.push('/pregunta-del-dia')}
               />
             ) : null}
 

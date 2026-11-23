@@ -53,10 +53,16 @@ export function useRecordatorio(temaDeHoy: TemaParaHoy | null = null) {
     let vivo = true;
 
     const leer = async () => {
-      const { status } = await Notifications.getPermissionsAsync();
+      const { status, canAskAgain } = await Notifications.getPermissionsAsync();
       if (!vivo) return;
+      /* `denied` does not mean the learner said no. On Android it is
+         also what a permission that has never been asked for reads as,
+         and treating the two the same sent someone to system settings
+         for a prompt the app had never shown them. `canAskAgain` is
+         what tells them apart: while it is true there is still a
+         prompt to show, whatever the status says. */
       setPermiso(
-        status === 'granted' ? 'concedido' : status === 'denied' ? 'negado' : 'sin-pedir',
+        status === 'granted' ? 'concedido' : canAskAgain ? 'sin-pedir' : 'negado',
       );
       const programadas = await Notifications.getAllScheduledNotificationsAsync();
       if (!vivo) return;
@@ -88,7 +94,11 @@ export function useRecordatorio(temaDeHoy: TemaParaHoy | null = null) {
       }
 
       if (!concedido) {
-        setPermiso('negado');
+        /* Only now is "go to settings" the honest message: the prompt
+           was shown and refused, or the system will not show it
+           again. */
+        const tras = await Notifications.getPermissionsAsync();
+        setPermiso(tras.canAskAgain ? 'sin-pedir' : 'negado');
         return { ok: false as const, motivo: 'sin-permiso' as const };
       }
       setPermiso('concedido');
