@@ -2,9 +2,10 @@ import '@/app/global.css';
 import { useState } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { QueryClientProvider } from '@tanstack/react-query';
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { crearClienteConsultas } from '@/core/http/consultas';
+import { opcionesDePersistencia } from '@/core/http/persistencia';
 import { conectarRenovacion } from '@/features/sesion/api/peticiones';
 
 /**
@@ -23,12 +24,16 @@ conectarRenovacion();
 export default function Layout() {
   const [cliente] = useState(crearClienteConsultas);
 
+  /* Persisting rather than plain: without this the cache dies with the
+     process, so the app is blank with no connection. The provider
+     holds children until the stored cache is read, which is a few
+     milliseconds and avoids a flash of empty screen followed by data. */
   return (
-    <QueryClientProvider client={cliente}>
+    <PersistQueryClientProvider client={cliente} persistOptions={opcionesDePersistencia}>
       <SafeAreaProvider>
         <StatusBar style="dark" />
         <Stack screenOptions={{ headerShown: false }} />
       </SafeAreaProvider>
-    </QueryClientProvider>
+    </PersistQueryClientProvider>
   );
 }

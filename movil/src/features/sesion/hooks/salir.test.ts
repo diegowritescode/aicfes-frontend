@@ -24,17 +24,22 @@ async function salirRoto(cliente: QueryClient) {
   await cliente.invalidateQueries({ queryKey: CLAVE });
 }
 
+/** Stands in for the persisted store, so the disk step is observable. */
+const discoBorrado = vi.fn();
+
 /** What it does now. */
 async function salirArreglado(cliente: QueryClient) {
   cliente.setQueryData(CLAVE, null);
   cliente.removeQueries({
     predicate: (consulta) => consulta.queryKey[0] !== CLAVE[0],
   });
+  await discoBorrado();
 }
 
 let cliente: QueryClient;
 
 beforeEach(() => {
+  discoBorrado.mockReset();
   cliente = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   cliente.setQueryData(CLAVE, { token: 'tok', userId: 'u1', email: 'a@b.c' });
   cliente.setQueryData(['panel'], { puntaje: 310 });
@@ -114,5 +119,23 @@ describe('el código real conserva este orden', () => {
       'salir() volvió a usar clear(), que descarta los observadores y deja el botón sin efecto',
     ).toBe(false);
     expect(cuerpoSalir).toMatch(/setQueryData\(CLAVE, null\)/);
+  });
+});
+
+describe('el teléfono compartido', () => {
+  it('salir también borra lo que quedó en el disco', async () => {
+    /* The cache is persisted now, so clearing memory alone leaves the
+       previous learner's dashboard on the device until something
+       overwrites it. That defeats the shared-phone protection the rest
+       of this function was written for — by making the cache survive a
+       restart. */
+    await salirArreglado(cliente);
+    expect(discoBorrado).toHaveBeenCalledTimes(1);
+  });
+
+  it('la implementación vieja no tocaba el disco', async () => {
+    // Kept to show what the new assertion is protecting against.
+    await salirRoto(cliente);
+    expect(discoBorrado).not.toHaveBeenCalled();
   });
 });

@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { almacenSesion, type Sesion } from '@/core/almacenamiento/sesion';
+import { olvidarPersistido } from '@/core/http/persistencia';
 import type { Fallo } from '@/core/http/cliente';
 import { entrar, registrar } from '../api/peticiones';
 
@@ -119,6 +120,13 @@ export function useAccionesSesion() {
     clienteConsultas.removeQueries({
       predicate: (consulta) => consulta.queryKey[0] !== CLAVE[0],
     });
+
+    /* And forget what was written to disk. The cache is persisted now,
+       so clearing memory alone leaves the previous learner's dashboard
+       on the device — which is exactly the shared-phone case the lines
+       above were written to prevent, defeated by making the cache
+       survive a restart. */
+    await olvidarPersistido();
   }, [clienteConsultas]);
 
   return { entrar: mutacionEntrar, registrar: mutacionRegistrar, salir };

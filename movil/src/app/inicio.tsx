@@ -3,6 +3,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Redirect, useRouter } from 'expo-router';
 import { Boton } from '@/shared/ui/Boton';
 import { Aviso } from '@/shared/ui/Aviso';
+import { AvisoConexion } from '@/shared/conexion/AvisoConexion';
+import { useConexion } from '@/shared/conexion/useConexion';
 import { NOMBRE_AREA } from '@/shared/model/icfes';
 import { useAccionesSesion, useSesion } from '@/features/sesion/hooks/useSesion';
 import { useErrorDelDia, useLogros, usePanel } from '@/features/panel/hooks/usePanel';
@@ -30,6 +32,7 @@ export default function RutaInicio() {
   const { panel, cargando, fallo, recargar } = usePanel();
   const { pregunta, registrar } = useErrorDelDia();
   const { logros } = useLogros();
+  const conexion = useConexion();
 
   if (cargandoSesion) return null;
   if (!autenticado) return <Redirect href="/entrar" />;
@@ -52,7 +55,14 @@ export default function RutaInicio() {
           <Text className="text-[22px] font-bold text-slate-900">{sesion?.email}</Text>
         </View>
 
-        {fallo ? <Aviso mensaje={fallo.mensaje} detalle={fallo.detalle} /> : null}
+        {/* Before the error, because with no network the network is the
+            explanation — and a failure message about the server is
+            misleading when the phone never reached it. */}
+        <AvisoConexion conexion={conexion} hayDatos={panel !== null} esDeCache={!!panel && !!fallo} />
+
+        {fallo && conexion !== 'sin-red' ? (
+          <Aviso mensaje={fallo.mensaje} detalle={fallo.detalle} />
+        ) : null}
 
         {panel ? (
           <>
