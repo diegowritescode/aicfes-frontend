@@ -51,6 +51,26 @@ export const ENTRADAS: readonly EntradaDeMenu[] = [
 ];
 
 /** Whether a route is one of the menu's own, for highlighting it. */
+/**
+ * The bench for the native blocking module, in development only.
+ *
+ * `__DEV__` is false in a release build, so it never reaches a
+ * learner. It is here rather than typed by hand into the URL bar
+ * because a development build has no URL bar.
+ */
+const BANCO: EntradaDeMenu = {
+  ruta: '/bloqueo-prueba',
+  titulo: 'Banco de pruebas: bloqueo',
+  descripcion: 'Prueba el módulo nativo. No es una función.',
+};
+
+/* `__DEV__` is React Native's, so Node does not have it — reading it
+   directly broke this file's own test. Checked defensively, which
+   also means the entry simply does not appear anywhere it cannot be
+   determined. */
+export const ENTRADAS_DE_PRUEBA: readonly EntradaDeMenu[] =
+  typeof __DEV__ !== 'undefined' && __DEV__ ? [BANCO] : [];
+
 export function esDelMenu(ruta: string): boolean {
   return ENTRADAS.some((e) => ruta.startsWith(e.ruta));
 }

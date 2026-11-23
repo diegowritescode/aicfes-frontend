@@ -15,6 +15,7 @@
     "expo-linking": "~58.0.17",
     "expo-notifications": "~58.1.9",
     "expo-router": "~58.0.32",
+    "expo-screen-time": "^0.4.0",
     "expo-secure-store": "~58.0.3",
     "expo-status-bar": "~58.0.5",
     "nativewind": "^4.2.7",
