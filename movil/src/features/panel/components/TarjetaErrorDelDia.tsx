@@ -44,24 +44,31 @@ export function TarjetaErrorDelDia({
      seed is fixed when the card mounts, so the options do not move
      while they read. */
   const [semillaDeHoy] = useState(() => Date.now());
+  /* Frozen when the card mounts, for the same reason the review run
+     is: answering invalidates `error-del-dia`, and the server then
+     answers null because today's question is done. Reading the live
+     value would make the card vanish — or reshuffle — while the
+     learner is still reading the explanation. */
+  const [fija] = useState(() => pregunta);
+
   const barajado = useMemo(
     () =>
       rotarOpciones({
-        itemId: `${pregunta.itemId}:${semillaDeHoy}`,
-        opciones: pregunta.opciones,
-        correcta: pregunta.respuesta_correcta as Letra,
+        itemId: `${fija.itemId}:${semillaDeHoy}`,
+        opciones: fija.opciones,
+        correcta: fija.respuesta_correcta as Letra,
         intento: 1,
         /* This question is one they already missed, so the letter
            they saw then is exactly the one to avoid. */
-        correctaAnterior: letraAnterior(pregunta.itemId) as Letra | null,
-        repeticionesSeguidas: repeticionesSeguidas(pregunta.itemId),
+        correctaAnterior: letraAnterior(fija.itemId) as Letra | null,
+        repeticionesSeguidas: repeticionesSeguidas(fija.itemId),
       }),
-    [pregunta, semillaDeHoy],
+    [fija, semillaDeHoy],
   );
 
   useEffect(() => {
-    recordarLetra(pregunta.itemId, barajado.correcta);
-  }, [pregunta.itemId, barajado]);
+    recordarLetra(fija.itemId, barajado.correcta);
+  }, [fija.itemId, barajado]);
 
   const [elegida, setElegida] = useState<string | null>(null);
   const respondida = elegida !== null;
@@ -82,8 +89,8 @@ export function TarjetaErrorDelDia({
     /* Looked up by the ORIGINAL letter: the explanations are keyed to
        the question as written, not to where the shuffle put it. */
     elegida: elegida ? (barajado.aOriginal[elegida] ?? elegida) : null,
-    correcta: pregunta.respuesta_correcta,
-    explicaciones: pregunta.explicaciones,
+    correcta: fija.respuesta_correcta,
+    explicaciones: fija.explicaciones,
   });
 
   return (
@@ -91,14 +98,14 @@ export function TarjetaErrorDelDia({
       <Text className="text-[12px] font-bold uppercase tracking-widest text-slate-600">
         Tu pregunta de hoy
       </Text>
-      <Text className="text-[13px] text-slate-600">{pregunta.motivo}</Text>
+      <Text className="text-[13px] text-slate-600">{fija.motivo}</Text>
 
-      {pregunta.contexto ? (
-        <Text className="text-[13.5px] leading-6 text-slate-700">{pregunta.contexto}</Text>
+      {fija.contexto ? (
+        <Text className="text-[13.5px] leading-6 text-slate-700">{fija.contexto}</Text>
       ) : null}
 
       <Text className="text-[15px] font-semibold leading-6 text-slate-900">
-        {pregunta.pregunta}
+        {fija.pregunta}
       </Text>
 
       <View className="gap-2">

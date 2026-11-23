@@ -215,3 +215,43 @@ describe('repite a veces, pero no se atasca', () => {
     }
   });
 });
+
+describe('el orden no puede cambiar bajo el dedo', () => {
+  it('la misma pregunta en la misma sesión baraja igual', () => {
+    /* Reported from a phone: answer B, see it marked wrong, and two
+       seconds later the options have reordered and B is now the right
+       one. The answer had been saved, the list reloaded, and the
+       object identity changed — so the memo recomputed with a
+       different `veces` and reshuffled a question already answered.
+
+       The shuffle itself is stable; what has to be stable is what is
+       fed to it. */
+    const antes = rotarOpciones({
+      itemId: 'item-x:1795400000000',
+      opciones: OPCIONES,
+      correcta: 'C',
+      intento: 4,
+    });
+    const despues = rotarOpciones({
+      itemId: 'item-x:1795400000000',
+      opciones: OPCIONES,
+      correcta: 'C',
+      intento: 4,
+    });
+    expect(despues.opciones).toEqual(antes.opciones);
+    expect(despues.correcta).toBe(antes.correcta);
+  });
+
+  it('un `veces` distinto SÍ cambia el orden, que es el riesgo', () => {
+    /* This is why the screen must not re-read `veces` mid-question:
+       answering increments it server-side, and feeding the new value
+       back in would reshuffle what the learner is looking at. */
+    const conCuatro = rotarOpciones({
+      itemId: 'item-x', opciones: OPCIONES, correcta: 'C', intento: 4,
+    });
+    const conCinco = rotarOpciones({
+      itemId: 'item-x', opciones: OPCIONES, correcta: 'C', intento: 5,
+    });
+    expect(conCinco.correcta).not.toBe(conCuatro.correcta);
+  });
+});

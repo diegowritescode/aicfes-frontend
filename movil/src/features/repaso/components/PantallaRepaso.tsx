@@ -49,7 +49,26 @@ export function PantallaRepaso({
   const [avanzadas, setAvanzadas] = useState(0);
   const [elegida, setElegida] = useState<Letra | null>(null);
 
-  const sesion: SesionDeRepaso = { errores, intentos, avanzadas };
+  /**
+   * The questions, frozen when the run starts.
+   *
+   * This fixes a defect reported from a phone: answer B, see it
+   * marked wrong, and two seconds later the options have reordered
+   * and B is now the right one.
+   *
+   * Answering saves to the server, which reloads the review list —
+   * correctly, since one question is now cleared. But the reloaded
+   * rows are new objects with a new `veces`, and both feed the
+   * shuffle. So the question being read got reshuffled underneath the
+   * learner, and the answer they had already given started pointing
+   * at a different option.
+   *
+   * A run works on the list it started with. The list is allowed to
+   * change behind it; what the learner is looking at is not.
+   */
+  const [congeladas] = useState<readonly ErrorPendiente[]>(() => errores);
+
+  const sesion: SesionDeRepaso = { errores: congeladas, intentos, avanzadas };
   const actual = errorActual(sesion);
 
   /* One number per review run, fixed when the screen mounts.
@@ -151,7 +170,7 @@ export function PantallaRepaso({
       <View className="gap-1.5">
         <View className="flex-row items-center justify-between gap-3">
           <Text className="text-[12px] font-bold uppercase tracking-widest text-slate-400">
-            {avanzadas + 1} de {errores.length}
+            {avanzadas + 1} de {congeladas.length}
           </Text>
           <Text className="text-[12px] font-semibold text-slate-400">
             {NOMBRE_AREA[actual.area]}
@@ -218,7 +237,7 @@ export function PantallaRepaso({
 
       {respondida ? (
         <Boton onPress={seguir} ancho>
-          {avanzadas + 1 >= errores.length ? 'Terminar' : 'Siguiente'}
+          {avanzadas + 1 >= congeladas.length ? 'Terminar' : 'Siguiente'}
         </Boton>
       ) : null}
     </ScrollView>
