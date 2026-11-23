@@ -130,3 +130,78 @@ describe('volver a entrar cambia el orden', () => {
     expect(new Set(letras).size).toBeGreaterThan(1);
   });
 });
+
+describe('nunca cae donde estaba', () => {
+  it('con la letra anterior dada, la correcta se mueve siempre', () => {
+    /* Chance alone leaves it in place a quarter of the time with four
+       options, and a learner who meets the same letter twice
+       concludes the shuffle is broken — which, for that attempt, it
+       was. Exhaustive over many runs rather than a sample. */
+    for (let run = 1; run <= 300; run += 1) {
+      for (const anterior of ['A', 'B', 'C', 'D'] as const) {
+        const r = rotarOpciones({
+          itemId: `item-${run}`,
+          opciones: OPCIONES,
+          correcta: 'C',
+          intento: run,
+          correctaAnterior: anterior,
+        });
+        expect(r.correcta).not.toBe(anterior);
+      }
+    }
+  });
+
+  it('moverla no rompe nada de lo demás', () => {
+    const r = rotarOpciones({
+      itemId: 'i1',
+      opciones: OPCIONES,
+      correcta: 'C',
+      intento: 1,
+      correctaAnterior: 'A',
+    });
+    // The answer is still the same text.
+    expect(r.opciones[r.correcta]).toBe('tres');
+    // All four options, none lost or duplicated.
+    expect(Object.values(r.opciones).sort()).toEqual(['cuatro', 'dos', 'tres', 'uno']);
+    // And every displayed letter still maps to a real original.
+    for (const [mostrada, original] of Object.entries(r.aOriginal)) {
+      expect(r.opciones[mostrada]).toBe(OPCIONES[original]);
+    }
+  });
+
+  it('sigue siendo reproducible con la garantía activa', () => {
+    const args = {
+      itemId: 'i1',
+      opciones: OPCIONES,
+      correcta: 'C' as const,
+      intento: 3,
+      correctaAnterior: 'B' as const,
+    };
+    expect(rotarOpciones(args).opciones).toEqual(rotarOpciones(args).opciones);
+  });
+
+  it('sin letra anterior se comporta como antes', () => {
+    // A first encounter has nothing to avoid.
+    const a = rotarOpciones({ itemId: 'i1', opciones: OPCIONES, correcta: 'C', intento: 2 });
+    const b = rotarOpciones({
+      itemId: 'i1', opciones: OPCIONES, correcta: 'C', intento: 2, correctaAnterior: null,
+    });
+    expect(a.correcta).toBe(b.correcta);
+  });
+
+  it('con dos opciones la garantía también se cumple', () => {
+    /* The tightest case: with only two slots, avoiding one leaves
+       exactly one choice. */
+    for (let run = 1; run <= 50; run += 1) {
+      const r = rotarOpciones({
+        itemId: `dos-${run}`,
+        opciones: { A: 'sí', B: 'no' },
+        correcta: 'A',
+        intento: run,
+        correctaAnterior: 'A',
+      });
+      expect(r.correcta).toBe('B');
+      expect(r.opciones[r.correcta]).toBe('sí');
+    }
+  });
+});

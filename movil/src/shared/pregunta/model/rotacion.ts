@@ -60,6 +60,15 @@ export function rotarOpciones(params: {
   opciones: Record<string, string>;
   correcta: Letra;
   intento: number;
+  /**
+   * Where the answer sat last time, if this learner has seen it.
+   *
+   * Given, the shuffle guarantees it lands somewhere else. Chance
+   * alone leaves it in place a quarter of the time with four options,
+   * and a learner who meets the same letter twice concludes the
+   * shuffle is not working — which, for that attempt, it was not.
+   */
+  readonly correctaAnterior?: Letra | null;
 }): OpcionesRotadas {
   const presentes = LETRAS.filter((l) => params.opciones[l] !== undefined);
 
@@ -91,16 +100,44 @@ export function rotarOpciones(params: {
     [orden[i], orden[j]] = [orden[j]!, orden[i]!];
   }
 
-  const opciones: Record<string, string> = {};
-  const aOriginal: Record<string, Letra> = {};
-  let correcta = params.correcta;
+  const construir = (desde: readonly Letra[]): OpcionesRotadas => {
+    const opciones: Record<string, string> = {};
+    const aOriginal: Record<string, Letra> = {};
+    let correcta = params.correcta;
 
-  orden.forEach((original, indice) => {
-    const mostrada = presentes[indice]!;
-    opciones[mostrada] = params.opciones[original]!;
-    aOriginal[mostrada] = original;
-    if (original === params.correcta) correcta = mostrada;
-  });
+    desde.forEach((original, indice) => {
+      const mostrada = presentes[indice]!;
+      opciones[mostrada] = params.opciones[original]!;
+      aOriginal[mostrada] = original;
+      if (original === params.correcta) correcta = mostrada;
+    });
 
-  return { opciones, correcta, aOriginal };
+    return { opciones, correcta, aOriginal };
+  };
+
+  let resultado = construir(orden);
+
+  /* If the answer landed where it was last time, move it. Swapping
+     with a neighbour rather than reshuffling: one swap is enough to
+     break the repeat, and reshuffling until it differs could loop.
+     
+     The neighbour is chosen by the same seed, so this stays
+     reproducible. */
+  if (params.correctaAnterior && resultado.correcta === params.correctaAnterior) {
+    const aqui = presentes.indexOf(resultado.correcta);
+    estado = siguiente(estado);
+    /* Any position but this one. With n slots there are n-1 others,
+       and the modulo picks among them. */
+    const salto = 1 + (estado % (presentes.length - 1));
+    const alla = (aqui + salto) % presentes.length;
+
+    const intercambiado = [...orden];
+    [intercambiado[aqui], intercambiado[alla]] = [
+      intercambiado[alla]!,
+      intercambiado[aqui]!,
+    ];
+    resultado = construir(intercambiado);
+  }
+
+  return resultado;
 }

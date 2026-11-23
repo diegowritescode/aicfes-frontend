@@ -1,7 +1,8 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Text, View } from 'react-native';
 import { OpcionRespuesta } from '@/shared/pregunta/components/OpcionRespuesta';
 import { rotarOpciones } from '@/shared/pregunta/model/rotacion';
+import { letraAnterior, recordarLetra } from '@/shared/pregunta/model/memoriaLetras';
 import type { Letra } from '@/shared/model/icfes';
 import type { ErrorDelDia } from '../api/esquemas';
 import { estadoDeOpcion, explicacionAMostrar, letrasDisponibles } from '../model/errorDelDia';
@@ -46,9 +47,16 @@ export function TarjetaErrorDelDia({
         opciones: pregunta.opciones,
         correcta: pregunta.respuesta_correcta as Letra,
         intento: 1,
+        /* This question is one they already missed, so the letter
+           they saw then is exactly the one to avoid. */
+        correctaAnterior: letraAnterior(pregunta.itemId) as Letra | null,
       }),
     [pregunta, semillaDeHoy],
   );
+
+  useEffect(() => {
+    recordarLetra(pregunta.itemId, barajado.correcta);
+  }, [pregunta.itemId, barajado]);
 
   const [elegida, setElegida] = useState<string | null>(null);
   const respondida = elegida !== null;

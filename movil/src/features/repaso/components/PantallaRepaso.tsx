@@ -1,9 +1,10 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { Boton } from '@/shared/ui/Boton';
 import { NOMBRE_AREA, type Letra } from '@/shared/model/icfes';
 import { OpcionRespuesta, type EstadoOpcion } from '@/shared/pregunta/components/OpcionRespuesta';
 import { rotarOpciones } from '@/shared/pregunta/model/rotacion';
+import { letraAnterior, recordarLetra } from '@/shared/pregunta/model/memoriaLetras';
 import type { ErrorPendiente } from '../api/esquemas';
 import {
   cierre,
@@ -72,8 +73,20 @@ export function PantallaRepaso({
       opciones: actual.opciones,
       correcta: actual.respuesta_correcta,
       intento: Math.max(1, actual.veces),
+      /* Where it was last time, so the shuffle can promise a
+         different letter rather than hoping for one: chance alone
+         repeats a quarter of the time with four options, and a
+         learner who sees the same letter twice concludes the shuffle
+         is broken. */
+      correctaAnterior: letraAnterior(actual.itemId) as Letra | null,
     });
   }, [actual, semillaDeSesion]);
+
+  /* Remembered after rendering, not before: reading and writing in
+     the same pass would have this question avoid its own letter. */
+  useEffect(() => {
+    if (actual && barajado) recordarLetra(actual.itemId, barajado.correcta);
+  }, [actual, barajado]);
 
   const responder = useCallback(
     (mostrada: Letra) => {

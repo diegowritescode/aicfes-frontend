@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { almacenSesion, type Sesion } from '@/core/almacenamiento/sesion';
 import { olvidarPersistido } from '@/core/http/persistencia';
+import { olvidarLetras } from '@/shared/pregunta/model/memoriaLetras';
 import type { Fallo } from '@/core/http/cliente';
 import { entrar, registrar } from '../api/peticiones';
 
@@ -127,6 +128,11 @@ export function useAccionesSesion() {
        above were written to prevent, defeated by making the cache
        survive a restart. */
     await olvidarPersistido();
+
+    /* And the shuffle's memory: where an option was shown to one
+       learner is not where it should start for the next person on a
+       shared phone. */
+    olvidarLetras();
   }, [clienteConsultas]);
 
   return { entrar: mutacionEntrar, registrar: mutacionRegistrar, salir };
