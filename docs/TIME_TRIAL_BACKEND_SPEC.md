@@ -1,5 +1,14 @@
 # Contrarreloj Backend Spec (AICFES v1)
 
+> **✅ Implementado. Verificado el 22 nov 2026.**
+>
+> El backend sirve `GET /api/time-trial/modes` y
+> `POST /api/time-trial/start`, con cinco modos en una escalera anclada
+> a los 64 segundos por pregunta del examen real.
+>
+> Se conserva por el razonamiento. Contrato vigente:
+> `aicfes-backend/docs/TIME_TRIAL.md`.
+
 Este documento define **todo lo necesario** en backend para habilitar el modo Contrarreloj con retos predefinidos, modo personalizado, XP con bonus de velocidad y métricas para dashboard.
 
 ---
