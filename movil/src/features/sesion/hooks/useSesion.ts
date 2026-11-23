@@ -56,6 +56,10 @@ export function useAccionesSesion() {
     [clienteConsultas],
   );
 
+  /* One place that turns a server response into a stored session.
+     Both sign-in and sign-up built it by hand and both dropped
+     `refreshToken` on the floor — which is how the session could never
+     renew itself. */
   const mutacionEntrar = useMutation<Sesion, Fallo, { email: string; password: string }>({
     mutationFn: async ({ email, password }) => {
       const r = await entrar(email, password);
@@ -63,7 +67,7 @@ export function useAccionesSesion() {
          throw to mark the mutation failed, so this is the one place
          that converts between the two. */
       if (!r.ok) throw r.fallo;
-      const sesion = { token: r.datos.token, userId: r.datos.userId, email: r.datos.email };
+      const sesion = aSesion(r.datos);
 
       /* Saving happens here, not in `onSuccess`, because a sign-in
          whose session was not stored has not succeeded. In
@@ -84,12 +88,7 @@ export function useAccionesSesion() {
     mutationFn: async (params) => {
       const r = await registrar(params);
       if (!r.ok) throw r.fallo;
-      const sesion = {
-        token: r.datos.token,
-        userId: r.datos.userId,
-        email: r.datos.email,
-        nombre: params.nombre,
-      };
+      const sesion = { ...aSesion(r.datos), nombre: params.nombre };
       await guardar(sesion);
       return sesion;
     },
@@ -123,4 +122,27 @@ export function useAccionesSesion() {
   }, [clienteConsultas]);
 
   return { entrar: mutacionEntrar, registrar: mutacionRegistrar, salir };
+}
+
+/**
+ * The server's auth payload, as a session we store.
+ *
+ * `refreshToken` arrives only for a native client — a browser keeps
+ * its own in an httpOnly cookie — so it is carried through when
+ * present and simply absent otherwise.
+ */
+function aSesion(datos: {
+  token: string;
+  userId: string;
+  email: string;
+  refreshToken?: string;
+  refreshTokenExpiresAt?: string;
+}): Sesion {
+  return {
+    token: datos.token,
+    userId: datos.userId,
+    email: datos.email,
+    refreshToken: datos.refreshToken,
+    refreshTokenExpiresAt: datos.refreshTokenExpiresAt,
+  };
 }

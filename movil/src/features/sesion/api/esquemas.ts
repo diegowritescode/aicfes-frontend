@@ -26,6 +26,13 @@ export const respuestaAuth = z.object({
      refreshes, on a phone, weeks later. */
   expiresIn: z.string().optional(),
   timezone: z.string().optional(),
+  /* Sent only to a client that declares itself native, because a
+     browser keeps its refresh token in an httpOnly cookie where
+     JavaScript cannot reach it. Optional here rather than required:
+     the same schema serves the web build, which correctly receives
+     nothing. */
+  refreshToken: z.string().optional(),
+  refreshTokenExpiresAt: z.string().optional(),
 });
 
 export type RespuestaAuth = z.infer<typeof respuestaAuth>;

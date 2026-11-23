@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { entorno } from '@/core/config/entorno';
 import { almacenSesion } from '@/core/almacenamiento/sesion';
 import { limiteDe } from './model/limite';
+import { cabecerasDeCliente } from './model/plataforma';
 
 /**
  * The one place that talks to the server.
@@ -116,7 +117,13 @@ export async function pedir<T>({
   esquema,
   conSesion = true,
 }: OpcionesPeticion<T>): Promise<Resultado<T>> {
-  const cabeceras: Record<string, string> = { 'Content-Type': 'application/json' };
+  const cabeceras: Record<string, string> = {
+    'Content-Type': 'application/json',
+    /* Declares that this client has no cookie jar, so the server sends
+       the refresh token in the body instead of in a Set-Cookie a
+       native app would never keep. */
+    ...cabecerasDeCliente(),
+  };
 
   if (conSesion) {
     const sesion = await almacenSesion.leer();

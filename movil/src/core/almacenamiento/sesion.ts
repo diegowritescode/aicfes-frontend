@@ -26,6 +26,13 @@ export interface Sesion {
   readonly userId: string;
   readonly email: string;
   readonly nombre?: string;
+  /* How to get a new access token without asking for the password
+     again. Optional because a session stored before this existed has
+     none, and that has to keep working: the learner gets the old
+     behaviour, not a crash. */
+  readonly refreshToken?: string;
+  /** ISO 8601. When the refresh token itself stops working. */
+  readonly refreshTokenExpiresAt?: string;
 }
 
 const esWeb = Platform.OS === 'web';
