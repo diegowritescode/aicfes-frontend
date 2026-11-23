@@ -44,9 +44,14 @@ export function PantallaPeaje({
 }) {
   const [intentos, setIntentos] = useState<IntentoDelPeaje[]>([]);
   const [elegida, setElegida] = useState<Letra | null>(null);
+  /* Separate from `intentos.length`, because between answering and
+     moving on sits the explanation — the only part of this that
+     teaches. Deriving the index from the answers made the question
+     jump the instant an option was tapped. */
+  const [avanzadas, setAvanzadas] = useState(0);
   const inicioRef = useRef(Date.now());
 
-  const estado: EstadoDelPeaje = { preguntas, intentos };
+  const estado: EstadoDelPeaje = { preguntas, intentos, avanzadas };
   const pregunta = preguntaActual(estado);
 
   const responder = useCallback(
@@ -68,6 +73,7 @@ export function PantallaPeaje({
 
   const seguir = useCallback(() => {
     setElegida(null);
+    setAvanzadas((n) => n + 1);
     inicioRef.current = Date.now();
   }, []);
 
@@ -134,7 +140,7 @@ export function PantallaPeaje({
       <ScrollView contentContainerClassName="gap-5 px-5 py-6">
         <View className="gap-1.5">
           <Text className="text-[12px] font-bold uppercase tracking-widest text-slate-400">
-            Pregunta {intentos.length + 1} de {preguntas.length}
+            Pregunta {avanzadas + 1} de {preguntas.length}
           </Text>
           <Text className="text-[13px] leading-5 text-slate-500">
             Responde y sigues. No importa si fallas.
@@ -190,7 +196,7 @@ export function PantallaPeaje({
 
         {respondida ? (
           <Boton onPress={seguir} ancho>
-            {intentos.length >= preguntas.length ? 'Terminar' : 'Siguiente'}
+            {avanzadas + 1 >= preguntas.length ? 'Terminar' : 'Siguiente'}
           </Boton>
         ) : null}
       </ScrollView>

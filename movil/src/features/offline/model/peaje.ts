@@ -40,15 +40,29 @@ export interface IntentoDelPeaje {
 export interface EstadoDelPeaje {
   readonly preguntas: readonly PreguntaDelLote[];
   readonly intentos: readonly IntentoDelPeaje[];
+  /**
+   * How many questions the learner has moved past.
+   *
+   * Not the same as how many they have answered, and conflating the
+   * two was a real defect: answering question 1 jumped straight to
+   * question 2 with the tapped option still marked and question 2's
+   * explanation underneath, because the index came from
+   * `intentos.length` and the answer was recorded on tap.
+   *
+   * Between answering and advancing sits the moment the explanation
+   * is on screen, which is the only part of this feature that teaches
+   * anything. It needs its own state.
+   */
+  readonly avanzadas: number;
 }
 
 export function esCorrecta(pregunta: PreguntaDelLote, elegida: Letra): boolean {
   return pregunta.respuesta_correcta === elegida;
 }
 
-/** The question being asked right now, or null when the block is done. */
+/** The question on screen, or null when the block is done. */
 export function preguntaActual(estado: EstadoDelPeaje): PreguntaDelLote | null {
-  return estado.preguntas[estado.intentos.length] ?? null;
+  return estado.preguntas[estado.avanzadas] ?? null;
 }
 
 export function vanRespondidas(estado: EstadoDelPeaje): number {
@@ -75,7 +89,10 @@ export function vanRespondidas(estado: EstadoDelPeaje): number {
  * completing, which measure negative in adolescents.
  */
 export function estaPagado(estado: EstadoDelPeaje): boolean {
-  return estado.preguntas.length > 0 && estado.intentos.length >= estado.preguntas.length;
+  /* Advanced, not answered. Answering the fifth used to end the block
+     at once, so its explanation never appeared — the one question
+     where the learner had nothing left to do but read it. */
+  return estado.preguntas.length > 0 && estado.avanzadas >= estado.preguntas.length;
 }
 
 /**

@@ -46,6 +46,10 @@ function estado(cuantas: number, intentos = 0, aciertos = 0): EstadoDelPeaje {
       correcta: i < aciertos,
       tiempoMs: 20_000,
     })),
+    /* These cases are about the rules rather than the pacing, so they
+       assume the learner has moved past everything they answered. The
+       gap between the two is covered in `avance.test.ts`. */
+    avanzadas: intentos,
   };
 }
 

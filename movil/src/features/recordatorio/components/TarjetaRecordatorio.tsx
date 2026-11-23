@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { Boton } from '@/shared/ui/Boton';
 import { legible, recordatorioDeHoy } from '../model/mensaje';
 import type { TemaParaHoy } from '../model/mensaje';
@@ -13,7 +13,10 @@ import type { TemaParaHoy } from '../model/mensaje';
  * rather than about a streak, which is worth seeing before agreeing.
  */
 
-const HORAS = [15, 17, 19, 21] as const;
+/* Every hour the model accepts, not four chips. Four presets is a
+   guess about when a learner studies, and the one person who tried it
+   said so: "no me dio para escoger una hora personalizada". */
+const HORAS: readonly number[] = Array.from({ length: 17 }, (_, i) => i + 6);
 
 export function TarjetaRecordatorio({
   activo,
@@ -94,19 +97,29 @@ export function TarjetaRecordatorio({
           <Text className="text-[12.5px] font-semibold uppercase tracking-wide text-slate-400">
             ¿A qué hora?
           </Text>
-          <View className="flex-row gap-2">
+          {/* Horizontal rather than a wrapped grid: seventeen hours in
+              rows is a wall, and scrolling past the ones that are
+              obviously wrong is faster than reading them. */}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerClassName="gap-2 pr-2"
+          >
             {HORAS.map((h) => (
               <Pressable
                 key={h}
                 onPress={() => onActivar(h)}
                 accessibilityRole="button"
                 accessibilityLabel={`Avisarme a las ${h}:00`}
-                className="flex-1 items-center rounded-xl border border-slate-200 py-2.5"
+                className="min-w-[66px] items-center rounded-xl border border-slate-200 px-3 py-2.5"
               >
                 <Text className="text-[14px] font-semibold text-slate-800">{h}:00</Text>
               </Pressable>
             ))}
-          </View>
+          </ScrollView>
+          <Text className="text-[11.5px] text-slate-400">
+            De 6 de la mañana a 10 de la noche.
+          </Text>
         </View>
       ) : (
         <Boton onPress={() => setEligiendo(true)} ancho>

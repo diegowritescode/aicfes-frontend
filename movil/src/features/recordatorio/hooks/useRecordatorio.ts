@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { AppState } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import {
   horaValida,
@@ -41,10 +42,17 @@ export function useRecordatorio(temaDeHoy: TemaParaHoy | null = null) {
 
   /* Read the current state without asking. Asking is a one-shot on
      iOS — a declined prompt cannot be shown again from inside the app
-     — so it only happens when the learner turns the reminder on. */
+     — so it only happens when the learner turns the reminder on.
+     
+     Re-read whenever the app comes back to the foreground, not only on
+     mount. Granting the permission happens in system settings, which
+     means leaving the app: reading once left it convinced the
+     permission was still denied until the whole app was restarted,
+     which is exactly what was reported from a phone. */
   useEffect(() => {
     let vivo = true;
-    void (async () => {
+
+    const leer = async () => {
       const { status } = await Notifications.getPermissionsAsync();
       if (!vivo) return;
       setPermiso(
@@ -53,9 +61,17 @@ export function useRecordatorio(temaDeHoy: TemaParaHoy | null = null) {
       const programadas = await Notifications.getAllScheduledNotificationsAsync();
       if (!vivo) return;
       setActivo(programadas.some((n) => n.identifier.startsWith(CLAVE_PREFERENCIA)));
-    })();
+    };
+
+    void leer();
+
+    const suscripcion = AppState.addEventListener('change', (estado) => {
+      if (estado === 'active') void leer();
+    });
+
     return () => {
       vivo = false;
+      suscripcion.remove();
     };
   }, []);
 
