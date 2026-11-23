@@ -3,6 +3,7 @@ import { entorno } from '@/core/config/entorno';
 import { almacenSesion } from '@/core/almacenamiento/sesion';
 import { limiteDe } from './model/limite';
 import { cabecerasDeCliente } from './model/plataforma';
+import { renovarSesion } from './renovacion';
 
 /**
  * The one place that talks to the server.
@@ -108,6 +109,10 @@ export interface OpcionesPeticion<T> {
   readonly esquema: z.ZodType<T>;
   /** Public endpoints (sign-in, sign-up) send no token. */
   readonly conSesion?: boolean;
+  /* Internal. Set when this call is already the retry after a
+     renewal, so a second 401 is reported rather than renewed again —
+     otherwise an endpoint that always answers 401 would loop. */
+  readonly yaReintentado?: boolean;
 }
 
 export async function pedir<T>({
@@ -116,6 +121,7 @@ export async function pedir<T>({
   cuerpo,
   esquema,
   conSesion = true,
+  yaReintentado = false,
 }: OpcionesPeticion<T>): Promise<Resultado<T>> {
   const cabeceras: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -183,10 +189,27 @@ export async function pedir<T>({
   if (!respuesta.ok || datosApi?.ok === false) {
     const codigoApi = datosApi?.error?.code;
     const mensajeApi = datosApi?.error?.message;
+    const codigo = codigoPorEstado(respuesta.status);
+
+    /* An expired access token is the one failure we can fix without
+       telling the learner. Renew once and repeat the request; only if
+       that fails is a sign-in screen honest.
+       
+       `yaReintentado` stops the loop: a route that answers 401 for a
+       reason renewal cannot fix would otherwise retry forever. And
+       public routes are excluded because a 401 from sign-in means the
+       password was wrong, not that the session aged out. */
+    if (codigo === 'sin_sesion' && conSesion && !yaReintentado) {
+      const nueva = await renovarSesion();
+      if (nueva) {
+        return pedir({ ruta, metodo, cuerpo, esquema, conSesion, yaReintentado: true });
+      }
+    }
+
     /* The API's own message is written for learners and is more
        specific than ours — "puede pedir hasta 12" beats "llegó al
        límite". Prefer it when there is one. */
-    return fallo(codigoPorEstado(respuesta.status), mensajeApi, codigoApi);
+    return fallo(codigo, mensajeApi, codigoApi);
   }
 
   /* Payloads arrive as {data}, as {items}, or bare. Rather than make

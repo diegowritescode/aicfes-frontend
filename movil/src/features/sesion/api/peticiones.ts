@@ -1,4 +1,5 @@
 import { pedir } from '@/core/http/cliente';
+import { registrarRenovador } from '@/core/http/renovacion';
 import { respuestaAuth } from './esquemas';
 
 /**
@@ -44,5 +45,26 @@ export function renovar(refreshToken: string) {
     cuerpo: { refreshToken },
     esquema: respuestaAuth,
     conSesion: false,
+  });
+}
+
+/**
+ * Teach the HTTP client how to renew.
+ *
+ * Registered rather than imported because the dependency only runs
+ * one way: the client cannot import this module, which imports the
+ * client. Called once at startup.
+ */
+export function conectarRenovacion(): void {
+  registrarRenovador(async (refreshToken) => {
+    const r = await renovar(refreshToken);
+    if (!r.ok) return null;
+    return {
+      token: r.datos.token,
+      userId: r.datos.userId,
+      email: r.datos.email,
+      refreshToken: r.datos.refreshToken,
+      refreshTokenExpiresAt: r.datos.refreshTokenExpiresAt,
+    };
   });
 }

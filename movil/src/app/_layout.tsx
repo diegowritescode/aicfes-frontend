@@ -5,6 +5,7 @@ import { StatusBar } from 'expo-status-bar';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { crearClienteConsultas } from '@/core/http/consultas';
+import { conectarRenovacion } from '@/features/sesion/api/peticiones';
 
 /**
  * The shell every screen sits in.
@@ -14,6 +15,11 @@ import { crearClienteConsultas } from '@/core/http/consultas';
  * server rendering, which leaks one user's cached data into another's
  * page. It costs nothing to be correct here.
  */
+/* Done at module scope, once: it only stores a function, and doing it
+   in an effect would leave the first requests of a cold start unable
+   to renew — which is exactly when a stale token is most likely. */
+conectarRenovacion();
+
 export default function Layout() {
   const [cliente] = useState(crearClienteConsultas);
 
