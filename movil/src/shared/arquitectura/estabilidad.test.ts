@@ -71,6 +71,51 @@ describe('una pregunta en pantalla no se recarga sola', () => {
     expect(fuente).toMatch(/refetchOnWindowFocus:\s*false/);
   });
 
+  it('el peaje guarda cada respuesta, no solo al final', () => {
+    /* Saving on completion would lose exactly the case persistence
+       exists for: the learner who leaves midway. Before this, someone
+       on question 2 of 5 could press back, reopen the blocked app and
+       start again at zero — which is not an escape hatch, it is the
+       absence of a door. */
+    const hook = leer('features/offline/hooks/useBloqueoPersistido.ts');
+
+    /* Each function is sliced out and checked on its own. A regex
+       spanning both found `avanzar`'s write while `responder`'s was
+       deleted and still passed — a test that cannot fail is worse
+       than no test, because it is counted as coverage. */
+    const cuerpoDe = (nombre: string): string => {
+      const desde = hook.indexOf(`const ${nombre} = useCallback`);
+      expect(desde, `falta ${nombre}`).toBeGreaterThan(-1);
+      /* Cut at the next `useCallback`, not the next `const`: the
+         first `const` inside is a local and would truncate the body
+         before the write this asserts. */
+      const siguiente = hook.indexOf('= useCallback', desde + 20);
+      if (siguiente === -1) return hook.slice(desde);
+      const corte = hook.lastIndexOf('const ', siguiente);
+      return hook.slice(desde, corte);
+    };
+
+    expect(cuerpoDe('responder')).toMatch(/guardarSesion/);
+    expect(cuerpoDe('avanzar')).toMatch(/guardarSesion/);
+  });
+
+  it('el gesto de atrás no sale del peaje', () => {
+    /* What makes the toll a toll rather than an announcement. The
+       exits that remain are deliberate: clearing the block, spending
+       an emergency, or an empty pool. */
+    const ruta = leer('app/peaje.tsx');
+    expect(ruta).toMatch(/addEventListener\('hardwareBackPress', \(\) => true\)/);
+  });
+
+  it('una emergencia no borra el avance', () => {
+    /* Otherwise the way out doubles as a free reset of work already
+       done, and answering two questions then escaping is cheaper than
+       answering five. */
+    const ruta = leer('app/peaje.tsx');
+    const usar = ruta.slice(ruta.indexOf('const usarEmergencia'));
+    expect(usar.slice(0, 400)).not.toMatch(/terminar\(\)/);
+  });
+
   it('la moderación no se asoma sin token en el teléfono', () => {
     /* Three places could leak the existence of a moderation queue to a
        learner: the home notice, the drawer entry and the screen

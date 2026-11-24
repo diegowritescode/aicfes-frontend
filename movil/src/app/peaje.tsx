@@ -1,33 +1,31 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
+import { BackHandler } from 'react-native';
 import { Redirect, useRouter } from 'expo-router';
 import { useSesion } from '@/features/sesion/hooks/useSesion';
 import { useLote } from '@/features/offline/hooks/useLote';
 import { useCola } from '@/features/offline/hooks/useCola';
+import { useBloqueoPersistido } from '@/features/offline/hooks/useBloqueoPersistido';
 import { PantallaPeaje } from '@/features/offline/components/PantallaPeaje';
 import { POR_BLOQUE } from '@/features/offline/model/lote';
+import { MINUTOS_DE_EMERGENCIA, textoDelBoton } from '@/features/offline/model/emergencia';
 import type { IntentoDelPeaje } from '@/features/offline/model/peaje';
-import type { PreguntaDelLote } from '@/features/offline/api/esquemas';
 
 /**
  * The toll, as a route.
  *
- * Reachable today by navigating here, which is how the mechanic gets
- * validated with real learners before the native app-blocking exists.
- * When that exists, the shield's button opens this same route — on iOS
- * through `openParentalControlsApp`, on Android from the overlay.
+ * Opened by the native shield when a blocked app is launched, and
+ * reachable directly for validating the mechanic with learners.
  *
- * Everything it needs is already on the device: the questions come
- * from the offline pool and the answers go into the queue. It works
- * with the radio off, which is the only way it can work at all.
+ * Everything it needs is on the device: the questions come from the
+ * offline pool and the answers go into the queue. It works with the
+ * radio off, which is the only way it can work at all.
  */
 export default function RutaPeaje() {
   const { cargando, autenticado } = useSesion();
 
   /* The block is drawn inside `Bloque`, which only mounts once the
      session is known. Drawing it here would consume five questions
-     from the pool before we know whether this person is signed in —
-     and an anonymous visit would quietly cost a learner their next
-     toll block. */
+     from the pool before we know whether this person is signed in. */
   if (cargando) return null;
   if (!autenticado) return <Redirect href="/entrar" />;
 
@@ -39,22 +37,32 @@ function Bloque() {
   const lote = useLote();
   const cola = useCola();
 
-  /* Drawn once and held. Calling `tomarBloque` on every render would
-     eat the pool several questions at a time for one block the learner
-     is answering — a bug that surfaces days later as "the toll ran out
-     of questions".
-     
-     An effect would be the usual shape and is wrong here: the block
-     has to exist for the first render, or the screen flashes its
-     empty-pool message and tells the learner they pass free when they
-     do not. */
-  const [preguntas] = useState<readonly PreguntaDelLote[]>(() =>
-    lote.tomarBloque(POR_BLOQUE),
-  );
+  /* Held in a ref so the hook can call it exactly once, on the mount
+     where there is nothing to resume. Calling it on every render
+     would eat the pool several questions at a time for one block. */
+  const tomar = useRef(() => lote.tomarBloque(POR_BLOQUE));
+  const bloqueo = useBloqueoPersistido(() => tomar.current());
+
+  /**
+   * Back does not leave.
+   *
+   * This is what makes the toll a toll rather than an announcement.
+   * Before it, the gesture dismissed the screen and reopening the
+   * blocked app showed it again from the start — so the way past was
+   * to press back twice.
+   *
+   * The exits that remain are deliberate: clearing the block, spending
+   * an emergency, or an empty pool. Android's own navigation out of
+   * the app still works, and should: this is a study aid, not a kiosk.
+   */
+  useEffect(() => {
+    const suscripcion = BackHandler.addEventListener('hardwareBackPress', () => true);
+    return () => suscripcion.remove();
+  }, []);
 
   const salir = useCallback(() => {
-    /* Back to where they were. The native layer is what actually
-       unblocks the other app; this route's job ends here. */
+    /* The native layer is what actually unblocks the other app; this
+       route's job ends here. */
     router.replace('/inicio');
   }, [router]);
 
@@ -62,6 +70,7 @@ function Bloque() {
     (intentos: readonly IntentoDelPeaje[]) => {
       if (intentos.length > 0) {
         const ahora = new Date();
+        const preguntas = bloqueo.sesion?.preguntas ?? [];
         const porId = new Map(preguntas.map((p) => [p.id, p]));
         const total = intentos.reduce((s, i) => s + i.tiempoMs, 0);
 
@@ -72,7 +81,8 @@ function Bloque() {
           id: `peaje-${ahora.getTime()}`,
           /* Derived from the answers rather than from a timer started
              on mount: the learner may have left the screen open for an
-             hour. What counts is the time they spent answering. */
+             hour, or closed it overnight and come back. What counts is
+             the time they spent answering. */
           empezadoEn: new Date(ahora.getTime() - total).toISOString(),
           terminadoEn: ahora.toISOString(),
           respuestas: intentos.map((i, indice) => {
@@ -90,10 +100,40 @@ function Bloque() {
           intentos: 0,
         });
       }
+
+      /* Cleared only now. Clearing it when the last question was
+         answered would lose the answers if the queue write failed. */
+      bloqueo.terminar();
       salir();
     },
-    [cola, preguntas, salir],
+    [cola, bloqueo, salir],
   );
 
-  return <PantallaPeaje preguntas={preguntas} alPagar={pagar} alSaltar={salir} />;
+  const usarEmergencia = useCallback(() => {
+    /* The half-finished block is kept on purpose: five minutes later
+       the same questions are still waiting. Clearing it would make
+       the emergency a free reset of work already done. */
+    if (bloqueo.gastarEmergencia()) salir();
+  }, [bloqueo, salir]);
+
+  if (bloqueo.cargando) return null;
+
+  return (
+    <PantallaPeaje
+      preguntas={bloqueo.sesion?.preguntas ?? []}
+      intentos={bloqueo.sesion?.intentos ?? []}
+      avanzadas={bloqueo.sesion?.avanzadas ?? 0}
+      retomada={bloqueo.retomada}
+      emergencia={{
+        texto: textoDelBoton(bloqueo.emergenciasRestantes),
+        disponible: bloqueo.puedeUsarEmergencia,
+        usar: usarEmergencia,
+      }}
+      minutosDeEmergencia={MINUTOS_DE_EMERGENCIA}
+      alResponder={bloqueo.responder}
+      alAvanzar={bloqueo.avanzar}
+      alPagar={pagar}
+      alSaltar={salir}
+    />
+  );
 }

@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Boton } from '@/shared/ui/Boton';
 import { OpcionRespuesta, type EstadoOpcion } from '@/shared/pregunta/components/OpcionRespuesta';
@@ -33,22 +33,41 @@ const LETRAS: readonly Letra[] = ['A', 'B', 'C', 'D'];
 
 export function PantallaPeaje({
   preguntas,
+  intentos,
+  avanzadas,
+  retomada,
+  emergencia,
+  minutosDeEmergencia,
+  alResponder,
+  alAvanzar,
   alPagar,
   alSaltar,
 }: {
   preguntas: readonly PreguntaDelLote[];
+  /* Answers and position come from outside, because they are written
+     to the device as they happen. Holding them here meant a learner
+     who left on question 2 came back to question 1 — which is not an
+     escape hatch, it is the absence of a door. */
+  intentos: readonly IntentoDelPeaje[];
+  avanzadas: number;
+  /** True when this block was already underway before this launch. */
+  retomada: boolean;
+  /** The counted way out, or null where there is none to offer. */
+  emergencia: {
+    readonly texto: string;
+    readonly disponible: boolean;
+    readonly usar: () => void;
+  } | null;
+  /** Minutes an emergency buys, so the screen can name the trade. */
+  minutosDeEmergencia: number;
+  alResponder: (intento: IntentoDelPeaje) => void;
+  alAvanzar: () => void;
   /** Called once the block is cleared, with what to queue for sending. */
   alPagar: (intentos: readonly IntentoDelPeaje[]) => void;
   /** Called when there is nothing to ask, so the app must not block. */
   alSaltar: () => void;
 }) {
-  const [intentos, setIntentos] = useState<IntentoDelPeaje[]>([]);
   const [elegida, setElegida] = useState<Letra | null>(null);
-  /* Separate from `intentos.length`, because between answering and
-     moving on sits the explanation — the only part of this that
-     teaches. Deriving the index from the answers made the question
-     jump the instant an option was tapped. */
-  const [avanzadas, setAvanzadas] = useState(0);
   const inicioRef = useRef(Date.now());
 
   const estado: EstadoDelPeaje = { preguntas, intentos, avanzadas };
@@ -58,24 +77,21 @@ export function PantallaPeaje({
     (letra: Letra) => {
       if (elegida !== null || !pregunta) return;
       setElegida(letra);
-      setIntentos((previos) => [
-        ...previos,
-        {
-          itemId: pregunta.id,
-          elegida: letra,
-          correcta: esCorrecta(pregunta, letra),
-          tiempoMs: Date.now() - inicioRef.current,
-        },
-      ]);
+      alResponder({
+        itemId: pregunta.id,
+        elegida: letra,
+        correcta: esCorrecta(pregunta, letra),
+        tiempoMs: Date.now() - inicioRef.current,
+      });
     },
-    [elegida, pregunta],
+    [elegida, pregunta, alResponder],
   );
 
   const seguir = useCallback(() => {
     setElegida(null);
-    setAvanzadas((n) => n + 1);
+    alAvanzar();
     inicioRef.current = Date.now();
-  }, []);
+  }, [alAvanzar]);
 
   /* Nothing to ask: let them through and say why. A barrier the
      learner cannot pass is not self-regulation, it is the app holding
@@ -145,6 +161,14 @@ export function PantallaPeaje({
           <Text className="text-[13px] leading-5 text-slate-500">
             Responde y sigues. No importa si fallas.
           </Text>
+          {/* Said out loud when true. A learner who answered two last
+              night and opens this at "3 de 5" would otherwise think
+              the app lost their work or invented the number. */}
+          {retomada ? (
+            <Text className="text-[13px] leading-5 text-emerald-700">
+              Seguimos donde ibas.
+            </Text>
+          ) : null}
         </View>
 
         {pregunta.contexto ? (
@@ -198,6 +222,39 @@ export function PantallaPeaje({
           <Boton onPress={seguir} ancho>
             {avanzadas + 1 >= preguntas.length ? 'Terminar' : 'Siguiente'}
           </Boton>
+        ) : null}
+
+        {/* The way out when there is a real reason.
+            Below the question and not beside it: a learner who came
+            here to study should meet the exercises first and the exit
+            second. It names what it costs before the tap, because the
+            count is the whole design — an unlimited exit is the button
+            a procrastinator presses every time, and then the toll does
+            not exist. */}
+        {emergencia ? (
+          <View className="gap-2 border-t border-slate-200 pt-5">
+            <Pressable
+              onPress={emergencia.disponible ? emergencia.usar : undefined}
+              disabled={!emergencia.disponible}
+              accessibilityRole="button"
+              accessibilityState={{ disabled: !emergencia.disponible }}
+              className="py-1.5"
+            >
+              <Text
+                className={`text-center text-[13.5px] ${
+                  emergencia.disponible ? 'text-slate-500' : 'text-slate-300'
+                }`}
+              >
+                {emergencia.texto}
+              </Text>
+            </Pressable>
+            {emergencia.disponible ? (
+              <Text className="text-center text-[12px] leading-4 text-slate-400">
+                {minutosDeEmergencia} minutos, sin ejercicios. Tu avance aquí se
+                guarda.
+              </Text>
+            ) : null}
+          </View>
         ) : null}
       </ScrollView>
     </SafeAreaView>
