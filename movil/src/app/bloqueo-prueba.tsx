@@ -138,7 +138,20 @@ export default function RutaBloqueoPrueba() {
               En iOS esto necesita el permiso de Apple, que todavía no está
               pedido. Los botones van a fallar.
             </Text>
-          ) : null}
+          ) : (
+            /* Found on the first real device, 23 Nov 2026, and nowhere
+               in the module's documentation. Android 13+ refuses the
+               usage-access toggle to an app installed outside Play
+               and says nothing about why in the dialog. It will hit
+               every student we hand an APK to, which is how the toll
+               gets validated. */
+            <Text className="text-[13px] leading-5 text-amber-700">
+              Si el permiso de «Acceso de uso» no se deja activar: Ajustes →
+              Aplicaciones → AICFES → ⋮ → «Permitir ajustes restringidos».
+              Android lo bloquea en las apps instaladas por fuera de Play y no
+              lo explica.
+            </Text>
+          )}
         </View>
 
         <View className="gap-2">
@@ -223,9 +236,33 @@ function Selector({ alAnotar }: { alAnotar: (t: string, ok?: boolean | null) => 
     return <Text className="text-[13px] text-slate-500">Cargando el selector…</Text>;
   }
 
+  /* `style={{ flex: 1 }}` is not decoration: the native view measures
+     itself from the style React Native gives it, and without one it
+     lays out at zero height. The bench showed an empty box and the
+     module looked broken, when the only thing missing was a height.
+     The library's own README passes it for this reason. */
   return (
     <View className="h-96 overflow-hidden rounded-2xl border border-slate-200 bg-white">
-      <Picker selectionId="prueba" />
+      <Picker
+        selectionId="prueba"
+        style={{ flex: 1 }}
+        searchPlaceholder="Buscar una app"
+        emptyText="Este teléfono no reporta apps que se puedan bloquear."
+        noMatchText="Ninguna app con ese nombre."
+        onSelectionChange={(evento: {
+          nativeEvent?: { metadata?: { applicationCount?: number } };
+        }) => {
+          /* `metadata.applicationCount`, read from the module's own
+             types rather than guessed: the payload is
+             `{metadata, tokens}`, and a wrong field name here would
+             print "?" and look like the picker had failed. */
+          const cuantas = evento?.nativeEvent?.metadata?.applicationCount;
+          alAnotar(
+            `selección: ${typeof cuantas === 'number' ? cuantas : '?'} app(s) escogidas`,
+            true,
+          );
+        }}
+      />
     </View>
   );
 }
