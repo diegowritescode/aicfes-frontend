@@ -151,6 +151,19 @@ describe('una pregunta en pantalla no se recarga sola', () => {
     expect(selector).toMatch(/style=\{\{ flex: 1 \}\}/);
   });
 
+  it('hay una forma de llegar a moderación la primera vez', () => {
+    /* The drawer entry for Denuncias appears once the device holds a
+       token, and the screen that takes the token was behind that
+       entry: a door whose key is inside the room. Whoever moderates
+       could never get in.
+
+       The way in is a line in the duel settings screen. Pinned here
+       because the gating above is the kind of rule that gets
+       tightened without noticing it closed the last door. */
+    const ajustes = leer('features/duelos/components/PantallaAjustesDeDuelos.tsx');
+    expect(ajustes).toMatch(/router\.push\('\/moderacion'\)/);
+  });
+
   it('la moderación no se asoma sin token en el teléfono', () => {
     /* Three places could leak the existence of a moderation queue to a
        learner: the home notice, the drawer entry and the screen

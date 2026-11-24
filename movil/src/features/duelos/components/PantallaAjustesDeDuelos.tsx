@@ -3,6 +3,7 @@ import { Pressable, ScrollView, Switch, Text, TextInput, View } from 'react-nati
 import { Boton } from '@/shared/ui/Boton';
 import { Aviso } from '@/shared/ui/Aviso';
 import { EsqueletoLista } from '@/shared/ui/Esqueleto';
+import { useRouter } from 'expo-router';
 import { useModeracion, usePerfilDeDuelos } from '../hooks/useDuelos';
 
 /**
@@ -14,6 +15,7 @@ import { useModeracion, usePerfilDeDuelos } from '../hooks/useDuelos';
  * of what it is.
  */
 export function PantallaAjustesDeDuelos({ onVolver }: { onVolver: () => void }) {
+  const router = useRouter();
   const perfil = usePerfilDeDuelos();
   const moderacion = useModeracion();
   const [borrador, setBorrador] = useState('');
@@ -147,6 +149,23 @@ export function PantallaAjustesDeDuelos({ onVolver }: { onVolver: () => void }) 
           de inmediato.
         </Text>
       </View>
+
+      {/* The way in for whoever moderates, and the only one.
+          The drawer entry for Denuncias appears once this device
+          holds a token — but the screen that takes the token was
+          behind that entry, so there was no first time. This is that
+          first time.
+
+          Plain text at the bottom of a settings screen, with no
+          explanation: a learner who taps it finds a box asking for
+          something they do not have, which is as far as it goes. */}
+      <Pressable
+        onPress={() => router.push('/moderacion')}
+        accessibilityRole="button"
+        className="py-2"
+      >
+        <Text className="text-center text-[12px] text-slate-400">Moderación</Text>
+      </Pressable>
 
       <Boton variante="contorno" onPress={onVolver}>
         Volver
