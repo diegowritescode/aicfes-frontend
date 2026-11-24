@@ -8,6 +8,8 @@ import { useBloqueoPersistido } from '@/features/offline/hooks/useBloqueoPersist
 import { PantallaPeaje } from '@/features/offline/components/PantallaPeaje';
 import { POR_BLOQUE } from '@/features/offline/model/lote';
 import { MINUTOS_DE_EMERGENCIA, textoDelBoton } from '@/features/offline/model/emergencia';
+import { MINUTOS_DESBLOQUEO } from '@/features/offline/model/peaje';
+import { useBloqueo } from '@/features/bloqueo/hooks/useBloqueo';
 import type { IntentoDelPeaje } from '@/features/offline/model/peaje';
 
 /**
@@ -42,6 +44,7 @@ function Bloque() {
      would eat the pool several questions at a time for one block. */
   const tomar = useRef(() => lote.tomarBloque(POR_BLOQUE));
   const bloqueo = useBloqueoPersistido(() => tomar.current());
+  const nativo = useBloqueo();
 
   /**
    * Back does not leave.
@@ -104,17 +107,31 @@ function Bloque() {
       /* Cleared only now. Clearing it when the last question was
          answered would lose the answers if the queue write failed. */
       bloqueo.terminar();
+
+      /* The reason the exercises were answered at all. Granted after
+         the answers are queued, so a learner who earned their minutes
+         keeps them even if the queue write fails — the opposite order
+         would take the time away over a bookkeeping error.
+
+         Minutes of use, not of clock: the native budget only runs
+         down while a blocked app is in the foreground. */
+      void nativo.conceder(MINUTOS_DESBLOQUEO);
+
       salir();
     },
-    [cola, bloqueo, salir],
+    [cola, bloqueo, nativo, salir],
   );
 
   const usarEmergencia = useCallback(() => {
     /* The half-finished block is kept on purpose: five minutes later
        the same questions are still waiting. Clearing it would make
        the emergency a free reset of work already done. */
-    if (bloqueo.gastarEmergencia()) salir();
-  }, [bloqueo, salir]);
+    if (!bloqueo.gastarEmergencia()) return;
+    /* Shorter than a cleared block, and that gap is the argument for
+       doing the exercises. */
+    void nativo.conceder(MINUTOS_DE_EMERGENCIA);
+    salir();
+  }, [bloqueo, nativo, salir]);
 
   if (bloqueo.cargando) return null;
 

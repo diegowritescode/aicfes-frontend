@@ -1,8 +1,7 @@
 import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ENTRADAS, entradasDeModeracion, entradasDePrueba, entradaActiva } from './model/menu';
+import { ENTRADAS, entradasDeModeracion, entradaActiva } from './model/menu';
 import { useHayTokenDeModeracion } from './useHayTokenDeModeracion';
-import { entorno } from '@/core/config/entorno';
 
 /**
  * The menu, as a sheet over the screen.
@@ -67,7 +66,6 @@ export function Menu({
             {[
               ...ENTRADAS,
               ...entradasDeModeracion(hayToken),
-              ...entradasDePrueba(entorno.esDePrueba),
             ].map((entrada) => {
               const aqui = activa?.ruta === entrada.ruta;
               return (

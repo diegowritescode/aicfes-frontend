@@ -53,47 +53,20 @@ export const ENTRADAS: readonly EntradaDeMenu[] = [
     titulo: 'Duelos',
     descripcion: 'Rete a un compañero a las mismas 5 preguntas.',
   },
+  {
+    ruta: '/bloqueo',
+    titulo: 'Bloquear apps',
+    descripcion: 'Cinco preguntas antes de abrir Instagram.',
+  },
 ];
-
-/** Whether a route is one of the menu's own, for highlighting it. */
-/**
- * The bench for the native blocking module, outside the store build.
- *
- * It is here rather than typed into a URL bar because a built APK has
- * no URL bar.
- *
- * It used to be gated on `__DEV__`, which was wrong in the one case
- * that matters: `__DEV__` is false in a preview APK, so the bench
- * disappeared from the exact build handed to someone to test the
- * native module with. `esDePrueba` keys off the EAS profile instead,
- * so it shows in development and preview and is absent only from the
- * store build.
- */
-const BANCO: EntradaDeMenu = {
-  ruta: '/bloqueo-prueba',
-  titulo: 'Banco de pruebas: bloqueo',
-  descripcion: 'Prueba el módulo nativo. No es una función.',
-};
-
-/**
- * Takes the flag rather than reading it.
- *
- * Reading `entorno` here would pull `expo-constants` and from there
- * `react-native` into this file, and this file's test runs in Node
- * where neither parses. The caller passes `entorno.esDePrueba`; the
- * decision stays testable and the layer stays importable from a test.
- */
-export function entradasDePrueba(esDePrueba: boolean): readonly EntradaDeMenu[] {
-  return esDePrueba ? [BANCO] : [];
-}
 
 /**
  * The moderation queue.
  *
  * Shown only when this device holds a moderation token, which a
- * learner never has. Not gated on the build profile like the bench
- * above: this one has to work in the store build, because the person
- * who moderates uses the same app as everyone else.
+ * learner never has. Not gated on the build profile: the person who
+ * moderates uses the same app as everyone else, so it has to work in
+ * the store build.
  */
 const MODERACION: EntradaDeMenu = {
   ruta: '/moderacion',

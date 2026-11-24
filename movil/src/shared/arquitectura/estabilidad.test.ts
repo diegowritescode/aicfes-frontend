@@ -116,6 +116,41 @@ describe('una pregunta en pantalla no se recarga sola', () => {
     expect(usar.slice(0, 400)).not.toMatch(/terminar\(\)/);
   });
 
+  it('pagar el peaje concede los minutos, y en ese orden', () => {
+    /* The grant comes after the answers are queued, so a learner who
+       earned their minutes keeps them even if the queue write fails.
+       The other order takes the time away over a bookkeeping error —
+       which, from the learner's side, is the app cheating. */
+    const ruta = leer('app/peaje.tsx');
+    const pagar = ruta.slice(ruta.indexOf('const pagar'), ruta.indexOf('const usarEmergencia'));
+    expect(pagar).toMatch(/conceder\(MINUTOS_DESBLOQUEO\)/);
+    expect(pagar.indexOf('cola.añadir')).toBeLessThan(pagar.indexOf('conceder('));
+  });
+
+  it('el escudo abre la app en vez de solo cerrarse', () => {
+    /* `openApp` is what turns a wall into a toll: the learner lands
+       on the exercises. `unblock` would lift the shield for nothing
+       and `close` sends them home having learned nothing. */
+    const escudo = leer('features/bloqueo/model/escudo.ts');
+    expect(escudo).toMatch(/ACCION_PRINCIPAL = \{ type: 'openApp' \}/);
+  });
+
+  it('seleccionar una app la bloquea, sin botón de por medio', () => {
+    /* "What is selected is blocked" explains itself. A separate
+       Block button leaves a state where something is picked and
+       nothing is blocked, and no label makes that clear. */
+    const ruta = leer('app/bloqueo.tsx');
+    expect(ruta).toMatch(/alCambiar=\{\(\) => void bloqueo\.aplicar\(\)\}/);
+  });
+
+  it('el selector nativo recibe una altura', () => {
+    /* It measures itself from the style React Native gives it, and
+       without one it lays out at zero: the first real-device test
+       showed an empty box and the module looked broken. */
+    const selector = leer('features/bloqueo/components/SelectorDeApps.tsx');
+    expect(selector).toMatch(/style=\{\{ flex: 1 \}\}/);
+  });
+
   it('la moderación no se asoma sin token en el teléfono', () => {
     /* Three places could leak the existence of a moderation queue to a
        learner: the home notice, the drawer entry and the screen
