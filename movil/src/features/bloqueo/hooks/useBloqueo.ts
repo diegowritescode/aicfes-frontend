@@ -31,6 +31,7 @@ export function useBloqueo() {
   const [bloqueado, setBloqueado] = useState(false);
   const [appsSeleccionadas, setAppsSeleccionadas] = useState(0);
   const [cargando, setCargando] = useState(true);
+  const [sinPasos, setSinPasos] = useState(false);
   const [fallo, setFallo] = useState<string | null>(null);
 
   const refrescar = useCallback(async () => {
@@ -50,6 +51,18 @@ export function useBloqueo() {
     if (permisos.ok) {
       const crudos = (permisos.valor as { steps?: PasoNativo[] }).steps ?? [];
       setPasos(crudos.map(aLegible));
+      /* An empty list from a call that worked is not a failure — it
+         is a platform with no steps to grant. Said out loud anyway,
+         because an empty section with a heading over it looks like a
+         screen that failed to load. */
+      setSinPasos(crudos.length === 0);
+    } else {
+      /* Swallowing this is what made a typo look like a missing
+         feature: the section rendered its heading and nothing else,
+         with no way to tell "no permissions needed" from "the call
+         did not work". */
+      setFallo(permisos.motivo);
+      setPasos([]);
     }
     if (estado.ok) setBloqueado(estado.valor);
     if (meta.ok) setAppsSeleccionadas(meta.valor?.applicationCount ?? 0);
@@ -142,6 +155,8 @@ export function useBloqueo() {
     disponible,
     cargando,
     pasos,
+    /** The call worked and reported nothing to grant. */
+    sinPasos,
     siguiente,
     listo,
     bloqueado,

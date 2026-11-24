@@ -69,6 +69,17 @@ export function PantallaBloqueo({
           <ChipDePermiso key={paso.id} paso={paso} />
         ))}
 
+        {/* A heading with nothing under it reads as a screen that
+            failed to load — which is exactly how a wrong method name
+            surfaced once. Every case now says something. */}
+        {bloqueo.pasos.length === 0 ? (
+          <Text className="text-[13.5px] leading-6 text-slate-500">
+            {bloqueo.sinPasos
+              ? 'Este teléfono no pide permisos extra.'
+              : 'No pudimos leer los permisos. Cierra y vuelve a abrir la app.'}
+          </Text>
+        ) : null}
+
         {bloqueo.siguiente ? (
           /* The button names what it will ask for. "Pedir el
              siguiente" told the learner nothing about what screen

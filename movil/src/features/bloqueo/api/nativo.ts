@@ -65,7 +65,12 @@ export const nativo = {
 
   capacidades: () => llamar<Record<string, unknown>>('getCapabilities'),
 
-  permisos: () => llamar<Record<string, unknown>>('getScreenTimePermissionStatus'),
+  /* `getScreenTimePermissionsAsync`, not `...PermissionStatus`. The
+     wrong name shipped once: the wrapper correctly reported "this
+     version of the module has no such call" and the screen showed an
+     empty Permisos section, so it read as a missing feature rather
+     than a typo. */
+  permisos: () => llamar<Record<string, unknown>>('getScreenTimePermissionsAsync'),
 
   pedirPermiso: (step?: string) =>
     llamar<Record<string, unknown>>(
