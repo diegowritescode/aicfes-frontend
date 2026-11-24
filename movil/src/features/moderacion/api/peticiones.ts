@@ -15,23 +15,22 @@ import {
  * rather than taking it as an argument, so no screen or hook ends up
  * holding it in memory or in a query key.
  */
-async function conToken(): Promise<Readonly<Record<string, string>> | null> {
+/**
+ * The moderation header, when there is one.
+ *
+ * Returns `{}` rather than null when no token is stored: the session
+ * alone is enough for whoever holds the role (ADR 34), and refusing
+ * to send the request would lock out the very path the role exists
+ * to provide. The server decides; this only adds the header when it
+ * has one to add.
+ */
+async function conToken(): Promise<Readonly<Record<string, string>>> {
   const token = await almacenModeracion.leer();
-  if (!token) return null;
-  return { 'x-moderacion-token': token };
+  return token ? { 'x-moderacion-token': token } : {};
 }
-
-const SIN_TOKEN = {
-  ok: false as const,
-  fallo: {
-    codigo: 'SIN_TOKEN' as const,
-    mensaje: 'No hay token de moderación en este teléfono.',
-  },
-};
 
 export async function leerPendientes() {
   const cabeceras = await conToken();
-  if (!cabeceras) return SIN_TOKEN;
   return pedir({
     ruta: '/api/moderacion/pendientes',
     esquema: pendientesDeModeracion,
@@ -41,7 +40,6 @@ export async function leerPendientes() {
 
 export async function leerCola(limite = 20) {
   const cabeceras = await conToken();
-  if (!cabeceras) return SIN_TOKEN;
   return pedir({
     ruta: `/api/moderacion/cola?limite=${limite}`,
     esquema: colaDeModeracion,
@@ -54,7 +52,6 @@ export async function resolverDenuncia(params: {
   estado: 'revisada' | 'descartada';
 }) {
   const cabeceras = await conToken();
-  if (!cabeceras) return SIN_TOKEN;
   return pedir({
     ruta: `/api/moderacion/denuncia/${params.id}/resolver`,
     metodo: 'POST',
@@ -66,7 +63,6 @@ export async function resolverDenuncia(params: {
 
 export async function retirarDeBusqueda(userId: string) {
   const cabeceras = await conToken();
-  if (!cabeceras) return SIN_TOKEN;
   return pedir({
     ruta: `/api/moderacion/cuenta/${userId}/retirar-de-busqueda`,
     metodo: 'POST',

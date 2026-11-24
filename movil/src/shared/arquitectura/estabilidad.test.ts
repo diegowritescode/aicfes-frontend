@@ -164,23 +164,30 @@ describe('una pregunta en pantalla no se recarga sola', () => {
     expect(ajustes).toMatch(/router\.push\('\/moderacion'\)/);
   });
 
-  it('la moderación no se asoma sin token en el teléfono', () => {
-    /* Three places could leak the existence of a moderation queue to a
-       learner: the home notice, the drawer entry and the screen
-       itself. Each is gated, and each gate is asserted here because
-       the failure is invisible in testing — whoever develops this has
-       a token on their device, so they would never see the leaked
-       version. */
+  it('la moderación no se asoma a un estudiante cualquiera', () => {
+    /* Three places could tell a learner that a report queue exists:
+       the home notice, the drawer entry and the screen itself. Each
+       is gated on holding the role or a token, and each gate is
+       asserted here because the failure is invisible in testing —
+       whoever develops this has one, so they would never see the
+       leaked version.
+
+       Updated when the role landed (ADR 34): the condition widened
+       from "has a token" to "moderates, or has a token", and the
+       property did not change. */
     const aviso = leer('features/moderacion/components/AvisoDeDenuncias.tsx');
     expect(aviso).toMatch(/if \(!token\.tiene \|\| !pendientes\.mensaje\) return null;/);
 
     const menu = leer('shared/navegacion/model/menu.ts');
     expect(menu).toMatch(/tieneToken \? \[MODERACION\] : \[\]/);
 
-    /* And the requests refuse to go out without one, so a screen
-       reached by typing the path cannot read the queue either. */
-    const peticiones = leer('features/moderacion/api/peticiones.ts');
-    expect(peticiones).toMatch(/if \(!cabeceras\) return SIN_TOKEN;/);
+    const nav = leer('shared/navegacion/useHayTokenDeModeracion.ts');
+    expect(nav).toMatch(/return esModerador \|\| hayToken;/);
+
+    /* And the screen shows the paste box rather than the queue when
+       neither applies. */
+    const pantalla = leer('features/moderacion/components/PantallaModeracion.tsx');
+    expect(pantalla).toMatch(/if \(!puede\) \{/);
   });
 
   it('el menú lee el token desde core, no desde features', () => {

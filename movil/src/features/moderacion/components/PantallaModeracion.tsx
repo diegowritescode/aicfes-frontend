@@ -24,10 +24,19 @@ const MOTIVO: Record<Denuncia['motivo'], string> = {
  * Hidden entirely without a token on the device, so a learner never
  * sees that any of this is here.
  */
-export function PantallaModeracion({ onVolver }: { onVolver: () => void }) {
+export function PantallaModeracion({
+  onVolver,
+  esModerador = false,
+}: {
+  onVolver: () => void;
+  /* Whether the signed-in account holds the role. With it, nothing
+     needs pasting (ADR 34); the token screen is for the fallback. */
+  esModerador?: boolean;
+}) {
   const token = useTokenDeModeracion();
-  const pendientes = usePendientesDeModeracion(token.tiene);
-  const cola = useColaDeModeracion(token.tiene);
+  const puede = esModerador || token.tiene;
+  const pendientes = usePendientesDeModeracion(puede);
+  const cola = useColaDeModeracion(puede);
 
   if (token.cargando) {
     return (
@@ -37,7 +46,7 @@ export function PantallaModeracion({ onVolver }: { onVolver: () => void }) {
     );
   }
 
-  if (!token.tiene) {
+  if (!puede) {
     return <PedirToken onGuardar={token.guardar} onVolver={onVolver} />;
   }
 
@@ -89,15 +98,19 @@ export function PantallaModeracion({ onVolver }: { onVolver: () => void }) {
         />
       ))}
 
-      <Pressable
-        onPress={() => void token.borrar()}
-        className="py-2"
-        accessibilityRole="button"
-      >
-        <Text className="text-center text-[13px] text-slate-500">
-          Quitar el token de este teléfono
-        </Text>
-      </Pressable>
+      {/* Only when a token is what is being used. Offering to remove
+          a token that was never pasted reads as a broken button. */}
+      {token.tiene ? (
+        <Pressable
+          onPress={() => void token.borrar()}
+          className="py-2"
+          accessibilityRole="button"
+        >
+          <Text className="text-center text-[13px] text-slate-500">
+            Quitar el token de este teléfono
+          </Text>
+        </Pressable>
+      ) : null}
 
       <Boton variante="contorno" onPress={onVolver}>
         Volver

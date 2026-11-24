@@ -24,6 +24,7 @@ export function Menu({
   onIr,
   onSalir,
   email,
+  esModerador = false,
 }: {
   abierto: boolean;
   rutaActual: string;
@@ -31,8 +32,11 @@ export function Menu({
   onIr: (ruta: string) => void;
   onSalir: () => void;
   email?: string;
+  /* Passed in rather than read here: the profile that carries it
+     lives in `features`, and `shared` must not import from there. */
+  esModerador?: boolean;
 }) {
-  const hayToken = useHayTokenDeModeracion();
+  const hayToken = useHayTokenDeModeracion(esModerador);
   const activa = entradaActiva(rutaActual);
 
   return (

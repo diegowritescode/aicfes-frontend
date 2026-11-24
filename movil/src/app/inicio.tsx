@@ -11,6 +11,7 @@ import { Menu } from '@/shared/navegacion/Menu';
 import { BotonMenu } from '@/shared/navegacion/BotonMenu';
 import { AvisoDeDenuncias } from '@/features/moderacion/components/AvisoDeDenuncias';
 import { AvisoDeDuelos } from '@/features/duelos/components/AvisoDeDuelos';
+import { usePerfilDeDuelos } from '@/features/duelos/hooks/useDuelos';
 import { useLote } from '@/features/offline/hooks/useLote';
 import { useCola } from '@/features/offline/hooks/useCola';
 import { useRecordatorio } from '@/features/recordatorio/hooks/useRecordatorio';
@@ -40,6 +41,10 @@ import {
 export default function RutaInicio() {
   const router = useRouter();
   const { sesion, cargando: cargandoSesion, autenticado } = useSesion();
+  /* Read here so the drawer can show Denuncias to whoever moderates.
+     The query is shared with the duels screen, so this costs no extra
+     request. */
+  const perfilDuelos = usePerfilDeDuelos();
   const { salir } = useAccionesSesion();
   const { panel, cargando, fallo, recargar } = usePanel();
   const { pregunta } = useErrorDelDia();
@@ -261,6 +266,7 @@ export default function RutaInicio() {
       </ScrollView>
 
       <Menu
+        esModerador={perfilDuelos.perfil?.esModerador ?? false}
         abierto={menuAbierto}
         rutaActual="/inicio"
         email={sesion?.email}

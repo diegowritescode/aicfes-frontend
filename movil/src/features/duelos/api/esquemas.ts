@@ -19,6 +19,11 @@ export const perfilDeDuelos = z.object({
   tutorAutorizoEn: z.string().nullable(),
   /** The server's own answer on whether this account can be found. */
   visible: z.boolean(),
+  /* Whether this account moderates. Optional so an app built against
+     a server without the role still parses — the field arrived after
+     the screens did, and a schema that refuses an older server turns
+     a missing feature into a broken sign-in. */
+  esModerador: z.boolean().optional(),
 });
 
 export const resultadoDuelo = z.object({
