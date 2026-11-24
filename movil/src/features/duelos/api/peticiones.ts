@@ -2,6 +2,8 @@ import { pedir } from '@/core/http/cliente';
 import {
   denunciaRecibida,
   entregaHecha,
+  estadoDeAmistad,
+  misAmigos,
   estadoDeBloqueo,
   listaDeBloqueados,
   listaDeDuelos,
@@ -137,5 +139,35 @@ export function denunciarJugador(params: {
     metodo: 'POST',
     cuerpo: params,
     esquema: denunciaRecibida,
+  });
+}
+
+export function leerAmigos() {
+  return pedir({ ruta: '/api/duelos/amigos', esquema: misAmigos });
+}
+
+export function pedirAmistad(usuarioId: string) {
+  return pedir({
+    ruta: `/api/duelos/amigos/${usuarioId}`,
+    metodo: 'POST',
+    cuerpo: {},
+    esquema: estadoDeAmistad,
+  });
+}
+
+export function responderAmistad(params: { id: string; acepta: boolean }) {
+  return pedir({
+    ruta: `/api/duelos/amigos/solicitud/${params.id}/${params.acepta ? 'aceptar' : 'rechazar'}`,
+    metodo: 'POST',
+    cuerpo: {},
+    esquema: estadoDeAmistad,
+  });
+}
+
+export function quitarAmigo(usuarioId: string) {
+  return pedir({
+    ruta: `/api/duelos/amigos/${usuarioId}`,
+    metodo: 'DELETE',
+    esquema: estadoDeAmistad,
   });
 }

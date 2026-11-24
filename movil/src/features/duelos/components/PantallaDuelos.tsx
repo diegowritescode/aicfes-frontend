@@ -3,7 +3,7 @@ import { Pressable, RefreshControl, ScrollView, Text, TextInput, View } from 're
 import { Boton } from '@/shared/ui/Boton';
 import { Aviso } from '@/shared/ui/Aviso';
 import { EsqueletoLista } from '@/shared/ui/Esqueleto';
-import { useBuscarJugadores, useMisDuelos, useModeracion, usePerfilDeDuelos } from '../hooks/useDuelos';
+import { useAmigos, useBuscarJugadores, useMisDuelos, useModeracion, usePerfilDeDuelos } from '../hooks/useDuelos';
 import { ModalDenuncia } from './ModalDenuncia';
 import type { Duelo } from '../api/esquemas';
 
@@ -18,12 +18,13 @@ export function PantallaDuelos({
   onJugar,
   onAjustes,
 }: {
-  onJugar: (dueloId: string, contra: string) => void;
+  onJugar: (dueloId: string, contra: string, rivalId: string | null) => void;
   onAjustes: () => void;
 }) {
   const { perfil, cargando: cargandoPerfil } = usePerfilDeDuelos();
   const duelos = useMisDuelos();
   const moderacion = useModeracion();
+  const amigos = useAmigos();
   /* Who is being reported, or null. Held here rather than in each row
      so only one modal can be open. */
   const [denunciando, setDenunciando] = useState<{ id: string; alias: string } | null>(null);
@@ -64,7 +65,7 @@ export function PantallaDuelos({
               respondiendo={duelos.respondiendo}
               onAceptar={async () => {
                 await duelos.aceptar(d.id);
-                onJugar(d.id, d.contra?.alias ?? 'su rival');
+                onJugar(d.id, d.contra?.alias ?? 'su rival', d.contra?.id ?? null);
               }}
               onRechazar={() => void duelos.rechazar(d.id)}
               onDenunciar={
@@ -89,7 +90,10 @@ export function PantallaDuelos({
                   Entregado. Falta {d.contra?.alias ?? 'su rival'}.
                 </Text>
               ) : (
-                <Boton tamano="medio" onPress={() => onJugar(d.id, d.contra?.alias ?? 'su rival')}>
+                <Boton
+                  tamano="medio"
+                  onPress={() => onJugar(d.id, d.contra?.alias ?? 'su rival', d.contra?.id ?? null)}
+                >
                   Jugar
                 </Boton>
               )}
@@ -98,7 +102,71 @@ export function PantallaDuelos({
         </Seccion>
       ) : null}
 
-      <Buscador onRetar={duelos.retar} retando={duelos.retando} fallo={duelos.falloAlRetar} />
+      {amigos.porResponder.length > 0 ? (
+        <Seccion titulo="Te quieren agregar">
+          {amigos.porResponder.map((a) => (
+            <View
+              key={a.id}
+              className="flex-row items-center justify-between rounded-xl bg-slate-50 px-4 py-3"
+            >
+              <Text className="text-[15px] font-semibold text-slate-800">
+                {a.amigo.alias}
+              </Text>
+              <View className="flex-row gap-2">
+                <Boton
+                  tamano="medio"
+                  variante="suave"
+                  deshabilitado={amigos.respondiendo}
+                  onPress={() => void amigos.responder({ id: a.id, acepta: true })}
+                >
+                  Aceptar
+                </Boton>
+                <Pressable
+                  onPress={() => void amigos.responder({ id: a.id, acepta: false })}
+                  accessibilityRole="button"
+                  className="justify-center px-2"
+                >
+                  <Text className="text-[13px] text-slate-500">No</Text>
+                </Pressable>
+              </View>
+            </View>
+          ))}
+        </Seccion>
+      ) : null}
+
+      {/* Friends above the search box, because the common case is
+          duelling the same three classmates. Typing an alias every
+          time is friction with no purpose. */}
+      {amigos.amigos.length > 0 ? (
+        <Seccion titulo="Tus amigos">
+          {amigos.amigos.map((a) => (
+            <View
+              key={a.id}
+              className="flex-row items-center justify-between rounded-xl bg-slate-50 px-4 py-3"
+            >
+              <Text className="text-[15px] font-semibold text-slate-800">
+                {a.amigo.alias}
+              </Text>
+              <Boton
+                tamano="medio"
+                variante="suave"
+                deshabilitado={duelos.retando}
+                onPress={() => void duelos.retar(a.amigo.id)}
+              >
+                Retar
+              </Boton>
+            </View>
+          ))}
+        </Seccion>
+      ) : null}
+
+      <Buscador
+        onRetar={duelos.retar}
+        retando={duelos.retando}
+        fallo={duelos.falloAlRetar}
+        onAgregar={amigos.pedir}
+        agregando={amigos.pidiendo}
+      />
 
       {duelos.enviados.length > 0 ? (
         <Seccion titulo="Retos que envió">
@@ -199,13 +267,18 @@ function Buscador({
   onRetar,
   retando,
   fallo,
+  onAgregar,
+  agregando,
 }: {
   onRetar: (rivalId: string) => Promise<unknown>;
   retando: boolean;
   fallo: { mensaje: string } | null;
+  onAgregar: (usuarioId: string) => Promise<unknown>;
+  agregando: boolean;
 }) {
   const busqueda = useBuscarJugadores();
   const [retado, setRetado] = useState<string | null>(null);
+  const [agregado, setAgregado] = useState<string | null>(null);
 
   return (
     <Seccion titulo="Retar a alguien">
@@ -232,21 +305,41 @@ function Buscador({
           className="flex-row items-center justify-between rounded-xl bg-slate-50 px-4 py-3"
         >
           <Text className="text-[15px] font-semibold text-slate-800">{j.alias}</Text>
-          {retado === j.id ? (
-            <Text className="text-[13px] text-emerald-700">Reto enviado</Text>
-          ) : (
-            <Boton
-              tamano="medio"
-              variante="suave"
-              deshabilitado={retando}
-              onPress={async () => {
-                const r = await onRetar(j.id).catch(() => null);
-                if (r) setRetado(j.id);
-              }}
-            >
-              Retar
-            </Boton>
-          )}
+          <View className="flex-row items-center gap-3">
+            {/* Adding is offered beside challenging, because after
+                one duel with someone you will want the second
+                without typing their name again. */}
+            {agregado === j.id ? (
+              <Text className="text-[13px] text-slate-500">Pedido</Text>
+            ) : (
+              <Pressable
+                disabled={agregando}
+                onPress={async () => {
+                  const r = await onAgregar(j.id).catch(() => null);
+                  if (r) setAgregado(j.id);
+                }}
+                accessibilityRole="button"
+              >
+                <Text className="text-[13px] text-brand-bright">Agregar</Text>
+              </Pressable>
+            )}
+
+            {retado === j.id ? (
+              <Text className="text-[13px] text-emerald-700">Reto enviado</Text>
+            ) : (
+              <Boton
+                tamano="medio"
+                variante="suave"
+                deshabilitado={retando}
+                onPress={async () => {
+                  const r = await onRetar(j.id).catch(() => null);
+                  if (r) setRetado(j.id);
+                }}
+              >
+                Retar
+              </Boton>
+            )}
+          </View>
         </View>
       ))}
     </Seccion>

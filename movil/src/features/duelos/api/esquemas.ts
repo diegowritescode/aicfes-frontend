@@ -99,6 +99,11 @@ export const denunciaRecibida = z.object({
 
 export const estadoDeBloqueo = z.object({ bloqueado: z.boolean() });
 
+export const estadoDeAmistad = z.object({
+  estado: z.string().optional(),
+  quitado: z.boolean().optional(),
+});
+
 export type PerfilDeDuelos = z.infer<typeof perfilDeDuelos>;
 export type Duelo = z.infer<typeof duelo>;
 export type Jugador = z.infer<typeof jugador>;
@@ -107,3 +112,23 @@ export type ResultadoDuelo = z.infer<typeof resultadoDuelo>;
 export type EntregaHecha = z.infer<typeof entregaHecha>;
 export type Bloqueado = z.infer<typeof bloqueado>;
 export type MotivoDenuncia = 'alias_ofensivo' | 'acoso' | 'suplantacion' | 'otro';
+
+/** A friend, or a request waiting on someone. */
+export const amistad = z.object({
+  id: z.string(),
+  estado: z.enum(['pendiente', 'aceptada', 'rechazada']),
+  creadoEn: z.string(),
+  yoPedi: z.boolean(),
+  amigo: jugador,
+});
+
+export const misAmigos = z.object({
+  amigos: z.array(amistad),
+  /* Split by the server, because they are different things to act
+     on: one needs an answer, the other needs patience. */
+  porResponder: z.array(amistad),
+  enviadas: z.array(amistad),
+});
+
+export type Amistad = z.infer<typeof amistad>;
+export type MisAmigos = z.infer<typeof misAmigos>;

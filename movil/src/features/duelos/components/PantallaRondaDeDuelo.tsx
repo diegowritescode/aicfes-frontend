@@ -24,10 +24,15 @@ export function PantallaRondaDeDuelo({
   dueloId,
   contra,
   onSalir,
+  onRevancha,
+  retando = false,
 }: {
   dueloId: string;
   contra: string;
   onSalir: () => void;
+  /** Challenge the same person again, from the result screen. */
+  onRevancha?: () => void;
+  retando?: boolean;
 }) {
   const ronda = useRondaDeDuelo(dueloId);
 
@@ -54,24 +59,39 @@ export function PantallaRondaDeDuelo({
   }
 
   if (ronda.entrega) {
-    return <Marcador entrega={ronda.entrega} contra={contra} onSalir={onSalir} />;
+    return (
+      <Marcador
+        entrega={ronda.entrega}
+        contra={contra}
+        onSalir={onSalir}
+        onRevancha={onRevancha}
+        retando={retando}
+      />
+    );
   }
 
   if (!ronda.pregunta) {
     return (
-      <View className="flex-1 justify-center gap-4 px-5">
-        <Aviso
-          tono="aviso"
-          mensaje="Listo para entregar"
-          detalle={
-            ronda.sinResponder > 0
-              ? `Dejó ${ronda.sinResponder} sin responder. En un duelo adivinar siempre es mejor que dejar en blanco.`
-              : 'Respondió las cinco.'
-          }
-        />
+      /* Not an `Aviso`: that component is for errors, and using it
+         here painted a finished round amber with a "OCULTAR DETALLE"
+         toggle over it. Nothing went wrong — the learner answered
+         five questions. */
+      <View className="flex-1 justify-center gap-5 px-5">
+        <View className="gap-2">
+          <Text className="text-center text-[24px] font-bold text-slate-900">
+            Listo para entregar
+          </Text>
+          <Text className="text-center text-[15px] leading-6 text-slate-600">
+            {ronda.sinResponder > 0
+              ? `Dejaste ${ronda.sinResponder} sin responder. En un duelo adivinar siempre es mejor que dejar en blanco.`
+              : `Respondiste las ${ronda.total}. Ahora falta ${contra}.`}
+          </Text>
+        </View>
+
         {ronda.falloAlEntregar ? (
           <Aviso mensaje="No pudimos entregar" detalle={ronda.falloAlEntregar.mensaje} />
         ) : null}
+
         <Boton
           onPress={() => void ronda.entregar()}
           cargando={ronda.entregando}
@@ -142,10 +162,14 @@ function Marcador({
   entrega,
   contra,
   onSalir,
+  onRevancha,
+  retando,
 }: {
   entrega: { miMarcador: ResultadoDuelo; delOtro?: ResultadoDuelo; esperandoAlOtro?: boolean; gane?: boolean; empate?: boolean };
   contra: string;
   onSalir: () => void;
+  onRevancha?: () => void;
+  retando?: boolean;
 }) {
   if (entrega.esperandoAlOtro || !entrega.delOtro) {
     return (
@@ -176,10 +200,22 @@ function Marcador({
       {/* The duel gave no explanations on purpose. This is where they
           are, so a lost duel turns into something to study. */}
       <Text className="text-center text-[13px] leading-5 text-slate-500">
-        Lo que falló aquí queda en Repasar errores, con la explicación.
+        Lo que fallaste aquí queda en Repasar errores, con la explicación.
       </Text>
 
-      <Boton onPress={onSalir}>Listo</Boton>
+      {/* Right here, while the result is still on screen. Having to
+          go back, find the alias and search for it again is how a
+          rematch stops happening — and the rematch is the whole point
+          of a duel with someone you know. */}
+      {onRevancha ? (
+        <Boton onPress={onRevancha} cargando={retando} deshabilitado={retando}>
+          Otra vez
+        </Boton>
+      ) : null}
+
+      <Boton variante="contorno" onPress={onSalir}>
+        Listo
+      </Boton>
     </View>
   );
 }

@@ -9,11 +9,15 @@ import {
   declararAutorizacionDeTutor,
   denunciarJugador,
   desbloquearJugador,
+  leerAmigos,
   leerBloqueados,
   leerMisDuelos,
   leerPerfilDeDuelos,
+  pedirAmistad,
   ponerAlias,
+  quitarAmigo,
   rechazarDuelo,
+  responderAmistad,
   retar,
 } from '../api/peticiones';
 import type { MotivoDenuncia } from '../api/esquemas';
@@ -254,5 +258,76 @@ export function useModeracion() {
     bloqueando: bloquear.isPending || desbloquear.isPending,
     denunciar: denunciar.mutateAsync,
     denunciando: denunciar.isPending,
+  };
+}
+
+/**
+ * The people this learner duels often.
+ *
+ * Exists because the search box is the wrong tool for the common
+ * case: you compete with the same three classmates, and typing their
+ * alias every time is friction with no purpose.
+ */
+export function useAmigos() {
+  const cliente = useQueryClient();
+
+  const consulta = useQuery({
+    queryKey: ['duelos', 'amigos'],
+    queryFn: async () => {
+      const r = await leerAmigos();
+      if (!r.ok) throw r.fallo;
+      return r.datos;
+    },
+    staleTime: 60_000,
+  });
+
+  /* The whole `duelos` tree, not just the friends list: accepting a
+     request changes who shows in a search, and blocking from
+     elsewhere changes who shows here. */
+  const refrescar = useCallback(() => {
+    void cliente.invalidateQueries({ queryKey: ['duelos'] });
+  }, [cliente]);
+
+  const pedir = useMutation({
+    mutationFn: async (usuarioId: string) => {
+      const r = await pedirAmistad(usuarioId);
+      if (!r.ok) throw r.fallo;
+      return r.datos;
+    },
+    onSuccess: refrescar,
+  });
+
+  const responder = useMutation({
+    mutationFn: async (params: { id: string; acepta: boolean }) => {
+      const r = await responderAmistad(params);
+      if (!r.ok) throw r.fallo;
+      return r.datos;
+    },
+    onSuccess: refrescar,
+  });
+
+  const quitar = useMutation({
+    mutationFn: async (usuarioId: string) => {
+      const r = await quitarAmigo(usuarioId);
+      if (!r.ok) throw r.fallo;
+      return r.datos;
+    },
+    onSuccess: refrescar,
+  });
+
+  const datos = consulta.data ?? null;
+
+  return {
+    amigos: datos?.amigos ?? [],
+    porResponder: datos?.porResponder ?? [],
+    enviadas: datos?.enviadas ?? [],
+    cargando: consulta.isLoading,
+    fallo: (consulta.error as Fallo | null) ?? null,
+    pedir: pedir.mutateAsync,
+    pidiendo: pedir.isPending,
+    falloAlPedir: (pedir.error as Fallo | null) ?? null,
+    responder: responder.mutateAsync,
+    respondiendo: responder.isPending,
+    quitar: quitar.mutateAsync,
   };
 }

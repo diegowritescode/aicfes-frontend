@@ -10,6 +10,7 @@ import { useConexion } from '@/shared/conexion/useConexion';
 import { Menu } from '@/shared/navegacion/Menu';
 import { BotonMenu } from '@/shared/navegacion/BotonMenu';
 import { AvisoDeDenuncias } from '@/features/moderacion/components/AvisoDeDenuncias';
+import { AvisoDeDuelos } from '@/features/duelos/components/AvisoDeDuelos';
 import { useLote } from '@/features/offline/hooks/useLote';
 import { useCola } from '@/features/offline/hooks/useCola';
 import { useRecordatorio } from '@/features/recordatorio/hooks/useRecordatorio';
@@ -105,6 +106,11 @@ export default function RutaInicio() {
             holds a moderation token. Reports are the one thing here
             with someone else waiting on the other end. */}
         <AvisoDeDenuncias />
+
+        {/* Same reasoning, and the other case of someone waiting:
+            a challenge sent at noon was invisible until the learner
+            happened to open the duels screen. */}
+        <AvisoDeDuelos />
 
         {/* Before the error, because with no network the network is the
             explanation — and a failure message about the server is
