@@ -87,6 +87,24 @@ export function entradasDePrueba(esDePrueba: boolean): readonly EntradaDeMenu[] 
   return esDePrueba ? [BANCO] : [];
 }
 
+/**
+ * The moderation queue.
+ *
+ * Shown only when this device holds a moderation token, which a
+ * learner never has. Not gated on the build profile like the bench
+ * above: this one has to work in the store build, because the person
+ * who moderates uses the same app as everyone else.
+ */
+const MODERACION: EntradaDeMenu = {
+  ruta: '/moderacion',
+  titulo: 'Denuncias',
+  descripcion: 'Leer y atender lo que los estudiantes reportan.',
+};
+
+export function entradasDeModeracion(tieneToken: boolean): readonly EntradaDeMenu[] {
+  return tieneToken ? [MODERACION] : [];
+}
+
 export function esDelMenu(ruta: string): boolean {
   return ENTRADAS.some((e) => ruta.startsWith(e.ruta));
 }

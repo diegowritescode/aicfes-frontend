@@ -1,6 +1,7 @@
 import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ENTRADAS, entradasDePrueba, entradaActiva } from './model/menu';
+import { ENTRADAS, entradasDeModeracion, entradasDePrueba, entradaActiva } from './model/menu';
+import { useHayTokenDeModeracion } from './useHayTokenDeModeracion';
 import { entorno } from '@/core/config/entorno';
 
 /**
@@ -32,6 +33,7 @@ export function Menu({
   onSalir: () => void;
   email?: string;
 }) {
+  const hayToken = useHayTokenDeModeracion();
   const activa = entradaActiva(rutaActual);
 
   return (
@@ -62,7 +64,11 @@ export function Menu({
           </View>
 
           <ScrollView contentContainerClassName="gap-2 px-5 pb-4">
-            {[...ENTRADAS, ...entradasDePrueba(entorno.esDePrueba)].map((entrada) => {
+            {[
+              ...ENTRADAS,
+              ...entradasDeModeracion(hayToken),
+              ...entradasDePrueba(entorno.esDePrueba),
+            ].map((entrada) => {
               const aqui = activa?.ruta === entrada.ruta;
               return (
                 <Pressable

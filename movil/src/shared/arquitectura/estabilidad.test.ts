@@ -71,6 +71,36 @@ describe('una pregunta en pantalla no se recarga sola', () => {
     expect(fuente).toMatch(/refetchOnWindowFocus:\s*false/);
   });
 
+  it('la moderación no se asoma sin token en el teléfono', () => {
+    /* Three places could leak the existence of a moderation queue to a
+       learner: the home notice, the drawer entry and the screen
+       itself. Each is gated, and each gate is asserted here because
+       the failure is invisible in testing — whoever develops this has
+       a token on their device, so they would never see the leaked
+       version. */
+    const aviso = leer('features/moderacion/components/AvisoDeDenuncias.tsx');
+    expect(aviso).toMatch(/if \(!token\.tiene \|\| !pendientes\.mensaje\) return null;/);
+
+    const menu = leer('shared/navegacion/model/menu.ts');
+    expect(menu).toMatch(/tieneToken \? \[MODERACION\] : \[\]/);
+
+    /* And the requests refuse to go out without one, so a screen
+       reached by typing the path cannot read the queue either. */
+    const peticiones = leer('features/moderacion/api/peticiones.ts');
+    expect(peticiones).toMatch(/if \(!cabeceras\) return SIN_TOKEN;/);
+  });
+
+  it('el menú lee el token desde core, no desde features', () => {
+    /* `shared` importing from `features` is a layer violation that
+       `capas.test.ts` catches, and the first version of this did it.
+       Pinned separately because the fix is easy to undo. */
+    const hook = leer('shared/navegacion/useHayTokenDeModeracion.ts');
+    expect(hook).toMatch(/from '@\/core\/almacenamiento\/moderacion'/);
+    /* Only a boolean leaves it: the drawer has no business holding the
+       secret. */
+    expect(hook).toMatch(/: boolean/);
+  });
+
   it('el duelo no recibe la respuesta correcta', () => {
     /* Not a stability property but the same kind of defect: something
        on screen that must not be there. Both players are scored on

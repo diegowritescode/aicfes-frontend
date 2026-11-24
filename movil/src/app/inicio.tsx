@@ -9,6 +9,7 @@ import { EsqueletoPanel } from '@/shared/ui/Esqueleto';
 import { useConexion } from '@/shared/conexion/useConexion';
 import { Menu } from '@/shared/navegacion/Menu';
 import { BotonMenu } from '@/shared/navegacion/BotonMenu';
+import { AvisoDeDenuncias } from '@/features/moderacion/components/AvisoDeDenuncias';
 import { useLote } from '@/features/offline/hooks/useLote';
 import { useCola } from '@/features/offline/hooks/useCola';
 import { useRecordatorio } from '@/features/recordatorio/hooks/useRecordatorio';
@@ -99,6 +100,11 @@ export default function RutaInicio() {
           </Text>
           <Text className="text-[22px] font-bold text-slate-900">{sesion?.email}</Text>
         </View>
+
+        {/* Above the learner's own numbers, and only on a phone that
+            holds a moderation token. Reports are the one thing here
+            with someone else waiting on the other end. */}
+        <AvisoDeDenuncias />
 
         {/* Before the error, because with no network the network is the
             explanation — and a failure message about the server is

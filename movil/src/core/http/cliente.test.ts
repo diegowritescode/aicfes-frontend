@@ -201,3 +201,41 @@ describe('data: null es una respuesta, no una ausencia', () => {
     if (r.ok) expect(r.datos).toEqual([]);
   });
 });
+
+describe('cabeceras extra', () => {
+  it('llegan al servidor', async () => {
+    /* The moderation queue authenticates with a server-side secret
+       rather than a learner's session (ADR 33), so the client needs a
+       way to send one header that is not `Authorization`. */
+    const fetchFalso = vi.fn().mockReturnValue(responder({ ok: true, data: { id: 'a', total: 1 } }));
+    vi.stubGlobal('fetch', fetchFalso);
+
+    await pedir({
+      ruta: '/api/moderacion/pendientes',
+      esquema,
+      cabecerasExtra: { 'x-moderacion-token': 'secreto' },
+    });
+
+    const cabeceras = fetchFalso.mock.calls[0]![1].headers as Record<string, string>;
+    expect(cabeceras['x-moderacion-token']).toBe('secreto');
+  });
+
+  it('no pueden reemplazar la sesión del estudiante', async () => {
+    /* A caller that sets `Authorization` here by mistake would
+       otherwise silently replace the learner's own session on that
+       request — a bug that would look like a permissions problem
+       somewhere else entirely. */
+    leer.mockResolvedValue({ token: 'token-del-estudiante' });
+    const fetchFalso = vi.fn().mockReturnValue(responder({ ok: true, data: { id: 'a', total: 1 } }));
+    vi.stubGlobal('fetch', fetchFalso);
+
+    await pedir({
+      ruta: '/api/algo',
+      esquema,
+      cabecerasExtra: { Authorization: 'Bearer robado' },
+    });
+
+    const cabeceras = fetchFalso.mock.calls[0]![1].headers as Record<string, string>;
+    expect(cabeceras.Authorization).toBe('Bearer token-del-estudiante');
+  });
+});

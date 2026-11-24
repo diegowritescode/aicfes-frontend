@@ -109,6 +109,12 @@ export interface OpcionesPeticion<T> {
   readonly esquema: z.ZodType<T>;
   /** Public endpoints (sign-in, sign-up) send no token. */
   readonly conSesion?: boolean;
+  /* Extra headers for the few routes that authenticate with something
+     other than the session token — today only the moderation queue,
+     which uses a server-side secret rather than a learner's identity
+     (ADR 33). Merged after the session header, so it cannot replace
+     `Authorization` by accident. */
+  readonly cabecerasExtra?: Readonly<Record<string, string>>;
   /* Internal. Set when this call is already the retry after a
      renewal, so a second 401 is reported rather than renewed again —
      otherwise an endpoint that always answers 401 would loop. */
@@ -121,6 +127,7 @@ export async function pedir<T>({
   cuerpo,
   esquema,
   conSesion = true,
+  cabecerasExtra,
   yaReintentado = false,
 }: OpcionesPeticion<T>): Promise<Resultado<T>> {
   const cabeceras: Record<string, string> = {
@@ -134,6 +141,16 @@ export async function pedir<T>({
   if (conSesion) {
     const sesion = await almacenSesion.leer();
     if (sesion?.token) cabeceras.Authorization = `Bearer ${sesion.token}`;
+  }
+
+  if (cabecerasExtra) {
+    for (const [nombre, valor] of Object.entries(cabecerasExtra)) {
+      /* `Authorization` is skipped rather than overwritten: a caller
+         that set it here by mistake would otherwise silently replace
+         the learner's own session on that request. */
+      if (nombre.toLowerCase() === 'authorization') continue;
+      cabeceras[nombre] = valor;
+    }
   }
 
   const abortador = new AbortController();
@@ -202,7 +219,7 @@ export async function pedir<T>({
     if (codigo === 'sin_sesion' && conSesion && !yaReintentado) {
       const nueva = await renovarSesion();
       if (nueva) {
-        return pedir({ ruta, metodo, cuerpo, esquema, conSesion, yaReintentado: true });
+        return pedir({ ruta, metodo, cuerpo, esquema, conSesion, cabecerasExtra, yaReintentado: true });
       }
     }
 
