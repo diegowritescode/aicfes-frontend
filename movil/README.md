@@ -45,6 +45,31 @@ Para producción web, la imagen hace lo mismo detrás de nginx:
 docker build --build-arg EXPO_PUBLIC_API_URL=https://aicfes-backend.deviego.xyz .
 ```
 
+### La APK, y cuál de las dos
+
+```sh
+npx eas-cli build --platform android --profile preview
+```
+
+**`preview` es la que sirve para probar en un teléfono.** El
+JavaScript va empaquetado dentro del APK: se instala, se abre y
+funciona sola.
+
+**`development` no.** Deja el JavaScript fuera a propósito, así que al
+abrirla pide la IP de un computador con `npx expo start` en la misma
+red. Es cómoda para desarrollar —se cambia una pantalla y el teléfono
+la recarga— e inútil para entregarle la app a alguien. Que diga "Expo
+development build" y pida una IP no significa que no sea un APK: es un
+APK al que le falta el código.
+
+**`production`** hace un `.aab` para Play Store, no un APK.
+
+Las tres pasan su propio nombre en `EXPO_PUBLIC_PERFIL_BUILD`, que es
+como el código distingue un build de prueba del de tienda. `__DEV__`
+no sirve para eso —es `false` en un APK `preview`— y `NODE_ENV`
+tampoco, porque vale `production` en los dos. Las pantallas de prueba
+se esconden con `entorno.esDePrueba`.
+
 ## Dónde va cada cosa
 
 `ARQUITECTURA.md` lo explica con el porqué. En corto:

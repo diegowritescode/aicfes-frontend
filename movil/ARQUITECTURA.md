@@ -60,6 +60,10 @@ features/examen/
   model/          tipos y reglas de negocio puras
 ```
 
+Las features hoy: `examen`, `simulacro`, `contrarreloj`, `repaso`,
+`peaje` (en `offline/`), `panel`, `tutoria`, `feedback`,
+`recordatorio`, `sesion`, `duelos` y `moderacion`.
+
 **Una feature no importa de otra feature.** Si dos necesitan lo mismo,
 baja a `shared/`. Esta regla es la que mantiene el proyecto navegable:
 sin ella, en seis meses todo depende de todo y no se puede tocar nada.
@@ -111,7 +115,34 @@ en `model/`.
 - algo en `model/` importa `react` o `react-native`
 
 Escribir esas pruebas encontró **seis violaciones reales** el primer
-día. Una regla en un README es una regla hasta el primer afán.
+día, y siguen cobrando: el 23 nov 2026 atraparon que `Menu.tsx`
+(en `shared/`) importara el hook de la feature de moderación. El
+arreglo fue un hook en `shared/` sobre el almacén de `core/`, del que
+solo sale un booleano. Una regla en un README es una regla hasta el
+primer afán.
+
+`src/shared/arquitectura/estabilidad.test.ts` vigila otra cosa: que
+una pregunta en pantalla **no se recargue sola**. Existe porque pasó
+dos veces — el peaje saltaba de pregunta al tocar una opción, y la
+pantalla de repaso rebarajaba las opciones *después* de que el
+estudiante había respondido, porque la lista viva traía identidades
+nuevas. Hoy también fija:
+
+- que la ronda de duelo congele sus preguntas y que su consulta no
+  pueda recargarlas por debajo (un duelo se puntúa contra otra
+  persona: una pregunta que cambia a media ronda pierde el duelo por
+  algo que el estudiante no puede ver);
+- que el esquema del duelo **no acepte** `respuesta_correcta` ni
+  `explicaciones`, porque el servidor no las manda y el duelo no se
+  gana leyendo una respuesta HTTP;
+- que nada de moderación se asome sin token en el teléfono, en los
+  tres sitios que podrían filtrarlo: el aviso de Inicio, la entrada
+  del menú y las propias peticiones.
+
+Ese último grupo importa por una razón incómoda: **el fallo es
+invisible desarrollando**, porque quien construye la función tiene un
+token en su dispositivo y nunca vería la versión filtrada. Cada regla
+nueva se comprobó rompiéndola a propósito y viendo fallar la prueba.
 
 ## Por qué NativeWind y no StyleSheet
 
