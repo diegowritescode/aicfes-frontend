@@ -64,6 +64,47 @@ APK al que le falta el código.
 
 **`production`** hace un `.aab` para Play Store, no un APK.
 
+### Compilar en el Mac, sin EAS
+
+El plan gratuito de EAS da unos pocos builds de Android al mes y se
+agota. Compilar localmente no tiene cuota:
+
+```sh
+export ANDROID_HOME=/opt/homebrew/share/android-commandlinetools
+export JAVA_HOME=$(/usr/libexec/java_home -v 21)
+
+npx expo prebuild --platform android --no-install   # solo la primera vez
+cd android && ./gradlew assembleRelease --no-daemon --max-workers=2
+```
+
+La APK sale en
+`android/app/build/outputs/apk/release/app-release.apk`, firmada con
+la clave de depuración — sirve para instalar a mano, no para Play
+Store.
+
+**Lo que hace falta tener**, todo por Homebrew:
+`android-commandlinetools`, `openjdk@21`, y del SDK:
+`platform-tools`, `platforms;android-36`, `build-tools;36.0.0`
+(`sdkmanager` los instala).
+
+**Dos trampas que ya costaron un intento fallido:**
+
+El **JDK por omisión puede ser demasiado nuevo**. Gradle de Android no
+corre con Java 26; de ahí el `JAVA_HOME` explícito al 21.
+
+Y el build **muere sin memoria** con la configuración por omisión: las
+compilaciones de C++ de `reanimated` y `worklets` son pesadas, y
+cuatro en paralelo con 2 GB de heap tumbaron todo con un exit 137.
+`gradle.properties` ya pide 6 GB y `org.gradle.workers.max=2`. En una
+máquina con más RAM se puede subir.
+
+La primera vez tarda 15-20 minutos porque compila todo el código
+nativo. Las siguientes son mucho más rápidas: Gradle cachea.
+
+La carpeta `android/` la genera `prebuild` y **no se commitea**: se
+regenera desde `app.json`, y una copia vieja ahí anularía en silencio
+la configuración de la que salió.
+
 Las tres pasan su propio nombre en `EXPO_PUBLIC_PERFIL_BUILD`, que es
 como el código distingue un build de prueba del de tienda. `__DEV__`
 no sirve para eso —es `false` en un APK `preview`— y `NODE_ENV`
