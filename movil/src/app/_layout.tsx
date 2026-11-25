@@ -1,6 +1,7 @@
 import '@/app/global.css';
-import { useState } from 'react';
-import { Stack } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { Stack, useRouter } from 'expo-router';
+import { useLlegadaDelEscudo } from '@/features/bloqueo/hooks/useLlegadaDelEscudo';
 import { StatusBar } from 'expo-status-bar';
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -32,8 +33,34 @@ export default function Layout() {
     <PersistQueryClientProvider client={cliente} persistOptions={opcionesDePersistencia}>
       <SafeAreaProvider>
         <StatusBar style="dark" />
+        <LlevarAlPeaje />
         <Stack screenOptions={{ headerShown: false }} />
       </SafeAreaProvider>
     </PersistQueryClientProvider>
   );
+}
+
+/**
+ * Sends the learner to the toll when the shield is what opened the app.
+ *
+ * Here, at the root, rather than in a screen: Android usually resumes
+ * the existing process, so whichever screen was last open is the one
+ * that mounts. A check living in Inicio would miss every launch that
+ * resumed somewhere else.
+ *
+ * Renders nothing. It exists for the effect.
+ */
+function LlevarAlPeaje() {
+  const router = useRouter();
+  const vieneDelEscudo = useLlegadaDelEscudo();
+
+  useEffect(() => {
+    if (!vieneDelEscudo) return;
+    /* `replace`, not `push`: the toll is where this launch belongs,
+       and leaving Inicio underneath would make the back gesture —
+       which the toll blocks — the one way out of a block. */
+    router.replace('/peaje');
+  }, [vieneDelEscudo, router]);
+
+  return null;
 }

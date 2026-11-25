@@ -127,6 +127,22 @@ describe('una pregunta en pantalla no se recarga sola', () => {
     expect(pagar.indexOf('cola.añadir')).toBeLessThan(pagar.indexOf('conceder('));
   });
 
+  it('venir del escudo lleva al peaje, no a Inicio', () => {
+    /* Reported from a real phone: the block worked, the shield
+       appeared, "Resolverlas" opened AICFES — and landed on Inicio.
+       The shield opens the app and says nothing about why, so
+       something has to read the interaction and route.
+
+       It lives at the root layout because Android usually resumes
+       the existing process: a check inside Inicio would miss every
+       launch that resumed on another screen. */
+    const layout = leer('app/_layout.tsx');
+    expect(layout).toMatch(/useLlegadaDelEscudo\(\)/);
+    /* `replace`, not `push`: leaving Inicio underneath would make the
+       back gesture — which the toll blocks — the way out of a block. */
+    expect(layout).toMatch(/router\.replace\('\/peaje'\)/);
+  });
+
   it('el escudo abre la app en vez de solo cerrarse', () => {
     /* `openApp` is what turns a wall into a toll: the learner lands
        on the exercises. `unblock` would lift the shield for nothing

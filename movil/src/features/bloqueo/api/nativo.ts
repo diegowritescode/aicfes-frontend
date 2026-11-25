@@ -97,4 +97,9 @@ export const nativo = {
   configurarEscudo: (config: unknown) => llamar<void>('setShieldConfig', config),
 
   accionesDelEscudo: (config: unknown) => llamar<void>('setShieldActions', config),
+
+  /* Presses on the shield since the last read, oldest first. Reading
+     clears them — hence "drain" — so whoever calls this owns them. */
+  pulsacionesDelEscudo: () =>
+    llamar<Array<{ button: string; timestamp: number }>>('drainShieldInteractions'),
 };
