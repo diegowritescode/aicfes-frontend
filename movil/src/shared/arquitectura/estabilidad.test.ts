@@ -135,6 +135,30 @@ describe('una pregunta en pantalla no se recarga sola', () => {
     expect(escudo).toMatch(/ACCION_PRINCIPAL = \{ type: 'openApp' \}/);
   });
 
+  it('no se bloquea sin permisos, ni se dice que sí', () => {
+    /* Reported from a real phone: the screen said "1 app bloqueada"
+       while nothing was blocked. The permissions call had the wrong
+       name, so the app did not know they were missing, blocked
+       anyway, and reported success.
+
+       That is the worst failure this feature can have — it tells a
+       learner they are protected when they are not — so two things
+       are pinned: the block is refused when a required permission is
+       missing, and the result is read back from the system instead
+       of assumed. */
+    const hook = leer('features/bloqueo/hooks/useBloqueo.ts');
+    const aplicar = hook.slice(
+      hook.indexOf('const aplicar'),
+      hook.indexOf('const quitarTodo'),
+    );
+    expect(aplicar).toMatch(/if \(!listoParaBloquear\(pasos\)\)/);
+    expect(aplicar).toMatch(/estaBloqueado\(\)/);
+    /* And the refusal happens before the native call, not after. */
+    expect(aplicar.indexOf('listoParaBloquear')).toBeLessThan(
+      aplicar.indexOf('nativo.bloquear'),
+    );
+  });
+
   it('seleccionar una app la bloquea, sin botón de por medio', () => {
     /* "What is selected is blocked" explains itself. A separate
        Block button leaves a state where something is picked and

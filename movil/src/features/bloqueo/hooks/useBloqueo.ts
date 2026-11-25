@@ -119,6 +119,21 @@ export function useBloqueo() {
       return;
     }
 
+    /* Checked before blocking, not assumed.
+       `blockSelection` can return without error while the system
+       refuses to act, because Android cannot shield anything without
+       usage access. The screen then said "1 app bloqueada" over a
+       block that was not happening — reported from a real phone, and
+       the worst kind of failure this feature can have: it tells a
+       learner they are protected when they are not. */
+    if (!listoParaBloquear(pasos)) {
+      setFallo(
+        'Faltan permisos. Concédelos arriba y vuelve a escoger tus apps.',
+      );
+      setBloqueado(false);
+      return;
+    }
+
     /* The shield is configured before the block, so the first thing a
        learner sees is already the right screen. */
     await nativo.configurarEscudo(TEXTOS_DEL_ESCUDO);
@@ -130,10 +145,25 @@ export function useBloqueo() {
     const r = await nativo.bloquear(SELECCION);
     if (!r.ok) {
       setFallo(r.motivo);
+      setBloqueado(false);
       return;
     }
+
+    /* Asked, not assumed. A call that returned without error is not
+       the same as a shield that is up, and this is the one place
+       where believing the optimistic answer misleads a learner about
+       whether their phone is actually guarded. */
+    const confirmado = await nativo.estaBloqueado();
+    if (confirmado.ok && !confirmado.valor) {
+      setFallo(
+        'El sistema no aplicó el bloqueo. Revisa los permisos de arriba.',
+      );
+      setBloqueado(false);
+      return;
+    }
+
     setBloqueado(true);
-  }, []);
+  }, [pasos]);
 
   const quitarTodo = useCallback(async () => {
     const r = await nativo.desbloquearTodo();

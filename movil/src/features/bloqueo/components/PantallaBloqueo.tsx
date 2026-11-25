@@ -102,12 +102,20 @@ export function PantallaBloqueo({
               accessibilityRole="button"
               className="flex-row items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3.5"
             >
+              {/* "Bloqueada" only when the system says it is. The
+                  screen used to say it on the strength of a selection
+                  being saved, which is not the same thing and told a
+                  learner they were protected when they were not. */}
               <Text className="text-[15px] text-slate-800">
                 {bloqueo.appsSeleccionadas === 0
                   ? 'Escoger apps'
-                  : bloqueo.appsSeleccionadas === 1
-                    ? '1 app bloqueada'
-                    : `${bloqueo.appsSeleccionadas} apps bloqueadas`}
+                  : bloqueo.bloqueado
+                    ? bloqueo.appsSeleccionadas === 1
+                      ? '1 app bloqueada'
+                      : `${bloqueo.appsSeleccionadas} apps bloqueadas`
+                    : bloqueo.appsSeleccionadas === 1
+                      ? '1 app escogida, sin bloquear'
+                      : `${bloqueo.appsSeleccionadas} apps escogidas, sin bloquear`}
               </Text>
               <Text className="text-[15px] text-brand-bright">Cambiar</Text>
             </Pressable>
