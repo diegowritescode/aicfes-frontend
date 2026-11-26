@@ -107,6 +107,23 @@ describe('una pregunta en pantalla no se recarga sola', () => {
     expect(ruta).toMatch(/addEventListener\('hardwareBackPress', \(\) => true\)/);
   });
 
+  it('la limpieza no revoca los minutos ganados', () => {
+    /* Reported from a real phone, and the worst failure this feature
+       can have: eight questions answered, back to Inicio, open
+       Instagram — blocked again. The toll took the work and did not
+       pay.
+
+       The cause was a fix from an hour earlier. The breathing room
+       granted on arrival is revoked on unmount, and `relock` ends
+       *every* active grant — including the reward handed out a
+       moment before. The cleanup is now conditional. */
+    const ruta = leer('app/peaje.tsx');
+    expect(ruta).toMatch(/if \(!concedido\.current\) void nativo\.terminarRespiro\(\)/);
+    /* And both paths that grant minutes have to set the flag, or the
+       cleanup takes them back. */
+    expect((ruta.match(/concedido\.current = true/g) ?? []).length).toBe(2);
+  });
+
   it('el peaje cobra por fallar, no solo por tocar', () => {
     /* Reported on the first day of real use, by the person who built
        it: "puedo simplemente no leer la pregunta, y darle con mi

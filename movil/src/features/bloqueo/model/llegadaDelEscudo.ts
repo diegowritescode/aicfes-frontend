@@ -15,6 +15,10 @@ export interface InteraccionDelEscudo {
   readonly button: 'primary' | 'secondary';
   /** Unix milliseconds. */
   readonly timestamp: number;
+  /* Which app was shielded. Null when the module could not derive
+     one. Kept so the toll can name it — "Abrir la app" over a screen
+     that goes to Inicio is a label that lies. */
+  readonly target?: string | null;
 }
 
 /**

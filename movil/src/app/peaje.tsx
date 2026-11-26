@@ -10,6 +10,7 @@ import { TECHO } from '@/features/offline/model/costoDelError';
 import { MINUTOS_DE_EMERGENCIA, textoDelBoton } from '@/features/offline/model/emergencia';
 import { MINUTOS_DESBLOQUEO } from '@/features/offline/model/peaje';
 import { useBloqueo } from '@/features/bloqueo/hooks/useBloqueo';
+import { almacenPeaje } from '@/core/almacenamiento/peaje';
 import type { IntentoDelPeaje } from '@/features/offline/model/peaje';
 
 /**
@@ -80,10 +81,24 @@ function Bloque() {
    * outlive the screen, or thirty seconds of free access is exactly
    * what someone looking for a way out would find.
    */
+  /* Set the moment minutes are granted, so the cleanup below knows
+     not to take them back. A ref and not state: the cleanup runs
+     during unmount and would read a stale value from a closure. */
+  const concedido = useRef(false);
+
   useEffect(() => {
     void nativo.respiro();
     return () => {
-      void nativo.terminarRespiro();
+      /* Only when they left without earning anything.
+      
+         `relock` ends *every* active grant, breathing room and
+         reward alike. Calling it unconditionally undid the fifteen
+         minutes a moment after they were given: answer eight
+         questions, get sent back to Inicio, open Instagram, blocked
+         again. Reported from a real phone, and the worst failure
+         this feature can have — the toll took the work and did not
+         pay. */
+      if (!concedido.current) void nativo.terminarRespiro();
     };
     /* Once, on mount. `nativo` is rebuilt on every render of the
        hook, so listing it would re-grant on each one. */
@@ -147,7 +162,19 @@ function Bloque() {
          cleanup that calls `relock`, and a grant still in flight
          would be cancelled by it — the learner would answer five
          questions and get nothing. */
-      void nativo.conceder(MINUTOS_DESBLOQUEO).then(() => salir());
+      concedido.current = true;
+      void nativo.conceder(MINUTOS_DESBLOQUEO).then(async () => {
+        /* Back to the app they were reaching for, if the platform
+           lets us. It said "Abrir la app" and went to Inicio, which
+           is a label that lies — and after eight questions, lying is
+           the last thing this screen should do.
+
+           Where it cannot, the learner switches apps themselves; the
+           minutes are already granted either way. */
+        const handle = await almacenPeaje.leerAppBloqueada();
+        if (handle) await nativo.abrirApp(handle);
+        salir();
+      });
       return;
     },
     [cola, bloqueo, nativo, salir],
@@ -165,6 +192,7 @@ function Bloque() {
        runs the cleanup that calls `relock`, and a grant still in
        flight would be cancelled by it — the learner would spend one
        of two daily emergencies and get no minutes. */
+    concedido.current = true;
     void nativo.conceder(MINUTOS_DE_EMERGENCIA).then(() => salir());
   }, [bloqueo, nativo, salir]);
 

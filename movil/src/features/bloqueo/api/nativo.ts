@@ -96,6 +96,12 @@ export const nativo = {
      granted on arrival must not outlive the screen it was for. */
   volverABloquear: () => llamar<void>('relock'),
 
+  /* Brings a blocked app back to the front, where the platform
+     allows it (`getCapabilities().openApplication`). On a phone that
+     does not, the learner switches apps themselves — which is why
+     the button must not promise more than it can do. */
+  abrirApp: (handle: string) => llamar<void>('openApplication', handle),
+
   cuantasApps: (seleccionId: string) =>
     llamar<{ applicationCount?: number } | null>('getSelectionMetadata', seleccionId),
 

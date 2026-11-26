@@ -20,6 +20,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const CLAVE_SESION = 'aicfes.peaje.sesion';
 const CLAVE_EMERGENCIAS = 'aicfes.peaje.emergencias';
 const CLAVE_DESBLOQUEO = 'aicfes.peaje.desbloqueoHasta';
+const CLAVE_APP = 'aicfes.peaje.appBloqueada';
 
 async function leerJson<T>(clave: string): Promise<T | null> {
   try {
@@ -58,6 +59,14 @@ export const almacenPeaje = {
   },
 
   leerEmergencias: <T>() => leerJson<T>(CLAVE_EMERGENCIAS),
+
+  /* Which app the shield was guarding, written when the toll opens
+     and read when it is cleared. Stored rather than passed because
+     the two happen in different components — the root layout notices
+     the arrival, and the screen shows the result minutes later. */
+  leerAppBloqueada: () => leerJson<string>(CLAVE_APP),
+
+  guardarAppBloqueada: (handle: string) => escribirJson(CLAVE_APP, handle),
 
   guardarEmergencias: (uso: unknown) => escribirJson(CLAVE_EMERGENCIAS, uso),
 

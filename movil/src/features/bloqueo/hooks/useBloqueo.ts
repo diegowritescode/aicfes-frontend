@@ -203,6 +203,19 @@ export function useBloqueo() {
     await nativo.volverABloquear();
   }, []);
 
+  /**
+   * Brings the blocked app back to the front, where the platform
+   * allows it.
+   *
+   * Reported from a real phone: the finish button said "Abrir la
+   * app" and went to AICFES Inicio instead. After eight questions,
+   * a label that lies is the last thing this screen should do.
+   */
+  const abrirApp = useCallback(async (handle: string) => {
+    const r = await nativo.abrirApp(handle);
+    return r.ok;
+  }, []);
+
   return {
     disponible,
     cargando,
@@ -221,5 +234,6 @@ export function useBloqueo() {
     conceder,
     respiro,
     terminarRespiro,
+    abrirApp,
   };
 }

@@ -2,6 +2,7 @@ import '@/app/global.css';
 import { useEffect, useState } from 'react';
 import { Stack, useRouter } from 'expo-router';
 import { useLlegadaDelEscudo } from '@/features/bloqueo/hooks/useLlegadaDelEscudo';
+import { almacenPeaje } from '@/core/almacenamiento/peaje';
 import { StatusBar } from 'expo-status-bar';
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -52,10 +53,14 @@ export default function Layout() {
  */
 function LlevarAlPeaje() {
   const router = useRouter();
-  const { llego, atendido } = useLlegadaDelEscudo();
+  const { llego, appBloqueada, atendido } = useLlegadaDelEscudo();
 
   useEffect(() => {
     if (!llego) return;
+
+    /* Written before navigating: the toll reads it when the block is
+       cleared, which is a different component and minutes later. */
+    if (appBloqueada) void almacenPeaje.guardarAppBloqueada(appBloqueada);
 
     /* `replace`, not `push`: the toll is where this launch belongs,
        and leaving Inicio underneath would make the back gesture —
@@ -66,7 +71,7 @@ function LlevarAlPeaje() {
        Without this the second time a learner opened Instagram in a
        session left them wherever they were. */
     atendido();
-  }, [llego, atendido, router]);
+  }, [llego, appBloqueada, atendido, router]);
 
   return null;
 }

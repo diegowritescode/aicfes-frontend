@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState } from 'react-native';
 import { nativo } from '../api/nativo';
-import { vieneDelEscudo, type InteraccionDelEscudo } from '../model/llegadaDelEscudo';
+import { pulsacionQueAbrio, type InteraccionDelEscudo } from '../model/llegadaDelEscudo';
 
 /**
  * Whether the shield's button is what brought the app to the front.
@@ -16,8 +16,14 @@ import { vieneDelEscudo, type InteraccionDelEscudo } from '../model/llegadaDelEs
  * runs once in the app's lifetime and every later arrival comes
  * through `AppState` instead.
  */
-export function useLlegadaDelEscudo(): { llego: boolean; atendido: () => void } {
+export function useLlegadaDelEscudo(): {
+  llego: boolean;
+  /** Which app was shielded, when the module could say. */
+  appBloqueada: string | null;
+  atendido: () => void;
+} {
   const [llego, setLlego] = useState(false);
+  const [appBloqueada, setAppBloqueada] = useState<string | null>(null);
   /* Guards the window between deciding to navigate and the navigation
      happening — draining is destructive, so a second read in that gap
      finds nothing and would cancel the trip.
@@ -35,8 +41,10 @@ export function useLlegadaDelEscudo(): { llego: boolean; atendido: () => void } 
     if (!r.ok) return;
 
     const pulsaciones = (r.valor ?? []) as InteraccionDelEscudo[];
-    if (vieneDelEscudo(pulsaciones)) {
+    const pulsacion = pulsacionQueAbrio(pulsaciones);
+    if (pulsacion) {
       navegando.current = true;
+      setAppBloqueada(pulsacion.target ?? null);
       setLlego(true);
     }
   }, []);
@@ -58,7 +66,9 @@ export function useLlegadaDelEscudo(): { llego: boolean; atendido: () => void } 
   const atendido = useCallback(() => {
     navegando.current = false;
     setLlego(false);
+    /* `appBloqueada` survives: the toll shows it after the questions
+       are answered, which is long after this runs. */
   }, []);
 
-  return { llego, atendido };
+  return { llego, appBloqueada, atendido };
 }
