@@ -52,15 +52,21 @@ export default function Layout() {
  */
 function LlevarAlPeaje() {
   const router = useRouter();
-  const vieneDelEscudo = useLlegadaDelEscudo();
+  const { llego, atendido } = useLlegadaDelEscudo();
 
   useEffect(() => {
-    if (!vieneDelEscudo) return;
+    if (!llego) return;
+
     /* `replace`, not `push`: the toll is where this launch belongs,
        and leaving Inicio underneath would make the back gesture —
        which the toll blocks — the one way out of a block. */
     router.replace('/peaje');
-  }, [vieneDelEscudo, router]);
+
+    /* Released once the trip is made, so the next block routes too.
+       Without this the second time a learner opened Instagram in a
+       session left them wherever they were. */
+    atendido();
+  }, [llego, atendido, router]);
 
   return null;
 }

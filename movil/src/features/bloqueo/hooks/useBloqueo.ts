@@ -11,6 +11,7 @@ import {
 import {
   ACCION_PRINCIPAL,
   ACCION_SECUNDARIA,
+  SEGUNDOS_DE_RESPIRO,
   SELECCION,
   TEXTOS_DEL_ESCUDO,
   segundosDeDesbloqueo,
@@ -181,6 +182,27 @@ export function useBloqueo() {
     return true;
   }, []);
 
+  /**
+   * A few seconds so the shield does not interrupt the screen it
+   * asked for.
+   *
+   * Reported from a real phone: tapping Resolverlas opened the
+   * exercises and a second later the shield was back, unprompted.
+   * The blocked app is still in the foreground while Android
+   * switches, and the shield fires on it again.
+   *
+   * Not a reward — thirty seconds, revoked the moment the learner
+   * leaves the toll.
+   */
+  const respiro = useCallback(async () => {
+    await nativo.desbloqueoTemporal(SEGUNDOS_DE_RESPIRO);
+  }, []);
+
+  /** Ends the breathing room. The shield comes straight back. */
+  const terminarRespiro = useCallback(async () => {
+    await nativo.volverABloquear();
+  }, []);
+
   return {
     disponible,
     cargando,
@@ -197,5 +219,7 @@ export function useBloqueo() {
     aplicar,
     quitarTodo,
     conceder,
+    respiro,
+    terminarRespiro,
   };
 }

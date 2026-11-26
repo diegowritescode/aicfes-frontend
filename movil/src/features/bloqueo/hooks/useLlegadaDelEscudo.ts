@@ -1,53 +1,64 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState } from 'react-native';
 import { nativo } from '../api/nativo';
 import { vieneDelEscudo, type InteraccionDelEscudo } from '../model/llegadaDelEscudo';
 
 /**
- * Whether the shield's button is what opened the app.
+ * Whether the shield's button is what brought the app to the front.
  *
- * The shield opens AICFES and says nothing about why, so the learner
- * landed on Inicio: block worked, shield appeared, "Resolverlas"
- * opened the app, and then nothing. This reads the interaction the
- * native side recorded and answers the one question the router needs.
+ * The shield opens AICFES and says nothing about why, so without this
+ * the learner lands wherever they were — which is what shipped, and
+ * the report was exact: with the app closed it worked, with the app
+ * already open it did not.
  *
- * Checked on launch **and** whenever the app returns to the
- * foreground: Android usually resumes the existing process rather
- * than starting a new one, so a mount-only check would work the first
- * time and never again.
+ * That difference is the whole shape of the problem. Android resumes
+ * an existing process rather than starting a new one, so the effect
+ * runs once in the app's lifetime and every later arrival comes
+ * through `AppState` instead.
  */
-export function useLlegadaDelEscudo(): boolean {
+export function useLlegadaDelEscudo(): { llego: boolean; atendido: () => void } {
   const [llego, setLlego] = useState(false);
-  /* Draining removes the interactions, so a second read finds
-     nothing. This keeps the answer across the re-render that the
-     navigation itself causes. */
-  const yaRespondido = useRef(false);
+  /* Guards the window between deciding to navigate and the navigation
+     happening — draining is destructive, so a second read in that gap
+     finds nothing and would cancel the trip.
+     
+     Cleared by `atendido()` once the route is reached. The first
+     version never cleared it, so the second block of the session was
+     ignored: a one-shot latch for something that happens every time
+     a learner opens Instagram. */
+  const navegando = useRef(false);
+
+  const revisar = useCallback(async () => {
+    if (navegando.current) return;
+
+    const r = await nativo.pulsacionesDelEscudo();
+    if (!r.ok) return;
+
+    const pulsaciones = (r.valor ?? []) as InteraccionDelEscudo[];
+    if (vieneDelEscudo(pulsaciones)) {
+      navegando.current = true;
+      setLlego(true);
+    }
+  }, []);
 
   useEffect(() => {
-    let vivo = true;
-
-    const revisar = async () => {
-      const r = await nativo.pulsacionesDelEscudo();
-      if (!vivo || !r.ok) return;
-
-      const pulsaciones = (r.valor ?? []) as InteraccionDelEscudo[];
-      if (vieneDelEscudo(pulsaciones)) {
-        yaRespondido.current = true;
-        setLlego(true);
-      }
-    };
-
     void revisar();
 
     const suscripcion = AppState.addEventListener('change', (estado) => {
-      if (estado === 'active' && !yaRespondido.current) void revisar();
+      /* Every return to the foreground, not just the first. This is
+         the path that matters: once the app has been opened, every
+         later block arrives here. */
+      if (estado === 'active') void revisar();
     });
 
-    return () => {
-      vivo = false;
-      suscripcion.remove();
-    };
+    return () => suscripcion.remove();
+  }, [revisar]);
+
+  /** Called once the toll is on screen, so the next block can route. */
+  const atendido = useCallback(() => {
+    navegando.current = false;
+    setLlego(false);
   }, []);
 
-  return llego;
+  return { llego, atendido };
 }

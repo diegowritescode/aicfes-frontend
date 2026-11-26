@@ -63,6 +63,29 @@ function Bloque() {
     return () => suscripcion.remove();
   }, []);
 
+  /**
+   * A few seconds of quiet while this screen comes up.
+   *
+   * Reported from a real phone: the exercises opened and a second
+   * later the shield was back, unprompted. The blocked app is still
+   * in the foreground while Android switches, so the shield fires on
+   * it again and interrupts the very screen it asked for.
+   *
+   * Revoked on leaving, whichever way the learner leaves — paying,
+   * spending an emergency, or an empty pool. The grant must not
+   * outlive the screen, or thirty seconds of free access is exactly
+   * what someone looking for a way out would find.
+   */
+  useEffect(() => {
+    void nativo.respiro();
+    return () => {
+      void nativo.terminarRespiro();
+    };
+    /* Once, on mount. `nativo` is rebuilt on every render of the
+       hook, so listing it would re-grant on each one. */
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const salir = useCallback(() => {
     /* The native layer is what actually unblocks the other app; this
        route's job ends here. */
@@ -114,10 +137,14 @@ function Bloque() {
          would take the time away over a bookkeeping error.
 
          Minutes of use, not of clock: the native budget only runs
-         down while a blocked app is in the foreground. */
-      void nativo.conceder(MINUTOS_DESBLOQUEO);
+         down while a blocked app is in the foreground.
 
-      salir();
+         Awaited, unlike the breathing room: unmounting runs the
+         cleanup that calls `relock`, and a grant still in flight
+         would be cancelled by it — the learner would answer five
+         questions and get nothing. */
+      void nativo.conceder(MINUTOS_DESBLOQUEO).then(() => salir());
+      return;
     },
     [cola, bloqueo, nativo, salir],
   );
@@ -128,9 +155,13 @@ function Bloque() {
        the emergency a free reset of work already done. */
     if (!bloqueo.gastarEmergencia()) return;
     /* Shorter than a cleared block, and that gap is the argument for
-       doing the exercises. */
-    void nativo.conceder(MINUTOS_DE_EMERGENCIA);
-    salir();
+       doing the exercises.
+
+       Sequenced for the same reason as paying: leaving the screen
+       runs the cleanup that calls `relock`, and a grant still in
+       flight would be cancelled by it — the learner would spend one
+       of two daily emergencies and get no minutes. */
+    void nativo.conceder(MINUTOS_DE_EMERGENCIA).then(() => salir());
   }, [bloqueo, nativo, salir]);
 
   if (bloqueo.cargando) return null;

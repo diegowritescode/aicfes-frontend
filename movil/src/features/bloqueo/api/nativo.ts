@@ -91,6 +91,11 @@ export const nativo = {
 
   segundosRestantes: () => llamar<number>('getRemainingUnlockSeconds'),
 
+  /* Ends every active unlock and puts the shield back. Used when the
+     learner leaves the toll without finishing: the breathing room
+     granted on arrival must not outlive the screen it was for. */
+  volverABloquear: () => llamar<void>('relock'),
+
   cuantasApps: (seleccionId: string) =>
     llamar<{ applicationCount?: number } | null>('getSelectionMetadata', seleccionId),
 

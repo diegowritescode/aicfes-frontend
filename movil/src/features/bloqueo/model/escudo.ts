@@ -59,3 +59,22 @@ export function segundosDeDesbloqueo(minutos: number): number {
      was never offered. */
   return Math.max(30, Math.round(minutos * 60));
 }
+
+/**
+ * Seconds of breathing room granted on arriving at the toll.
+ *
+ * Reported from a real phone: tapping Resolverlas opened the
+ * exercises and a second later the shield was back, unprompted. The
+ * blocked app is still in the foreground for a moment while Android
+ * switches, and the shield fires again on it.
+ *
+ * Thirty is the module's floor for a temporary unlock, and it is
+ * also about right: long enough for the switch to settle, short
+ * enough that nobody reads a question in it and walks away with free
+ * access.
+ *
+ * This is not the reward. Clearing the block grants
+ * `MINUTOS_DESBLOQUEO`; this only stops the shield from interrupting
+ * the thing it asked for.
+ */
+export const SEGUNDOS_DE_RESPIRO = 30;
