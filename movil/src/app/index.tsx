@@ -1,5 +1,6 @@
 import { ActivityIndicator, View } from 'react-native';
 import { Redirect } from 'expo-router';
+import { color } from '@/shared/ui';
 import { useSesion } from '@/features/sesion/hooks/useSesion';
 
 /**
@@ -16,8 +17,12 @@ export default function Index() {
 
   if (cargando) {
     return (
-      <View className="flex-1 items-center justify-center bg-wash">
-        <ActivityIndicator size="large" color="#2563eb" />
+      <View className="flex-1 items-center justify-center bg-fondo">
+        {/* The accent token. The blue that was here belonged to the
+            palette this design system replaced, and a cold-start
+            spinner is the first colour the learner ever sees from
+            us. */}
+        <ActivityIndicator size="large" color={color.acento} />
       </View>
     );
   }

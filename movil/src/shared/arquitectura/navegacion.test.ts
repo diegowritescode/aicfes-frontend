@@ -85,4 +85,53 @@ describe('las pantallas de entrada llevan a alguna parte', () => {
     const inexistentes = [...destinos].filter((d) => !archivos.has(d === '/' ? '/' : d));
     expect(inexistentes, `rutas que nadie define: ${inexistentes.join(', ')}`).toEqual([]);
   });
+
+  /**
+   * The tab bar's destinations, which the check above cannot see.
+   *
+   * That check scans for a literal path next to the call —
+   * `router.push('/repaso')`. `BarraPestanas` holds its five routes in
+   * an array and calls `router.replace(p.ruta as never)`, so every one
+   * of them is invisible to it. The bar shipped with a fifth tab
+   * pointing at `/yo`, a route that did not exist: a dead tab passed
+   * the test whose entire job is to catch dead tabs.
+   *
+   * Read out of the array instead. The bar is the app's only
+   * navigation now that the drawer is gone, so a tab that goes
+   * nowhere is not a cosmetic defect — it is a part of the app the
+   * learner cannot reach.
+   */
+  it('las pestañas de la barra apuntan a rutas que existen', () => {
+    const fuente = readFileSync(
+      join(__dirname, '../ui/organismos/BarraPestanas.tsx'),
+      'utf8',
+    );
+
+    const rutas = [...fuente.matchAll(/ruta:\s*'(\/[a-z-/]+)'/g)].map((m) => m[1]!);
+
+    /* An empty list would make the loop below assert nothing, which
+       is exactly the failure this test exists to correct. */
+    expect(rutas.length, 'no se leyó ninguna ruta de BarraPestanas').toBe(5);
+
+    const archivos = new Set<string>();
+    const recorrer = (dir: string, prefijo = '') => {
+      for (const entrada of readdirSync(dir)) {
+        const completo = join(dir, entrada);
+        if (statSync(completo).isDirectory()) recorrer(completo, `${prefijo}/${entrada}`);
+        else if (entrada.endsWith('.tsx')) {
+          const base = entrada.replace(/\.tsx$/, '');
+          archivos.add(base === 'index' ? prefijo || '/' : `${prefijo}/${base}`);
+        }
+      }
+    };
+    recorrer(RAIZ);
+
+    const muertas = rutas.filter((r) => !archivos.has(r));
+    expect(
+      muertas,
+      `pestañas que no llevan a ningún archivo: ${muertas.join(', ')}. ` +
+        `La barra es la única navegación de la app: una pestaña muerta es una parte ` +
+        `de la app a la que el estudiante no puede llegar.`,
+    ).toEqual([]);
+  });
 });

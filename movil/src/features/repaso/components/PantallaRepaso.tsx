@@ -1,8 +1,17 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ScrollView, Text, View } from 'react-native';
-import { Boton } from '@/shared/ui/Boton';
+import { ScrollView, View } from 'react-native';
+import {
+  BarraRespuesta,
+  Boton,
+  Cifra,
+  Contexto,
+  Explicacion,
+  Opcion,
+  Personaje,
+  Tarjeta,
+  Texto,
+} from '@/shared/ui';
 import { NOMBRE_AREA, type Letra } from '@/shared/model/icfes';
-import { OpcionRespuesta, type EstadoOpcion } from '@/shared/pregunta/components/OpcionRespuesta';
 import { rotarOpciones } from '@/shared/pregunta/model/rotacion';
 import {
   letraAnterior,
@@ -31,6 +40,11 @@ import {
  * Options are shuffled, because this is by definition a repeat: the
  * learner has seen the right letter highlighted before, and tapping it
  * from memory practises nothing.
+ *
+ * After answering, the two options that matter stay and the other two
+ * go. Four rows of which two are irrelevant is four rows to read, and
+ * the thing worth reading — why the one they picked is wrong — is
+ * below them.
  */
 export function PantallaRepaso({
   errores,
@@ -72,14 +86,14 @@ export function PantallaRepaso({
   const actual = errorActual(sesion);
 
   /* One number per review run, fixed when the screen mounts.
-     
+
      It seeds the shuffle, and getting this wrong was a real defect:
      the first version used `veces`, the number of times the question
      had been MISSED. Reviewing without missing it again leaves that
      unchanged, so a learner could fail, see that the answer was A,
      leave, come back and tap A without reading. Reported from a
      phone, exactly like that.
-     
+
      The run is what has to differ, not the failure count. */
   const [semillaDeSesion] = useState(() => Date.now());
 
@@ -140,19 +154,35 @@ export function PantallaRepaso({
   if (terminada(sesion)) {
     const r = resumen(sesion);
     return (
-      <View className="flex-1 justify-center gap-4 px-5">
-        <Text className="text-[24px] font-bold tracking-tight text-slate-900">
-          Repaso terminado
-        </Text>
-        <Text className="text-[14.5px] leading-6 text-slate-600">{cierre(sesion)}</Text>
-        {r.corregidas < r.total ? (
-          <Text className="text-[13px] leading-5 text-slate-500">
-            Las que no salieron siguen en tu lista. No se pierden.
-          </Text>
-        ) : null}
-        <Boton onPress={onTerminar} ancho>
-          Volver
-        </Boton>
+      <View className="flex-1">
+        <ScrollView className="flex-1" contentContainerClassName="flex-grow justify-center gap-5 px-5 py-5">
+          <Texto estilo="rotulo">Terminó</Texto>
+
+          {/* Green only for the ones that came out right: those were
+              earned. The total beside it is not. */}
+          <Tarjeta className="items-center gap-1.5">
+            <Cifra
+              valor={r.corregidas}
+              unidad={`de ${r.total}`}
+              tono={r.corregidas > 0 ? 'ganado' : 'texto'}
+            />
+            <Texto estilo="apoyo" className="text-center">
+              {cierre(sesion)}
+            </Texto>
+          </Tarjeta>
+
+          {r.corregidas < r.total ? (
+            <Tarjeta variante="plana">
+              <Texto estilo="apoyo">
+                Las que no salieron siguen en tu lista. No se pierden.
+              </Texto>
+            </Tarjeta>
+          ) : null}
+        </ScrollView>
+
+        <BarraRespuesta>
+          <Boton alTocar={onTerminar}>Volver</Boton>
+        </BarraRespuesta>
       </View>
     );
   }
@@ -161,94 +191,118 @@ export function PantallaRepaso({
 
   const respondida = elegida !== null;
   const acerto = respondida && elegida === barajado.correcta;
-  const letras = (['A', 'B', 'C', 'D'] as const).filter(
+  const todas = (['A', 'B', 'C', 'D'] as const).filter(
     (l) => barajado.opciones[l] !== undefined,
   );
+  /* Before answering, all four: the learner has to choose among them.
+     After, only the right one and the one they picked — the other two
+     were never in play, and leaving them pushes the explanation, which
+     is the only part with a measured effect, off the screen. */
+  const letras = respondida
+    ? todas.filter((l) => l === barajado.correcta || l === elegida)
+    : todas;
 
   return (
-    <ScrollView contentContainerClassName="gap-5 px-5 py-6">
-      <View className="gap-1.5">
-        <View className="flex-row items-center justify-between gap-3">
-          <Text className="text-[12px] font-bold uppercase tracking-widest text-slate-400">
-            {avanzadas + 1} de {congeladas.length}
-          </Text>
-          <Text className="text-[12px] font-semibold text-slate-400">
-            {NOMBRE_AREA[actual.area]}
-          </Text>
+    <View className="flex-1">
+      <ScrollView className="flex-1" contentContainerClassName="gap-5 px-5 py-5">
+        {/* The subject, not a topic: a review row carries `area` and
+            nothing finer. See the note on the pattern card below. */}
+        <Texto estilo="rotulo">{NOMBRE_AREA[actual.area]}</Texto>
+
+        {actual.contexto ? <Contexto>{actual.contexto}</Contexto> : null}
+
+        <Texto estilo="pregunta">{actual.pregunta}</Texto>
+
+        <View className="gap-2.5">
+          {letras.map((letra) => (
+            <Opcion
+              key={letra}
+              letra={letra}
+              estado={estadoDe(letra, barajado.correcta, elegida)}
+              alTocar={respondida ? undefined : () => responder(letra)}
+            >
+              {barajado.opciones[letra]!}
+            </Opcion>
+          ))}
         </View>
-        <Text className="text-[13px] leading-5 text-slate-500">
-          {actual.veces === 1
-            ? 'La fallaste una vez.'
-            : `La fallaste ${actual.veces} veces.`}
-        </Text>
-      </View>
 
-      {actual.contexto ? (
-        <View className="rounded-2xl border border-slate-200 bg-white p-4">
-          <Text className="text-[13.5px] leading-6 text-slate-700">{actual.contexto}</Text>
-        </View>
-      ) : null}
-
-      <Text className="text-[16px] font-semibold leading-6 text-slate-900">
-        {actual.pregunta}
-      </Text>
-
-      <View className="gap-2.5">
-        {letras.map((letra) => (
-          <OpcionRespuesta
-            key={letra}
-            letra={letra}
-            texto={barajado.opciones[letra]!}
-            estado={estadoDe(letra, barajado.correcta, elegida)}
-            bloqueada={respondida}
-            onElegir={() => responder(letra)}
-          />
-        ))}
-      </View>
-
-      {respondida ? (
-        <View
-          className={`gap-2 rounded-2xl border p-4 ${
-            acerto ? 'border-emerald-200 bg-emerald-50' : 'border-slate-200 bg-white'
-          }`}
-        >
-          <Text
-            className={`text-[13px] font-bold uppercase tracking-wide ${
-              acerto ? 'text-emerald-700' : 'text-slate-500'
-            }`}
-          >
-            {acerto ? 'Ahora sí' : 'Todavía no'}
-          </Text>
-          <Text className="text-[13.5px] leading-6 text-slate-700">
+        {respondida ? (
+          <Explicacion acerto={acerto} titulo={acerto ? 'Ahora sí' : 'Todavía no'}>
             {explicacion(actual, barajado.aOriginal[elegida] ?? elegida)}
-          </Text>
-        </View>
-      ) : null}
+          </Explicacion>
+        ) : null}
 
-      {respondida && !acerto ? (
-        <Boton
-          variante="contorno"
-          onPress={() => onPedirTutor(actual, barajado.aOriginal[elegida] ?? elegida)}
-          ancho
-        >
-          Hablarlo con el tutor
-        </Boton>
-      ) : null}
+        {/* The one thing in this product with a clear measured positive
+            effect is informative feedback: d = +0,33. This card is
+            that, extended backwards in time — not «you were wrong»
+            but «this is the third time, and here is what you keep
+            doing».
 
+            The count is real: `veces` comes from the server. The
+            pattern does not exist yet. `errorPendiente` carries no
+            field for «siempre eliges Golgi», so there is nothing to
+            render and nothing is invented here: a made-up pattern is
+            worse than none, because the learner will believe it. When
+            the backend sends one, it goes in this card under the
+            count. */}
+        {respondida ? (
+          <Tarjeta variante="plana" className="gap-1.5">
+            <Texto estilo="rotulo">
+              {actual.veces === 1
+                ? 'La has fallado una vez'
+                : `La has fallado ${actual.veces} veces`}
+            </Texto>
+            <Texto estilo="apoyo">
+              {actual.veces === 1
+                ? 'Si vuelve a salirte mal, vuelve a esta lista.'
+                : 'Sigue en tu lista hasta que te salga. No se pierde.'}
+            </Texto>
+          </Tarjeta>
+        ) : null}
+
+        {/* The character delivers the analysis here — `docs/PERSONAJE.md`
+            calls this the one screen where it is the protagonist. It
+            looks at its own page, not at the learner: failing gives it
+            more work, not disappointment. */}
+        {respondida ? (
+          <View className="items-center pt-1">
+            <Personaje pose={acerto ? 'acierto' : 'fallo'} tamano={72} />
+          </View>
+        ) : null}
+      </ScrollView>
+
+      {/* Outside the scroll: with a 1200-character stimulus, four
+          options and an explanation, anything inside it lands past the
+          fold, and a button nobody scrolls to is a button that does
+          not exist. */}
       {respondida ? (
-        <Boton onPress={seguir} ancho>
-          {avanzadas + 1 >= congeladas.length ? 'Terminar' : 'Siguiente'}
-        </Boton>
+        <BarraRespuesta>
+          <Boton alTocar={seguir}>
+            {avanzadas + 1 >= congeladas.length ? 'Terminar' : 'Intentar otra parecida'}
+          </Boton>
+          {!acerto ? (
+            <Boton
+              variante="plano"
+              alTocar={() => onPedirTutor(actual, barajado.aOriginal[elegida] ?? elegida)}
+            >
+              Hablarlo con el tutor
+            </Boton>
+          ) : null}
+        </BarraRespuesta>
       ) : null}
-    </ScrollView>
+    </View>
   );
 }
 
-function estadoDe(letra: Letra, correcta: Letra, elegida: Letra | null): EstadoOpcion {
+function estadoDe(
+  letra: Letra,
+  correcta: Letra,
+  elegida: Letra | null,
+): 'pendiente' | 'correcta' | 'fallada' | 'apagada' {
   if (elegida === null) return 'pendiente';
   if (letra === correcta) return 'correcta';
   if (letra === elegida) return 'fallada';
-  return 'descartada';
+  return 'apagada';
 }
 
 /** The explanation for what they picked, by its original letter. */

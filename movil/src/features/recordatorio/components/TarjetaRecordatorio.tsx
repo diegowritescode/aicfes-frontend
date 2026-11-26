@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
-import { Boton } from '@/shared/ui/Boton';
+import { Boton } from '@/shared/ui';
 import { legible, recordatorioDeHoy } from '../model/mensaje';
 import type { TemaParaHoy } from '../model/mensaje';
 
@@ -38,19 +38,19 @@ export function TarjetaRecordatorio({
 
   if (activo) {
     return (
-      <View className="gap-3 rounded-2xl border border-slate-200 bg-white p-5">
+      <View className="gap-3 rounded-2xl border border-linea bg-capa p-5">
         <View className="gap-1">
-          <Text className="text-[14.5px] font-semibold text-slate-900">
+          <Text className="text-[14.5px] font-semibold text-texto">
             Te avisamos a las {hora}:00
           </Text>
-          <Text className="text-[13px] leading-5 text-slate-500">
+          <Text className="text-[13px] leading-5 text-texto-apagado">
             {temaDeHoy
               ? `Hoy sería sobre ${legible(temaDeHoy.tema)}.`
               : 'Cuando tengamos de qué, te decimos el tema.'}
           </Text>
         </View>
         <Pressable onPress={onCancelar} hitSlop={8}>
-          <Text className="text-[12.5px] font-semibold uppercase tracking-wide text-slate-400">
+          <Text className="text-[12.5px] font-semibold uppercase tracking-wide text-texto-apagado">
             Quitar el recordatorio
           </Text>
         </Pressable>
@@ -63,11 +63,11 @@ export function TarjetaRecordatorio({
      does nothing. */
   if (permiso === 'negado') {
     return (
-      <View className="gap-2 rounded-2xl border border-slate-200 bg-white p-5">
-        <Text className="text-[14.5px] font-semibold text-slate-900">
+      <View className="gap-2 rounded-2xl border border-linea bg-capa p-5">
+        <Text className="text-[14.5px] font-semibold text-texto">
           Las notificaciones están apagadas
         </Text>
-        <Text className="text-[13px] leading-5 text-slate-500">
+        <Text className="text-[13px] leading-5 text-texto-apagado">
           Se activan en los ajustes del teléfono. Desde aquí ya no podemos
           volver a preguntarte.
         </Text>
@@ -76,25 +76,25 @@ export function TarjetaRecordatorio({
   }
 
   return (
-    <View className="gap-3 rounded-2xl border border-slate-200 bg-white p-5">
+    <View className="gap-3 rounded-2xl border border-linea bg-capa p-5">
       <View className="gap-1">
-        <Text className="text-[14.5px] font-semibold text-slate-900">
+        <Text className="text-[14.5px] font-semibold text-texto">
           Un recordatorio al día
         </Text>
-        <Text className="text-[13px] leading-5 text-slate-500">
+        <Text className="text-[13px] leading-5 text-texto-apagado">
           Te decimos qué tema te toca. Nada de rachas ni de presión.
         </Text>
       </View>
 
       {/* What it will actually say. */}
-      <View className="gap-0.5 rounded-xl bg-slate-50 px-3.5 py-3">
-        <Text className="text-[13px] font-semibold text-slate-700">{previo.titulo}</Text>
-        <Text className="text-[12.5px] leading-5 text-slate-500">{previo.cuerpo}</Text>
+      <View className="gap-0.5 rounded-xl bg-capa-alta px-3.5 py-3">
+        <Text className="text-[13px] font-semibold text-texto">{previo.titulo}</Text>
+        <Text className="text-[12.5px] leading-5 text-texto-apagado">{previo.cuerpo}</Text>
       </View>
 
       {eligiendo ? (
         <View className="gap-2">
-          <Text className="text-[12.5px] font-semibold uppercase tracking-wide text-slate-400">
+          <Text className="text-[12.5px] font-semibold uppercase tracking-wide text-texto-apagado">
             ¿A qué hora?
           </Text>
           {/* Horizontal rather than a wrapped grid: seventeen hours in
@@ -111,18 +111,18 @@ export function TarjetaRecordatorio({
                 onPress={() => onActivar(h)}
                 accessibilityRole="button"
                 accessibilityLabel={`Avisarme a las ${h}:00`}
-                className="min-w-[66px] items-center rounded-xl border border-slate-200 px-3 py-2.5"
+                className="min-w-[66px] items-center rounded-xl border border-linea px-3 py-2.5"
               >
-                <Text className="text-[14px] font-semibold text-slate-800">{h}:00</Text>
+                <Text className="text-[14px] font-semibold text-texto">{h}:00</Text>
               </Pressable>
             ))}
           </ScrollView>
-          <Text className="text-[11.5px] text-slate-400">
+          <Text className="text-[11.5px] text-texto-apagado">
             De 6 de la mañana a 10 de la noche.
           </Text>
         </View>
       ) : (
-        <Boton onPress={() => setEligiendo(true)} ancho>
+        <Boton alTocar={() => setEligiendo(true)}>
           Activar
         </Boton>
       )}

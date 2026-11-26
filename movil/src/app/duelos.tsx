@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Redirect, useRouter } from 'expo-router';
+import { Redirect } from 'expo-router';
+import { BarraPestanas, Texto } from '@/shared/ui';
 import { useSesion } from '@/features/sesion/hooks/useSesion';
 import { useMisDuelos } from '@/features/duelos/hooks/useDuelos';
 import { PantallaDuelos } from '@/features/duelos/components/PantallaDuelos';
@@ -30,33 +31,48 @@ type Vista =
   | { readonly tipo: 'ajustes' };
 
 export default function RutaDuelos() {
-  const router = useRouter();
   const { cargando, autenticado } = useSesion();
   const [vista, setVista] = useState<Vista>({ tipo: 'lista' });
   const duelos = useMisDuelos();
 
   if (cargando) {
-    return <SafeAreaView className="flex-1 bg-white" />;
+    return <SafeAreaView className="flex-1 bg-fondo" />;
   }
   if (!autenticado) {
     return <Redirect href="/entrar" />;
   }
 
+  const enLista = vista.tipo === 'lista';
+
   return (
-    <SafeAreaView className="flex-1 bg-white" edges={['top', 'bottom']}>
-      {/* No hamburger here: only `inicio` carries the drawer, and
+    <SafeAreaView
+      className="flex-1 bg-fondo"
+      /* The list carries the tab bar, which already fills the bottom
+         inset. The round and the settings do not, so they still need
+         it from the safe area. */
+      edges={enLista ? ['top'] : ['top', 'bottom']}
+    >
+      {/* No hamburger here: the tab bar below is the navigation, and
           every other route is reached from it. A second entry point
-          would put the learner in two places at once. */}
-      <View className="flex-row items-center px-4 py-2">
-        <Pressable
-          onPress={() => (vista.tipo === 'lista' ? router.back() : setVista({ tipo: 'lista' }))}
-          className="px-2 py-1"
-          accessibilityRole="button"
-          accessibilityLabel="Atrás"
-        >
-          <Text className="text-[15px] text-brand-bright">Atrás</Text>
-        </Pressable>
-      </View>
+          would put the learner in two places at once.
+
+          On the list there is nowhere to go back to that the tab bar
+          does not already offer, so the row only appears inside the
+          round and the settings — where it is the way out. */}
+      {!enLista ? (
+        <View className="flex-row items-center px-3 py-1">
+          <Pressable
+            onPress={() => setVista({ tipo: 'lista' })}
+            className="min-h-toque justify-center px-2"
+            accessibilityRole="button"
+            accessibilityLabel="Atrás"
+          >
+            <Texto estilo="apoyo" className="text-acento-texto">
+              Atrás
+            </Texto>
+          </Pressable>
+        </View>
+      ) : null}
 
       {vista.tipo === 'lista' ? (
         <PantallaDuelos
@@ -87,6 +103,11 @@ export default function RutaDuelos() {
       ) : (
         <PantallaAjustesDeDuelos onVolver={() => setVista({ tipo: 'lista' })} />
       )}
+
+      {/* A sibling after the screen, never inside its scroll — and
+          only on the list. A round is one task, and a tab bar there is
+          an invitation to abandon it halfway. */}
+      {enLista ? <BarraPestanas /> : null}
     </SafeAreaView>
   );
 }

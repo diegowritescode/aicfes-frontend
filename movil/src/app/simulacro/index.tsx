@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Redirect, useRouter } from 'expo-router';
-import { Boton } from '@/shared/ui/Boton';
+import { Boton, Chip, Encabezado, Tarjeta, Texto } from '@/shared/ui';
 import { Aviso } from '@/shared/ui/Aviso';
 import type { Fallo } from '@/core/http/cliente';
 import { useSesion } from '@/features/sesion/hooks/useSesion';
@@ -54,69 +54,81 @@ export default function RutaInicioSimulacro() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-wash">
-      <ScrollView contentContainerClassName="gap-5 px-5 py-8">
+    <SafeAreaView className="flex-1 bg-fondo">
+      <ScrollView contentContainerClassName="gap-5 px-5 py-6">
         <View className="gap-2">
-          <Text className="text-[26px] font-bold tracking-tight text-slate-900">Simulacro</Text>
-          <Text className="text-[14.5px] leading-6 text-slate-600">
+          <Texto estilo="titulo-grande">Simulacro</Texto>
+          <Texto estilo="cuerpo" className="text-texto-apagado">
             Como el examen real: puedes saltar preguntas, volver atrás y cambiar lo que
             respondiste. No sabes si acertaste hasta entregar.
-          </Text>
+          </Texto>
         </View>
 
         {enCurso ? (
-          <View className="gap-3 rounded-2xl border border-brand-bright/40 bg-brand-soft/20 p-5">
-            <Text className="text-[15px] font-bold text-slate-900">
-              Tiene un simulacro sin terminar
-            </Text>
-            <Text className="text-[13.5px] leading-6 text-slate-600">
+          /* The tinted panel, used once: resuming is what this screen
+             is for whenever there is something to resume. */
+          <Tarjeta variante="acento" className="gap-2">
+            <Texto estilo="cuerpo" style={{ fontFamily: 'Inter_600SemiBold' }}>
+              Tienes un simulacro sin terminar
+            </Texto>
+            <Texto estilo="apoyo">
               De {enCurso.totalPreguntas} preguntas. El tiempo sigue corriendo desde que lo
-              empezó.
-            </Text>
-            <Boton onPress={() => router.push(`/simulacro/${enCurso.id}`)}>
-              Continuar donde iba
-            </Boton>
-          </View>
+              empezaste.
+            </Texto>
+            <View className="mt-1">
+              <Boton alTocar={() => router.push(`/simulacro/${enCurso.id}`)}>
+                Continuar donde iba
+              </Boton>
+            </View>
+          </Tarjeta>
         ) : null}
 
         {fallo ? <Aviso mensaje={fallo.mensaje} detalle={fallo.detalle} /> : null}
 
         <View className="gap-3">
+          <Encabezado rotulo="Qué tan largo" />
           {LARGOS.map((largo) => {
             const alcanza = alcanzaElBanco(largo.preguntas, maximo);
             return (
-              <View
+              <Tarjeta
                 key={largo.preguntas}
-                className={`gap-2 rounded-2xl border border-slate-200 p-5 ${
-                  alcanza ? 'bg-white' : 'bg-slate-50'
-                }`}
+                variante={alcanza ? 'alzada' : 'plana'}
+                className="gap-2"
               >
-                <Text className="text-[16px] font-bold text-slate-900">{largo.titulo}</Text>
-                <Text className="text-[12.5px] font-semibold text-slate-500">
-                  {largo.preguntas} preguntas · {largo.minutos} min
-                </Text>
-                <Text className="text-[13.5px] leading-6 text-slate-600">{largo.para}</Text>
+                <View className="flex-row items-baseline justify-between">
+                  <Texto estilo="cuerpo" style={{ fontFamily: 'Nunito_800ExtraBold' }}>
+                    {largo.titulo}
+                  </Texto>
+                  <Chip>
+                    {largo.preguntas} preguntas · {largo.minutos} min
+                  </Chip>
+                </View>
+                <Texto estilo="cuerpo" className="text-texto-apagado">
+                  {largo.para}
+                </Texto>
 
                 {alcanza ? (
-                  <Boton
-                    variante="contorno"
-                    onPress={() => void empezar(largo.preguntas)}
-                    cargando={iniciando === largo.preguntas}
-                    deshabilitado={iniciando !== null}
-                  >
-                    Empezar
-                  </Boton>
+                  <View className="mt-1">
+                    <Boton
+                      variante="contorno"
+                      alTocar={() => void empezar(largo.preguntas)}
+                      cargando={iniciando === largo.preguntas}
+                      deshabilitado={iniciando !== null}
+                    >
+                      Empezar
+                    </Boton>
+                  </View>
                 ) : (
                   /* The reason is ours, not theirs: the bank is still
                      being filled. Offering a length that then fails
                      wastes the one thing the learner brought, which is
                      the decision to sit down and study. */
-                  <Text className="rounded-xl bg-white px-3 py-2.5 text-[12.5px] leading-5 text-slate-500">
+                  <Texto estilo="apoyo" className="rounded-chico bg-capa px-3 py-2.5">
                     Todavía no hay preguntas suficientes para este largo. Estamos llenando el
                     banco.
-                  </Text>
+                  </Texto>
                 )}
-              </View>
+              </Tarjeta>
             );
           })}
         </View>

@@ -1,14 +1,23 @@
 import { useState } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Boton } from '@/shared/ui/Boton';
+import {
+  BarraRespuesta,
+  Boton,
+  Chip,
+  Contexto,
+  Encabezado,
+  Explicacion,
+  Opcion,
+  Progreso,
+  Texto,
+  type EstadoOpcion,
+} from '@/shared/ui';
 import { Aviso } from '@/shared/ui/Aviso';
-import type { Letra } from '@/shared/model/icfes';
+import { NOMBRE_AREA, type Letra } from '@/shared/model/icfes';
 import { ModalTutoria } from '@/features/tutoria/components/ModalTutoria';
 import { useExamen } from '../hooks/useExamen';
 import { debeAbrirTutoria, esCorrecta, explicacionDe } from '@/shared/pregunta/model/reglas';
-import { Enunciado } from '@/shared/pregunta/components/Enunciado';
-import { OpcionRespuesta, type EstadoOpcion } from '@/shared/pregunta/components/OpcionRespuesta';
 
 const LETRAS: readonly Letra[] = ['A', 'B', 'C', 'D'];
 
@@ -20,6 +29,13 @@ const LETRAS: readonly Letra[] = ['A', 'B', 'C', 'D'];
  * the gap between "you failed" and "here is what you got wrong" is
  * where studying happens, and closing it while the mistake is still
  * warm is the whole reason this mode exists.
+ *
+ * The stimulus goes through `Contexto` and the button sits outside the
+ * scroll view. Before that, a Lectura Crítica item printed its
+ * 1200-character passage in full and pushed the question, the four
+ * options and «Responder» below the fold: the learner scrolled a
+ * screen and a half through text before finding out what was asked,
+ * and then had to scroll the same distance back to answer.
  */
 export function PantallaExamen({
   examen,
@@ -59,74 +75,83 @@ export function PantallaExamen({
     if (!respondida) return elegida === letra ? 'elegida' : 'pendiente';
     if (letra === item.respuesta_correcta) return 'correcta';
     if (letra === elegida) return 'fallada';
-    return 'descartada';
+    return 'apagada';
   };
 
   const acerto = respondida && elegida ? esCorrecta(item, elegida) : false;
+  const correctas = examen.respuestas.filter((r) => r.isCorrect).length;
 
   return (
-    <SafeAreaView className="flex-1 bg-wash">
-      <View className="flex-row items-center justify-between border-b border-slate-200 bg-white px-5 py-3">
-        <Text className="text-[13.5px] font-semibold text-slate-700">
-          Pregunta {examen.indice + 1} de {examen.items.length}
-        </Text>
-        <Text className="text-[13px] text-slate-500">
-          {examen.respuestas.filter((r) => r.isCorrect).length} correctas
-        </Text>
-      </View>
+    <SafeAreaView className="flex-1 bg-fondo">
+      <ScrollView contentContainerClassName="gap-4 px-5 py-5">
+        <Encabezado
+          rotulo={NOMBRE_AREA[item.area]}
+          derecha={
+            <Chip tono="acento">
+              {examen.indice + 1} de {examen.items.length}
+            </Chip>
+          }
+        />
 
-      <ScrollView contentContainerClassName="gap-5 px-5 py-6">
-        <Enunciado item={item} />
+        <Progreso
+          hechas={examen.respuestas.length}
+          total={examen.items.length}
+          dicho={`Pregunta ${examen.indice + 1} de ${examen.items.length}, ${correctas} correctas`}
+        />
 
-        <View className="gap-2.5" accessibilityRole="radiogroup">
+        {item.contexto ? <Contexto>{item.contexto}</Contexto> : null}
+
+        <Texto estilo="pregunta">{item.pregunta}</Texto>
+
+        <View className="gap-[9px]" accessibilityRole="radiogroup">
           {LETRAS.filter((l) => item.opciones[l]).map((letra) => (
-            <OpcionRespuesta
+            <Opcion
               key={letra}
               letra={letra}
-              texto={item.opciones[letra] ?? ''}
               estado={estadoDe(letra)}
-              bloqueada={respondida}
-              onElegir={() => setElegida(letra)}
-            />
+              /* No handler once answered: `Opcion` disables itself on
+                 a resolved state, and leaving one attached would make
+                 a dead row look tappable. */
+              alTocar={respondida ? undefined : () => setElegida(letra)}
+            >
+              {item.opciones[letra] ?? ''}
+            </Opcion>
           ))}
         </View>
 
         {respondida ? (
-          <View
-            accessibilityLiveRegion="polite"
-            className={`gap-2 rounded-2xl p-5 ${acerto ? 'bg-lime-50' : 'bg-white'}`}
-          >
-            <Text
-              className={`text-[14px] font-bold ${acerto ? 'text-lime-800' : 'text-slate-800'}`}
-            >
-              {acerto ? 'Correcta' : 'Incorrecta'}
-            </Text>
-            <Text className="text-[13.5px] leading-6 text-slate-600">
-              {elegida ? explicacionDe(item, elegida) : item.justificacion}
-            </Text>
+          <View accessibilityLiveRegion="polite" className="gap-3">
+            <Explicacion acerto={acerto}>
+              {elegida ? explicacionDe(item, elegida) : (item.justificacion ?? '')}
+            </Explicacion>
             {!acerto ? (
-              <Boton variante="contorno" onPress={() => setTutoriaAbierta(true)}>
+              <Boton variante="contorno" alTocar={() => setTutoriaAbierta(true)}>
                 No entiendo por qué
               </Boton>
             ) : null}
           </View>
         ) : null}
 
-        {respondida ? (
-          <Boton onPress={siguiente} tamano="grande" ancho>
-            {examen.esUltima ? 'Ver resultados' : 'Siguiente'}
-          </Boton>
-        ) : (
-          <Boton onPress={confirmar} deshabilitado={!elegida} tamano="grande" ancho>
-            Responder
-          </Boton>
-        )}
-
         {examen.guardar.isError ? <Aviso
             mensaje={examen.guardar.error.mensaje}
             detalle={examen.guardar.error.detalle}
           /> : null}
       </ScrollView>
+
+      <BarraRespuesta>
+        {respondida ? (
+          <Boton alTocar={siguiente}>
+            {examen.esUltima ? 'Ver resultados' : 'Siguiente'}
+          </Boton>
+        ) : (
+          /* Named even while it is disabled. A greyed-out «Responder»
+             reads as broken and gets tapped; «Elige una opción» says
+             what is missing. */
+          <Boton alTocar={confirmar} deshabilitado={!elegida}>
+            {elegida ? 'Responder' : 'Elige una opción'}
+          </Boton>
+        )}
+      </BarraRespuesta>
 
       {elegida && !acerto ? (
         <ModalTutoria

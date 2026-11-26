@@ -21,10 +21,10 @@ export function SeccionLogros({ logros }: { logros: readonly Logro[] | null }) {
   return (
     <View className="gap-3">
       <View className="flex-row items-baseline justify-between">
-        <Text className="text-[13px] font-bold uppercase tracking-widest text-slate-500">
+        <Text className="text-[13px] font-bold uppercase tracking-widest text-texto-apagado">
           Logros
         </Text>
-        <Text className="text-[12px] text-slate-400">
+        <Text className="text-[12px] text-texto-apagado">
           {conseguidos} de {total}
         </Text>
       </View>
@@ -42,7 +42,7 @@ function Fila({ logro }: { logro: Logro }) {
   return (
     <View
       className={`gap-2 rounded-2xl border p-4 ${
-        logro.achieved ? 'border-emerald-200 bg-emerald-50' : 'border-slate-200 bg-white'
+        logro.achieved ? 'border-ganado bg-ganado-suave' : 'border-linea bg-capa'
       }`}
       /* One label for the whole row: a screen reader should hear
          "Racha 7 días, 4 de 7" as one fact, not as four fragments. */
@@ -56,21 +56,21 @@ function Fila({ logro }: { logro: Logro }) {
       <View className="flex-row items-center justify-between gap-3">
         <Text
           className={`flex-1 text-[14.5px] font-semibold ${
-            logro.achieved ? 'text-emerald-900' : 'text-slate-900'
+            logro.achieved ? 'text-ganado' : 'text-texto'
           }`}
         >
           {logro.title}
         </Text>
         <Text
           className={`text-[12px] font-bold ${
-            logro.achieved ? 'text-emerald-700' : 'text-slate-400'
+            logro.achieved ? 'text-ganado' : 'text-texto-apagado'
           }`}
         >
           {logro.achieved ? 'Listo' : `${logro.progress}/${logro.target}`}
         </Text>
       </View>
 
-      <Text className="text-[13px] leading-5 text-slate-600">{logro.description}</Text>
+      <Text className="text-[13px] leading-5 text-texto-apagado">{logro.description}</Text>
 
       {/* The bar is decoration over a number already stated above, so
           it is hidden from screen readers rather than read twice. */}
@@ -78,9 +78,9 @@ function Fila({ logro }: { logro: Logro }) {
         <View
           accessibilityElementsHidden
           importantForAccessibility="no-hide-descendants"
-          className="h-1.5 overflow-hidden rounded-full bg-slate-100"
+          className="h-1.5 overflow-hidden rounded-full bg-capa-alta"
         >
-          <View className="h-full rounded-full bg-slate-400" style={{ width: `${porcentaje}%` }} />
+          <View className="h-full rounded-full bg-borde-control" style={{ width: `${porcentaje}%` }} />
         </View>
       ) : null}
     </View>

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, Text, TextInput, View } from 'react-native';
-import { Boton } from '@/shared/ui/Boton';
+import { Boton } from '@/shared/ui';
 import { Aviso } from '@/shared/ui/Aviso';
 import { EsqueletoLista } from '@/shared/ui/Esqueleto';
 import { useColaDeModeracion, usePendientesDeModeracion, useTokenDeModeracion } from '../hooks/useModeracionCola';
@@ -56,7 +56,7 @@ export function PantallaModeracion({
       contentContainerClassName="gap-6 px-5 py-6"
       refreshControl={<RefreshControl refreshing={cola.recargando} onRefresh={cola.refrescar} />}
     >
-      <Text className="text-[22px] font-bold text-slate-900">Denuncias</Text>
+      <Text className="text-[22px] font-bold text-texto">Denuncias</Text>
 
       {pendientes.mensaje ? (
         <Aviso
@@ -80,7 +80,7 @@ export function PantallaModeracion({
       {cola.cargando ? <EsqueletoLista filas={3} /> : null}
 
       {!cola.cargando && cola.denuncias.length === 0 && !cola.fallo ? (
-        <Text className="text-[15px] leading-6 text-slate-600">
+        <Text className="text-[15px] leading-6 text-texto-apagado">
           Nada sin revisar. Cuando alguien denuncie, aparece aquí con la más vieja primero.
         </Text>
       ) : null}
@@ -106,13 +106,13 @@ export function PantallaModeracion({
           className="py-2"
           accessibilityRole="button"
         >
-          <Text className="text-center text-[13px] text-slate-500">
+          <Text className="text-center text-[13px] text-texto-apagado">
             Quitar el token de este teléfono
           </Text>
         </Pressable>
       ) : null}
 
-      <Boton variante="contorno" onPress={onVolver}>
+      <Boton variante="contorno" alTocar={onVolver}>
         Volver
       </Boton>
     </ScrollView>
@@ -144,19 +144,19 @@ function TarjetaDenuncia({
   const patron = denuncia.personasQueLoDenunciaron > 1;
 
   return (
-    <View className="gap-3 rounded-2xl border border-slate-200 bg-white p-4">
+    <View className="gap-3 rounded-2xl border border-linea bg-capa p-4">
       <View className="flex-row items-start justify-between">
         <View className="flex-1 pr-3">
-          <Text className="text-[15px] font-semibold text-slate-900">
+          <Text className="text-[15px] font-semibold text-texto">
             {denuncia.denunciado.alias ?? 'sin nombre'}
           </Text>
-          <Text className="text-[13px] text-slate-500">
+          <Text className="text-[13px] text-texto-apagado">
             {MOTIVO[denuncia.motivo]} · denunció {denuncia.denunciante.alias ?? 'alguien'}
           </Text>
         </View>
         {patron ? (
-          <View className="rounded-full bg-red-100 px-2.5 py-1">
-            <Text className="text-[11px] font-semibold text-red-700">
+          <View className="rounded-pildora bg-alerta-suave px-2.5 py-1">
+            <Text className="text-[11px] font-semibold text-alerta">
               {denuncia.personasQueLoDenunciaron} personas
             </Text>
           </View>
@@ -164,12 +164,12 @@ function TarjetaDenuncia({
       </View>
 
       {denuncia.detalle ? (
-        <Text className="text-[14px] leading-5 text-slate-700">“{denuncia.detalle}”</Text>
+        <Text className="text-[14px] leading-5 text-texto">“{denuncia.detalle}”</Text>
       ) : (
-        <Text className="text-[13px] italic text-slate-400">Sin detalle</Text>
+        <Text className="text-[13px] italic text-texto-apagado">Sin detalle</Text>
       )}
 
-      <Text className="text-[12px] text-slate-500">
+      <Text className="text-[12px] text-texto-apagado">
         {denuncia.denunciasTotales === 1
           ? 'Primera denuncia sobre esta cuenta'
           : `${denuncia.denunciasTotales} denuncias en total, de ${denuncia.personasQueLoDenunciaron} ${
@@ -179,26 +179,25 @@ function TarjetaDenuncia({
       </Text>
 
       <View className="flex-row flex-wrap gap-2">
-        <Boton tamano="medio" variante="suave" deshabilitado={ocupado} onPress={onRevisada}>
+        <Boton variante="plano" deshabilitado={ocupado} alTocar={onRevisada}>
           Revisada
         </Boton>
-        <Boton tamano="medio" variante="contorno" deshabilitado={ocupado} onPress={onDescartada}>
+        <Boton variante="contorno" deshabilitado={ocupado} alTocar={onDescartada}>
           No había nada
         </Boton>
       </View>
 
       {denuncia.denunciado.aliasBuscable ? (
         confirmarRetiro ? (
-          <View className="gap-2 rounded-xl bg-slate-50 p-3">
-            <Text className="text-[13px] leading-5 text-slate-700">
+          <View className="gap-2 rounded-xl bg-capa-alta p-3">
+            <Text className="text-[13px] leading-5 text-texto">
               Deja de ser encontrable y se cancelan sus duelos abiertos. No se borra nada: conserva
               cuenta, historial y nombre, y puede volver a activarse desde sus ajustes.
             </Text>
             <View className="flex-row gap-2">
               <Boton
-                tamano="medio"
                 deshabilitado={ocupado}
-                onPress={() => {
+                alTocar={() => {
                   setConfirmarRetiro(false);
                   onRetirar();
                 }}
@@ -206,9 +205,8 @@ function TarjetaDenuncia({
                 Sí, retirar
               </Boton>
               <Boton
-                tamano="medio"
                 variante="contorno"
-                onPress={() => setConfirmarRetiro(false)}
+                alTocar={() => setConfirmarRetiro(false)}
               >
                 Cancelar
               </Boton>
@@ -216,7 +214,7 @@ function TarjetaDenuncia({
           </View>
         ) : (
           <Pressable onPress={() => setConfirmarRetiro(true)} accessibilityRole="button">
-            <Text className="text-[13px] text-red-700">Sacar de búsqueda</Text>
+            <Text className="text-[13px] text-alerta">Sacar de búsqueda</Text>
           </Pressable>
         )
       ) : null}
@@ -243,12 +241,12 @@ function PedirToken({
 
   return (
     <ScrollView className="flex-1" contentContainerClassName="gap-5 px-5 py-8">
-      <Text className="text-[22px] font-bold text-slate-900">Moderación</Text>
-      <Text className="text-[15px] leading-6 text-slate-600">
+      <Text className="text-[22px] font-bold text-texto">Moderación</Text>
+      <Text className="text-[15px] leading-6 text-texto-apagado">
         Pegue el token de moderación del servidor. Se guarda cifrado en este teléfono y no se
         vuelve a pedir.
       </Text>
-      <Text className="text-[13px] leading-5 text-slate-500">
+      <Text className="text-[13px] leading-5 text-texto-apagado">
         Si pierde el teléfono, genere uno nuevo en el servidor: eso invalida este de inmediato.
       </Text>
 
@@ -262,14 +260,14 @@ function PedirToken({
         autoCapitalize="none"
         autoCorrect={false}
         secureTextEntry
-        className="rounded-xl border border-slate-300 px-4 py-3 text-[15px] text-slate-900"
+        className="rounded-xl border border-borde-control px-4 py-3 text-[15px] text-texto"
       />
 
       {fallo ? <Aviso mensaje={fallo} /> : null}
 
       <Boton
         deshabilitado={valor.trim().length === 0}
-        onPress={async () => {
+        alTocar={async () => {
           const ok = await onGuardar(valor);
           if (!ok) setFallo('No pudimos guardarlo en este teléfono.');
           else setValor('');
@@ -278,7 +276,7 @@ function PedirToken({
         Guardar
       </Boton>
 
-      <Boton variante="contorno" onPress={onVolver}>
+      <Boton variante="contorno" alTocar={onVolver}>
         Volver
       </Boton>
     </ScrollView>

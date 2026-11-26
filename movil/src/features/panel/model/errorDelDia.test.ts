@@ -35,9 +35,13 @@ describe('cómo se ve cada opción', () => {
     expect(estadoDeOpcion({ ...base, letra: 'B', elegida: 'A' })).toBe('correcta');
   });
 
-  it('las demás quedan descartadas, no pendientes', () => {
-    expect(estadoDeOpcion({ ...base, letra: 'C', elegida: 'A' })).toBe('descartada');
-    expect(estadoDeOpcion({ ...base, letra: 'D', elegida: 'A' })).toBe('descartada');
+  it('las demás quedan apagadas, no pendientes', () => {
+    /* `apagada` is the design system's name for it. The card used to
+       carry its own option component with its own vocabulary; when it
+       moved onto the shared `Opcion`, this state had to be called
+       what every other screen calls it. */
+    expect(estadoDeOpcion({ ...base, letra: 'C', elegida: 'A' })).toBe('apagada');
+    expect(estadoDeOpcion({ ...base, letra: 'D', elegida: 'A' })).toBe('apagada');
   });
 });
 

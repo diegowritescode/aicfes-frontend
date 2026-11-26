@@ -1,7 +1,15 @@
-import { ScrollView, Text, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
-import { Boton } from '@/shared/ui/Boton';
+import {
+  BarraRespuesta,
+  Boton,
+  Cifra,
+  Encabezado,
+  FilaMateria,
+  Tarjeta,
+  Texto,
+} from '@/shared/ui';
 import { NOMBRE_AREA, type Area } from '@/shared/model/icfes';
 import { useSimulacro } from '@/features/simulacro/hooks/useSimulacro';
 import { areasPorPrioridad } from '@/features/simulacro/model/reglas';
@@ -20,8 +28,10 @@ export default function RutaResultados() {
 
   if (cargando) {
     return (
-      <SafeAreaView className="flex-1 items-center justify-center bg-wash">
-        <Text className="text-[14px] text-slate-500">Cargando resultados…</Text>
+      <SafeAreaView className="flex-1 items-center justify-center bg-fondo">
+        <Texto estilo="cuerpo" className="text-texto-apagado">
+          Cargando resultados…
+        </Texto>
       </SafeAreaView>
     );
   }
@@ -31,11 +41,11 @@ export default function RutaResultados() {
   const resultados = simulacro?.resultados;
   if (!resultados) {
     return (
-      <SafeAreaView className="flex-1 justify-center gap-4 bg-wash px-6">
-        <Text className="text-[15px] text-slate-600">
+      <SafeAreaView className="flex-1 justify-center gap-4 bg-fondo px-6">
+        <Texto estilo="cuerpo" className="text-texto-apagado">
           No encontramos los resultados de este simulacro.
-        </Text>
-        <Boton onPress={() => router.replace('/inicio')}>Volver al inicio</Boton>
+        </Texto>
+        <Boton alTocar={() => router.replace('/inicio')}>Volver al inicio</Boton>
       </SafeAreaView>
     );
   }
@@ -44,72 +54,62 @@ export default function RutaResultados() {
   const flojas = areas.filter((a) => a.total > 0 && a.porcentaje < 70);
 
   return (
-    <SafeAreaView className="flex-1 bg-wash">
-      <ScrollView contentContainerClassName="gap-6 px-5 py-8">
+    <SafeAreaView className="flex-1 bg-fondo">
+      <ScrollView contentContainerClassName="gap-5 px-5 py-6">
+        <Encabezado rotulo="Simulacro terminado" />
+
         <View className="gap-1.5">
-          <Text className="text-[12px] font-bold uppercase tracking-widest text-slate-400">
-            Simulacro terminado
-          </Text>
-          <Text className="text-[32px] font-bold tracking-tight text-slate-900">
-            {resultados.correctas} de {resultados.total}
-          </Text>
-          <Text className="text-[15px] text-slate-600">
+          <Cifra valor={resultados.correctas} unidad={`de ${resultados.total} correctas`} />
+          <Texto estilo="apoyo">
             {resultados.porcentaje}% de respuestas correctas.
             {simulacro?.expirado ? ' Se acabó el tiempo antes de terminar.' : ''}
-          </Text>
+          </Texto>
         </View>
 
         <View className="gap-3">
-          <Text className="text-[13px] font-bold uppercase tracking-widest text-slate-500">
-            Por área, de la más floja a la más firme
-          </Text>
-          {areas.map((a) => {
-            const medida = a.total > 0;
-            return (
-              <View key={a.area} className="gap-2 rounded-2xl border border-slate-200 bg-white p-4">
-                <View className="flex-row items-baseline justify-between">
-                  <Text className="text-[14.5px] font-semibold text-slate-800">
-                    {NOMBRE_AREA[a.area as Area] ?? a.area}
-                  </Text>
-                  <Text className="text-[14px] font-bold text-slate-700">
-                    {medida ? `${a.porcentaje}%` : '—'}
-                  </Text>
-                </View>
-                <View className="h-2 overflow-hidden rounded-full bg-slate-100">
-                  <View
-                    className={`h-full rounded-full ${
-                      a.porcentaje < 70 ? 'bg-alerta' : 'bg-exito'
-                    }`}
-                    style={{ width: `${medida ? Math.max(2, a.porcentaje) : 0}%` }}
-                  />
-                </View>
-                <Text className="text-[12.5px] text-slate-500">
-                  {medida ? `${a.correctas} de ${a.total} correctas` : 'Sin preguntas de esta área'}
-                </Text>
-              </View>
-            );
-          })}
+          <Encabezado rotulo="Por área, de la más floja a la más firme" />
+          <Tarjeta className="gap-4">
+            {areas.map((a) => {
+              const medida = a.total > 0;
+              return (
+                <FilaMateria
+                  key={a.area}
+                  nombre={NOMBRE_AREA[a.area as Area] ?? a.area}
+                  porcentaje={a.porcentaje}
+                  /* An area the sitting never asked about is not a
+                     zero. `FilaMateria` says «Sin practicar» instead
+                     of claiming a result nobody produced. */
+                  medida={medida}
+                  detalle={
+                    medida
+                      ? `${a.correctas} de ${a.total} correctas`
+                      : 'Sin preguntas de esta área'
+                  }
+                />
+              );
+            })}
+          </Tarjeta>
         </View>
 
         {flojas.length > 0 ? (
-          <View className="gap-2 rounded-2xl border border-alerta/40 bg-amber-50/60 p-5">
-            <Text className="text-[14.5px] font-bold text-slate-800">Por dónde empezar</Text>
-            <Text className="text-[13.5px] leading-6 text-slate-600">
+          <Tarjeta variante="acento" className="gap-2">
+            <Texto estilo="cuerpo" style={{ fontFamily: 'Inter_600SemiBold' }}>
+              Por dónde empezar
+            </Texto>
+            <Texto estilo="cuerpo" className="text-texto-apagado">
               {flojas.map((a) => NOMBRE_AREA[a.area as Area] ?? a.area).join(', ')}. Son las que
               quedaron por debajo del 70%.
-            </Text>
-          </View>
+            </Texto>
+          </Tarjeta>
         ) : null}
-
-        <View className="gap-2">
-          <Boton onPress={() => router.replace('/inicio')} ancho>
-            Volver al inicio
-          </Boton>
-          <Boton variante="contorno" onPress={() => router.replace('/simulacro')} ancho>
-            Hacer otro simulacro
-          </Boton>
-        </View>
       </ScrollView>
+
+      <BarraRespuesta>
+        <Boton alTocar={() => router.replace('/inicio')}>Volver al inicio</Boton>
+        <Boton variante="contorno" alTocar={() => router.replace('/simulacro')}>
+          Hacer otro simulacro
+        </Boton>
+      </BarraRespuesta>
     </SafeAreaView>
   );
 }

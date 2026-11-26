@@ -1,4 +1,6 @@
-import { Text, TextInput, View } from 'react-native';
+import { TextInput, View } from 'react-native';
+import { Texto } from './atomos/Texto';
+import { color } from './tokens';
 
 /**
  * A labelled text field.
@@ -31,12 +33,18 @@ export function Campo({
 }) {
   return (
     <View className="gap-1.5">
-      <Text className="text-[13.5px] font-semibold text-slate-700">{etiqueta}</Text>
+      <Texto estilo="cuerpo" style={{ fontFamily: 'Inter_600SemiBold' }}>
+        {etiqueta}
+      </Texto>
       <TextInput
         value={valor}
         onChangeText={onCambiar}
         placeholder={placeholder}
-        placeholderTextColor="#94a3b8"
+        /* The muted-text token rather than a grey of its own. The
+           slate it used to be belonged to the palette this design
+           system replaced, and a placeholder lighter than the label
+           above it reads as a field that is switched off. */
+        placeholderTextColor={color.textoApagado}
         secureTextEntry={tipo === 'clave'}
         autoCapitalize={tipo === 'texto' ? 'sentences' : 'none'}
         autoCorrect={tipo === 'texto'}
@@ -48,14 +56,23 @@ export function Campo({
         onSubmitEditing={alEnviar}
         accessibilityLabel={etiqueta}
         accessibilityHint={error}
-        className={`min-h-[48px] rounded-2xl border px-4 text-[15px] text-slate-900 ${
-          error ? 'border-error' : 'border-slate-200'
+        /* `borde-control`, not `linea`. The validated design drew
+           fields with a #d6d4e6 hairline that measures 1,46:1 against
+           white: a field nobody can see is a field nobody fills, and
+           these are the two fields standing in front of the app.
+           `linea` stays for dividers, where being nearly invisible is
+           the whole job. */
+        className={`min-h-[48px] rounded-medio border px-4 text-[15px] text-texto ${
+          error ? 'border-alerta' : 'border-borde-control'
         }`}
       />
       {error ? (
-        <Text accessibilityLiveRegion="polite" className="text-[12.5px] text-error">
+        /* `alerta` belongs here and nowhere near a wrong answer: an
+           unfilled field is work about to be lost, which is the one
+           thing this colour is reserved for. */
+        <Texto estilo="apoyo" accessibilityLiveRegion="polite" className="text-alerta">
           {error}
-        </Text>
+        </Texto>
       ) : null}
     </View>
   );

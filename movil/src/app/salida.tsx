@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { BackHandler, Text, View } from 'react-native';
+import { BackHandler, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Redirect, useRouter } from 'expo-router';
-import { Boton } from '@/shared/ui/Boton';
+import { Boton, Texto } from '@/shared/ui';
 import { useSesion } from '@/features/sesion/hooks/useSesion';
 import { useBloqueo } from '@/features/bloqueo/hooks/useBloqueo';
 import { almacenPeaje } from '@/core/almacenamiento/peaje';
@@ -33,7 +33,7 @@ import {
 export default function RutaSalida() {
   const { cargando, autenticado } = useSesion();
 
-  if (cargando) return <SafeAreaView className="flex-1 bg-wash" />;
+  if (cargando) return <SafeAreaView className="flex-1 bg-fondo" />;
   if (!autenticado) return <Redirect href="/entrar" />;
 
   return <Opciones />;
@@ -104,25 +104,21 @@ function Opciones() {
     router.replace('/inicio');
   }, [router]);
 
-  if (leyendo) return <SafeAreaView className="flex-1 bg-wash" />;
+  if (leyendo) return <SafeAreaView className="flex-1 bg-fondo" />;
 
   const restantes = quedanHoy(uso);
 
   return (
-    <SafeAreaView className="flex-1 bg-wash">
+    <SafeAreaView className="flex-1 bg-fondo">
       <View className="flex-1 justify-center gap-6 px-5">
         <View className="gap-2">
-          <Text className="text-[24px] font-bold tracking-tight text-slate-900">
-            Esa app está en pausa
-          </Text>
-          <Text className="text-[15px] leading-6 text-slate-600">
+          <Texto estilo="titulo-grande">Esa app está en pausa</Texto>
+          <Texto estilo="apoyo">
             Cinco preguntas y la abres por {MINUTOS_DESBLOQUEO} minutos de uso.
-          </Text>
+          </Texto>
         </View>
 
-        <Boton onPress={resolver} ancho>
-          Resolver las preguntas
-        </Boton>
+        <Boton alTocar={resolver}>Resolver las preguntas</Boton>
 
         <View className="gap-2">
           {/* The count is named before the tap, because the count is
@@ -130,24 +126,19 @@ function Opciones() {
               than a reflex. */}
           <Boton
             variante="contorno"
-            ancho
             deshabilitado={restantes <= 0}
-            onPress={() => void gastar()}
+            alTocar={() => void gastar()}
           >
             {textoDelBoton(restantes)}
           </Boton>
-          {restantes > 0 ? (
-            <Text className="text-center text-[12.5px] leading-5 text-slate-500">
-              {MINUTOS_DE_EMERGENCIA} minutos, sin ejercicios. Mañana vuelven a ser dos.
-            </Text>
-          ) : (
-            <Text className="text-center text-[12.5px] leading-5 text-slate-500">
-              Mañana tendrás dos otra vez.
-            </Text>
-          )}
+          <Texto estilo="apoyo" className="text-center">
+            {restantes > 0
+              ? `${MINUTOS_DE_EMERGENCIA} minutos, sin ejercicios. Mañana vuelven a ser dos.`
+              : 'Mañana tendrás dos otra vez.'}
+          </Texto>
         </View>
 
-        <Boton variante="suave" ancho onPress={cerrar}>
+        <Boton variante="plano" alTocar={cerrar}>
           Mejor no entro
         </Boton>
       </View>

@@ -18,11 +18,30 @@ import { describe, expect, it } from 'vitest';
 
 const RAIZ = new URL('../../', import.meta.url).pathname;
 
+/* The toll and blocking came first, because that is where the two
+   registers collided. The auth and mock-exam screens were added
+   after the redesign found «¿No tiene cuenta?» two taps from screens
+   that say «tú», and «Tiene un simulacro» on a screen this test was
+   not watching. Both had been there for months.
+
+   The rest of the app is still unwatched on purpose: it is older and
+   mixed, and a test that fails on day one is a test somebody
+   deletes. Add a path here once its text is actually in «tú». */
 const VIGILADAS = [
   'features/offline',
   'features/bloqueo',
   'app/peaje.tsx',
   'app/salida.tsx',
+  'app/entrar.tsx',
+  'app/registro.tsx',
+  'app/inicio.tsx',
+  'app/yo.tsx',
+  'app/repaso.tsx',
+  'app/duelos.tsx',
+  'app/entrenar.tsx',
+  'app/simulacro',
+  'features/repaso',
+  'features/duelos',
 ];
 
 /* Forms that only exist in the formal register. `su` is absent on

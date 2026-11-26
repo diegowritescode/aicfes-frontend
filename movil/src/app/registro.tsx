@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Boton } from '@/shared/ui/Boton';
+import { Boton, Texto } from '@/shared/ui';
 import { Campo } from '@/shared/ui/Campo';
 import { Aviso } from '@/shared/ui/Aviso';
 import { useAccionesSesion } from '@/features/sesion/hooks/useSesion';
@@ -39,22 +39,23 @@ export default function RutaRegistro() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
+    /* `fondo`, the same surface as the sign-in form and every other
+       screen. On white a disabled button's `capa-alta` fill measures
+       1,04:1 against the page and disappears. */
+    <SafeAreaView className="flex-1 bg-fondo">
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         className="flex-1"
       >
         <ScrollView
-          contentContainerClassName="flex-grow justify-center gap-6 px-6 py-10"
+          contentContainerClassName="flex-grow justify-center gap-6 px-5 py-10"
           keyboardShouldPersistTaps="handled"
         >
           <View className="gap-2">
-            <Text className="text-[28px] font-bold tracking-tight text-slate-900">
-              Crear cuenta
-            </Text>
-            <Text className="text-[15px] leading-6 text-slate-600">
+            <Texto estilo="titulo-grande">Crear cuenta</Texto>
+            <Texto estilo="apoyo">
               Guardamos tu progreso para que no empieces de cero cada vez.
-            </Text>
+            </Texto>
           </View>
 
           <View className="gap-4">
@@ -63,7 +64,7 @@ export default function RutaRegistro() {
               valor={email}
               onCambiar={setEmail}
               tipo="email"
-              placeholder="suemail@ejemplo.com"
+              placeholder="tucorreo@ejemplo.com"
               error={errores.email}
             />
             <Campo
@@ -76,20 +77,29 @@ export default function RutaRegistro() {
             />
           </View>
 
-          {registrar.isError ? <Aviso mensaje={registrar.error.mensaje} detalle={registrar.error.detalle} /> : null}
+          {registrar.isError ? (
+            <Aviso mensaje={registrar.error.mensaje} detalle={registrar.error.detalle} />
+          ) : null}
 
-          <Boton onPress={enviar} cargando={registrar.isPending} tamano="grande" ancho>
+          <Boton alTocar={enviar} cargando={registrar.isPending}>
             {registrar.isPending ? 'Creando…' : 'Crear cuenta'}
           </Boton>
 
           <Pressable
             onPress={() => router.replace('/entrar')}
             accessibilityRole="link"
-            className="min-h-[44px] justify-center"
+            className="min-h-toque justify-center"
           >
-            <Text className="text-center text-[14px] text-slate-600">
-              ¿Ya tiene cuenta? <Text className="font-semibold text-brand-bright">Entrar</Text>
-            </Text>
+            <Texto estilo="apoyo" className="text-center">
+              ¿Ya tienes cuenta?{' '}
+              <Texto
+                estilo="apoyo"
+                style={{ fontFamily: 'Inter_600SemiBold' }}
+                className="text-acento-texto"
+              >
+                Entrar
+              </Texto>
+            </Texto>
           </Pressable>
         </ScrollView>
       </KeyboardAvoidingView>

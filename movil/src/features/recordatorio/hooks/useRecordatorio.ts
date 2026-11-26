@@ -7,6 +7,7 @@ import {
   valeLaPenaRecordar,
   type TemaParaHoy,
 } from '../model/mensaje';
+import { color } from '@/shared/ui';
 
 /**
  * A daily nudge, scheduled on the device.
@@ -106,6 +107,16 @@ export function useRecordatorio(temaDeHoy: TemaParaHoy | null = null) {
       await Notifications.setNotificationChannelAsync(CANAL, {
         name: 'Recordatorio de estudio',
         importance: Notifications.AndroidImportance.DEFAULT,
+        /* The brand purple, matching the icon tint set in app.json.
+           Android tints the small icon per channel, so leaving this
+           out let the system pick its own accent and the notification
+           came out a different colour from the app.
+
+           From the token, not a literal: this was `#605ccb`, the
+           purple from before the palette was validated, so the one
+           notification the app sends was the only surface still
+           painted in the old colour. */
+        lightColor: color.acento,
       });
 
       /* Replace rather than add. Scheduling without cancelling first

@@ -1,4 +1,5 @@
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, View } from 'react-native';
+import { Texto } from '@/shared/ui';
 import { NOMBRE_AREA } from '@/shared/model/icfes';
 import type { PuntoMapa } from '../model/reglas';
 
@@ -29,9 +30,7 @@ export function MapaPreguntas({
     <View className="gap-4">
       {areas.map((area) => (
         <View key={area} className="gap-1.5">
-          <Text className="text-[11px] font-bold uppercase tracking-widest text-slate-400">
-            {NOMBRE_AREA[area]}
-          </Text>
+          <Texto estilo="rotulo">{NOMBRE_AREA[area]}</Texto>
           <View className="flex-row flex-wrap gap-2">
             {puntos
               .filter((p) => p.area === area)
@@ -56,19 +55,22 @@ export function MapaPreguntas({
                     accessibilityRole="button"
                     accessibilityLabel={etiqueta}
                     accessibilityState={{ selected: esActual }}
-                    className={`h-11 w-11 items-center justify-center rounded-xl ${
-                      p.respondida ? 'bg-brand-bright' : 'bg-slate-100'
-                    } ${esActual ? 'border-2 border-slate-900' : ''}`}
+                    className={`h-11 w-11 items-center justify-center rounded-chico ${
+                      p.respondida ? 'bg-acento' : 'bg-capa-alta'
+                    } ${esActual ? 'border-2 border-acento' : ''}`}
                   >
-                    <Text
-                      className={`text-[13px] font-semibold ${
-                        p.respondida ? 'text-white' : 'text-slate-500'
-                      }`}
+                    <Texto
+                      estilo="apoyo"
+                      style={{ fontFamily: 'Inter_600SemiBold' }}
+                      className={p.respondida ? 'text-sobre-acento' : 'text-texto-apagado'}
                     >
                       {p.orden + 1}
-                    </Text>
+                    </Texto>
                     {p.marcada ? (
-                      <View className="absolute -right-0.5 -top-0.5 h-3 w-3 rounded-full border border-white bg-alerta" />
+                      /* Ringed in `capa` so the dot reads against both
+                         fills: on the accent square a bare amber dot
+                         disappeared into the purple. */
+                      <View className="absolute -right-0.5 -top-0.5 h-3 w-3 rounded-pildora border border-capa bg-fallo" />
                     ) : null}
                   </Pressable>
                 );
@@ -78,9 +80,9 @@ export function MapaPreguntas({
       ))}
 
       <View className="flex-row flex-wrap gap-x-5 gap-y-1.5">
-        <Leyenda color="bg-brand-bright" texto="Respondida" />
-        <Leyenda color="bg-slate-200" texto="Sin responder" />
-        <Leyenda color="bg-alerta" texto="Para revisar" redonda />
+        <Leyenda color="bg-acento" texto="Respondida" />
+        <Leyenda color="bg-capa-alta" texto="Sin responder" />
+        <Leyenda color="bg-fallo" texto="Para revisar" redonda />
       </View>
     </View>
   );
@@ -89,8 +91,8 @@ export function MapaPreguntas({
 function Leyenda({ color, texto, redonda }: { color: string; texto: string; redonda?: boolean }) {
   return (
     <View className="flex-row items-center gap-1.5">
-      <View className={`h-3 w-3 ${redonda ? 'rounded-full' : 'rounded'} ${color}`} />
-      <Text className="text-[12px] text-slate-500">{texto}</Text>
+      <View className={`h-3 w-3 ${redonda ? 'rounded-pildora' : 'rounded'} ${color}`} />
+      <Texto estilo="apoyo">{texto}</Texto>
     </View>
   );
 }

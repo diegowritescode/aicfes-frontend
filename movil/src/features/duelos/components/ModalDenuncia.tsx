@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
-import { Boton } from '@/shared/ui/Boton';
+import { Modal, Pressable, ScrollView, TextInput, View } from 'react-native';
+import { Boton, Texto } from '@/shared/ui';
 import { Aviso } from '@/shared/ui/Aviso';
 import { useModeracion } from '../hooks/useDuelos';
 import type { MotivoDenuncia } from '../api/esquemas';
@@ -51,22 +51,22 @@ export function ModalDenuncia({
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={cerrar}>
-      <ScrollView className="flex-1 bg-white" contentContainerClassName="gap-5 px-5 py-8">
+      <ScrollView className="flex-1 bg-capa" contentContainerClassName="gap-5 px-5 py-8">
         {enviada ? (
           <>
-            <Text className="text-[22px] font-bold text-slate-900">Denuncia enviada</Text>
-            <Text className="text-[15px] leading-6 text-slate-600">
+            <Texto estilo="titulo">Denuncia enviada</Texto>
+            <Texto estilo="cuerpo">
               Bloqueamos a {alias}: no lo vuelve a ver ni puede retarlo. Una persona de nuestro
               equipo va a revisar lo que nos contó.
-            </Text>
-            <Boton onPress={cerrar}>Listo</Boton>
+            </Texto>
+            <Boton alTocar={cerrar}>Listo</Boton>
           </>
         ) : (
           <>
-            <Text className="text-[22px] font-bold text-slate-900">Denunciar a {alias}</Text>
-            <Text className="text-[15px] leading-6 text-slate-600">
+            <Texto estilo="titulo">Denunciar a {alias}</Texto>
+            <Texto estilo="cuerpo">
               Al denunciar lo bloqueamos de inmediato. No tiene que esperar a que alguien revise.
-            </Text>
+            </Texto>
 
             <View className="gap-2">
               {MOTIVOS.map((m) => (
@@ -75,13 +75,13 @@ export function ModalDenuncia({
                   onPress={() => setMotivo(m.id)}
                   accessibilityRole="radio"
                   accessibilityState={{ checked: motivo === m.id }}
-                  className={`rounded-xl border px-4 py-3 ${
+                  className={`min-h-toque justify-center rounded-medio border-[1.5px] px-4 ${
                     motivo === m.id
-                      ? 'border-brand-bright bg-brand-bright/10'
-                      : 'border-slate-300 bg-white'
+                      ? 'border-acento bg-acento-suave'
+                      : 'border-borde-control bg-capa'
                   }`}
                 >
-                  <Text className="text-[15px] text-slate-800">{m.texto}</Text>
+                  <Texto estilo="opcion">{m.texto}</Texto>
                 </Pressable>
               ))}
             </View>
@@ -92,7 +92,11 @@ export function ModalDenuncia({
               placeholder="¿Qué pasó? (opcional)"
               multiline
               maxLength={1000}
-              className="min-h-[90px] rounded-xl border border-slate-300 px-4 py-3 text-[15px] text-slate-900"
+              /* Only the face is inline. A `borderRadius` or a fill in
+                 a style object wins over the compiled class and the
+                 field loses it. */
+              style={{ fontFamily: 'Inter_400Regular' }}
+              className="min-h-[90px] rounded-medio border-[1.5px] border-borde-control bg-capa px-4 py-3 text-[15px] text-texto"
             />
 
             {fallo ? <Aviso mensaje={fallo} /> : null}
@@ -100,7 +104,7 @@ export function ModalDenuncia({
             <Boton
               cargando={denunciando}
               deshabilitado={denunciando || motivo === null}
-              onPress={async () => {
+              alTocar={async () => {
                 if (!motivo) return;
                 setFallo(null);
                 const r = await denunciar({
@@ -117,7 +121,7 @@ export function ModalDenuncia({
               Denunciar y bloquear
             </Boton>
 
-            <Boton variante="contorno" onPress={cerrar}>
+            <Boton variante="contorno" alTocar={cerrar}>
               Cancelar
             </Boton>
           </>

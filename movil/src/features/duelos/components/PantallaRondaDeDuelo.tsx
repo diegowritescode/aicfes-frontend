@@ -1,8 +1,18 @@
 import { ScrollView, Text, View } from 'react-native';
-import { Boton } from '@/shared/ui/Boton';
+import {
+  Avatar,
+  BarraRespuesta,
+  Boton,
+  Chip,
+  Cifra,
+  Contexto,
+  Opcion,
+  Progreso,
+  Tarjeta,
+  Texto,
+} from '@/shared/ui';
 import { Aviso } from '@/shared/ui/Aviso';
 import { EsqueletoPregunta } from '@/shared/ui/Esqueleto';
-import { OpcionRespuesta } from '@/shared/pregunta/components/OpcionRespuesta';
 import { NOMBRE_AREA } from '@/shared/model/icfes';
 import type { Letra } from '@/shared/model/icfes';
 import { useRondaDeDuelo } from '../hooks/useRondaDeDuelo';
@@ -19,6 +29,10 @@ import type { ResultadoDuelo } from '../api/esquemas';
  *
  * The explanation is worth having, which is why the result screen
  * points back at the review section rather than dropping it.
+ *
+ * The top row names the opponent rather than the subject. On every
+ * other answering screen that slot is a subject label, but here the
+ * person on the other side is the reason the learner opened it.
  */
 export function PantallaRondaDeDuelo({
   dueloId,
@@ -38,10 +52,8 @@ export function PantallaRondaDeDuelo({
 
   if (ronda.cargando) {
     return (
-      <View className="flex-1 gap-4 px-5 py-6">
-        <Text className="text-[13px] font-semibold uppercase tracking-wide text-slate-500">
-          Duelo contra {contra}
-        </Text>
+      <View className="flex-1 gap-4 px-5 py-5">
+        <Texto estilo="rotulo">Duelo contra {contra}</Texto>
         <EsqueletoPregunta />
       </View>
     );
@@ -51,7 +63,7 @@ export function PantallaRondaDeDuelo({
     return (
       <View className="flex-1 justify-center gap-4 px-5">
         <Aviso mensaje="No pudimos abrir el duelo" detalle={ronda.fallo.mensaje} />
-        <Boton variante="contorno" onPress={onSalir}>
+        <Boton variante="contorno" alTocar={onSalir}>
           Volver
         </Boton>
       </View>
@@ -76,84 +88,104 @@ export function PantallaRondaDeDuelo({
          here painted a finished round amber with a "OCULTAR DETALLE"
          toggle over it. Nothing went wrong — the learner answered
          five questions. */
-      <View className="flex-1 justify-center gap-5 px-5">
-        <View className="gap-2">
-          <Text className="text-center text-[24px] font-bold text-slate-900">
-            Listo para entregar
-          </Text>
-          <Text className="text-center text-[15px] leading-6 text-slate-600">
-            {ronda.sinResponder > 0
-              ? `Dejaste ${ronda.sinResponder} sin responder. En un duelo adivinar siempre es mejor que dejar en blanco.`
-              : `Respondiste las ${ronda.total}. Ahora falta ${contra}.`}
-          </Text>
-        </View>
+      <View className="flex-1">
+        <ScrollView className="flex-1" contentContainerClassName="flex-grow justify-center gap-5 px-5 py-5">
+          <View className="gap-2">
+            <Texto estilo="titulo" className="text-center">
+              Listo para entregar
+            </Texto>
+            <Texto estilo="cuerpo" className="text-center">
+              {ronda.sinResponder > 0
+                ? `Dejaste ${ronda.sinResponder} sin responder. En un duelo adivinar siempre es mejor que dejar en blanco.`
+                : `Respondiste las ${ronda.total}. Ahora falta ${contra}.`}
+            </Texto>
+          </View>
 
-        {ronda.falloAlEntregar ? (
-          <Aviso mensaje="No pudimos entregar" detalle={ronda.falloAlEntregar.mensaje} />
-        ) : null}
+          {ronda.falloAlEntregar ? (
+            <Aviso mensaje="No pudimos entregar" detalle={ronda.falloAlEntregar.mensaje} />
+          ) : null}
+        </ScrollView>
 
-        <Boton
-          onPress={() => void ronda.entregar()}
-          cargando={ronda.entregando}
-          deshabilitado={ronda.entregando}
-        >
-          Entregar
-        </Boton>
+        <BarraRespuesta>
+          <Boton
+            alTocar={() => void ronda.entregar()}
+            cargando={ronda.entregando}
+            deshabilitado={ronda.entregando}
+          >
+            Entregar
+          </Boton>
+        </BarraRespuesta>
       </View>
     );
   }
 
   const letras = Object.keys(ronda.pregunta.opciones).sort() as Letra[];
+  /* First name only. The row is 30px tall beside a chip, and a long
+     alias wraps it onto two lines. */
+  const primerNombre = contra.trim().split(/\s+/)[0] ?? contra;
 
   return (
-    <ScrollView className="flex-1" contentContainerClassName="gap-5 px-5 py-6">
-      <View className="gap-1">
-        <Text className="text-[13px] font-semibold uppercase tracking-wide text-slate-500">
-          Duelo contra {contra}
-        </Text>
-        <Text className="text-[13px] text-slate-500">
-          Pregunta {ronda.numero} de {ronda.total} · {NOMBRE_AREA[ronda.pregunta.area]}
-        </Text>
-        <View className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-200">
-          <View
-            className="h-full rounded-full bg-brand-bright"
-            style={{ width: `${Math.round(ronda.avance * 100)}%` }}
-          />
+    <View className="flex-1">
+      <ScrollView className="flex-1" contentContainerClassName="gap-5 px-5 py-5">
+        <View className="min-h-[30px] flex-row items-center justify-between gap-3">
+          <View className="flex-1 flex-row items-center gap-2.5">
+            <Avatar nombre={contra} tamano="chico" />
+            <Text
+              style={{ fontFamily: 'Inter_600SemiBold' }}
+              className="flex-1 text-[13px] text-texto"
+            >
+              {primerNombre}
+            </Text>
+          </View>
+          <Chip tono="acento">
+            {ronda.numero} de {ronda.total}
+          </Chip>
         </View>
-      </View>
 
-      {ronda.pregunta.contexto ? (
-        <Text className="text-[15px] leading-6 text-slate-700">{ronda.pregunta.contexto}</Text>
-      ) : null}
+        {/* No surcharge in a duel: both players get the same five, and
+            failing does not add any. */}
+        <Progreso
+          hechas={ronda.numero - 1}
+          total={ronda.total}
+          dicho={`Pregunta ${ronda.numero} de ${ronda.total}, ${NOMBRE_AREA[ronda.pregunta.area]}`}
+        />
 
-      <Text className="text-[17px] font-semibold leading-7 text-slate-900">
-        {ronda.pregunta.pregunta}
-      </Text>
+        {ronda.pregunta.contexto ? <Contexto>{ronda.pregunta.contexto}</Contexto> : null}
 
-      <View className="gap-2.5">
-        {letras.map((letra) => (
-          <OpcionRespuesta
-            key={letra}
-            letra={letra}
-            texto={ronda.pregunta!.opciones[letra] ?? ''}
-            /* Only 'elegida' or 'pendiente'. A duel never says whether
-               the choice was right: the other player has not answered
-               yet, and the score is settled on the server. */
-            estado={ronda.eleccion === letra ? 'elegida' : 'pendiente'}
-            bloqueada={false}
-            onElegir={() => ronda.elegir(letra)}
-          />
-        ))}
-      </View>
+        <Texto estilo="pregunta">{ronda.pregunta.pregunta}</Texto>
 
-      {/* Not disabled when nothing is chosen. A learner who cannot
+        <View className="gap-2.5">
+          {letras.map((letra) => (
+            <Opcion
+              key={letra}
+              letra={letra}
+              /* Only 'elegida' or 'pendiente'. A duel never says whether
+                 the choice was right: the other player has not answered
+                 yet, and the score is settled on the server. */
+              estado={ronda.eleccion === letra ? 'elegida' : 'pendiente'}
+              alTocar={() => ronda.elegir(letra)}
+            >
+              {ronda.pregunta!.opciones[letra] ?? ''}
+            </Opcion>
+          ))}
+        </View>
+
+        <Texto estilo="apoyo" className="text-center">
+          Nadie ve sus respuestas hasta que ambos entreguen.
+        </Texto>
+      </ScrollView>
+
+      {/* Outside the scroll. With a long stimulus and four options the
+          button lands past the fold, and a button nobody scrolls to is
+          a button that does not exist.
+
+          Not disabled when nothing is chosen. A learner who cannot
           answer should be able to move on; guessing is encouraged on
           the summary, not forced here. */}
-      <Boton onPress={ronda.siguiente}>{ronda.esUltima ? 'Terminar' : 'Siguiente'}</Boton>
-      <Text className="text-center text-[12px] text-slate-400">
-        Nadie ve sus respuestas hasta que ambos entreguen.
-      </Text>
-    </ScrollView>
+      <BarraRespuesta>
+        <Boton alTocar={ronda.siguiente}>{ronda.esUltima ? 'Terminar' : 'Siguiente'}</Boton>
+      </BarraRespuesta>
+    </View>
   );
 }
 
@@ -171,62 +203,112 @@ function Marcador({
   onRevancha?: () => void;
   retando?: boolean;
 }) {
+  const segundos = Math.round(entrega.miMarcador.segundos);
+
   if (entrega.esperandoAlOtro || !entrega.delOtro) {
     return (
-      <View className="flex-1 justify-center gap-5 px-5">
-        <Text className="text-center text-[22px] font-bold text-slate-900">Entregado</Text>
-        <Text className="text-center text-[15px] leading-6 text-slate-600">
-          {contra} todavía no juega su ronda. Le avisamos cuando termine.
-        </Text>
-        <Text className="text-center text-[13px] text-slate-500">
-          Acertó {entrega.miMarcador.aciertos} de 5 en {Math.round(entrega.miMarcador.segundos)} segundos.
-        </Text>
-        <Boton onPress={onSalir}>Listo</Boton>
+      <View className="flex-1">
+        <ScrollView className="flex-1" contentContainerClassName="flex-grow justify-center gap-5 px-5 py-5">
+          <Texto estilo="rotulo">Entregado</Texto>
+
+          {/* The figure stays in `texto`. Nothing has been won yet —
+              the rival has not played — and green here would spend the
+              one signal the palette has on a result that does not
+              exist. */}
+          <Tarjeta className="items-center gap-1.5">
+            <Cifra valor={entrega.miMarcador.aciertos} unidad="de 5" />
+            <Texto estilo="apoyo" className="text-center">
+              {contra} todavía no juega su ronda. Le avisamos cuando termine.
+            </Texto>
+          </Tarjeta>
+
+          <Tarjeta variante="plana" className="gap-2.5">
+            <Texto estilo="rotulo">Lo que quedó anotado</Texto>
+            <View className="flex-row flex-wrap gap-2">
+              <Chip>{entrega.miMarcador.aciertos} de 5</Chip>
+              <Chip>{segundos} s</Chip>
+            </View>
+          </Tarjeta>
+        </ScrollView>
+
+        <BarraRespuesta>
+          <Boton alTocar={onSalir}>Listo</Boton>
+        </BarraRespuesta>
       </View>
     );
   }
 
-  const titulo = entrega.empate ? 'Empate' : entrega.gane ? '¡Ganó!' : `Ganó ${contra}`;
+  const mios = entrega.miMarcador.aciertos;
+  const suyos = entrega.delOtro.aciertos;
+  const gano = entrega.gane === true;
+  const empate = entrega.empate === true;
+
+  /* Said in words, never left to the colour of a number. An empate
+     reads as a loss to anyone who cannot tell the green from the grey,
+     and the figure alone does not say whose five is whose. */
+  const dicho = empate
+    ? `Empataste con ${contra}`
+    : gano
+      ? `Le ganaste a ${contra}`
+      : `${contra} te ganó`;
 
   return (
-    <View className="flex-1 justify-center gap-6 px-5">
-      <Text className="text-center text-[26px] font-bold text-slate-900">{titulo}</Text>
+    <View className="flex-1">
+      <ScrollView className="flex-1" contentContainerClassName="flex-grow justify-center gap-5 px-5 py-5">
+        <Texto estilo="rotulo">Terminó</Texto>
 
-      <View className="gap-3 rounded-2xl bg-slate-50 p-4">
-        <Fila nombre="Usted" marcador={entrega.miMarcador} />
-        <Fila nombre={contra} marcador={entrega.delOtro} />
-      </View>
+        {/* Green only when the duel was won. A loss and a tie leave the
+            figure in `texto`: the colour means «you earned this», and
+            spending it on a result that was not earned is how it stops
+            meaning anything. */}
+        <Tarjeta className="items-center gap-1.5">
+          <Cifra
+            valor={mios}
+            unidad={`contra ${suyos}`}
+            tono={gano ? 'ganado' : 'texto'}
+          />
+          <Texto estilo="apoyo" className="text-center">
+            {dicho}
+          </Texto>
+        </Tarjeta>
 
-      {/* The duel gave no explanations on purpose. This is where they
-          are, so a lost duel turns into something to study. */}
-      <Text className="text-center text-[13px] leading-5 text-slate-500">
-        Lo que fallaste aquí queda en Repasar errores, con la explicación.
-      </Text>
+        <Tarjeta variante="plana" className="gap-2.5">
+          <Texto estilo="rotulo">Lo que quedó anotado</Texto>
+          <View className="flex-row flex-wrap gap-2">
+            <Chip tono={gano ? 'ganado' : 'neutro'}>
+              {mios} a {suyos}
+            </Chip>
+            {/* The server sends a total and a time, not which questions
+                were missed, so there is no topic to name here. When
+                `entregarDuelo` starts returning the per-question
+                result, the missed topic belongs in this row as a
+                `fallo` chip. */}
+            {mios < 5 ? <Chip tono="fallo">{5 - mios} sin acertar</Chip> : null}
+            <Chip>{segundos} s</Chip>
+          </View>
+        </Tarjeta>
+
+        {/* The duel gave no explanations on purpose. This is where they
+            are, so a lost duel turns into something to study. */}
+        <Texto estilo="apoyo" className="text-center">
+          Lo que fallaste aquí queda en Repaso, con la explicación.
+        </Texto>
+      </ScrollView>
 
       {/* Right here, while the result is still on screen. Having to
           go back, find the alias and search for it again is how a
           rematch stops happening — and the rematch is the whole point
           of a duel with someone you know. */}
-      {onRevancha ? (
-        <Boton onPress={onRevancha} cargando={retando} deshabilitado={retando}>
-          Otra vez
+      <BarraRespuesta>
+        {onRevancha ? (
+          <Boton alTocar={onRevancha} cargando={retando} deshabilitado={retando}>
+            Revancha
+          </Boton>
+        ) : null}
+        <Boton variante={onRevancha ? 'plano' : 'principal'} alTocar={onSalir}>
+          Volver
         </Boton>
-      ) : null}
-
-      <Boton variante="contorno" onPress={onSalir}>
-        Listo
-      </Boton>
-    </View>
-  );
-}
-
-function Fila({ nombre, marcador }: { nombre: string; marcador: ResultadoDuelo }) {
-  return (
-    <View className="flex-row items-center justify-between">
-      <Text className="text-[15px] font-semibold text-slate-800">{nombre}</Text>
-      <Text className="text-[15px] text-slate-600">
-        {marcador.aciertos}/5 · {Math.round(marcador.segundos)}s
-      </Text>
+      </BarraRespuesta>
     </View>
   );
 }

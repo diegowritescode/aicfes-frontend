@@ -59,9 +59,9 @@ export function Menu({
           accessibilityLabel="Cerrar el menú"
         />
 
-        <SafeAreaView edges={['bottom']} className="rounded-t-3xl bg-white">
+        <SafeAreaView edges={['bottom']} className="rounded-t-3xl bg-capa">
           <View className="gap-1 px-5 pb-2 pt-5">
-            <Text className="text-[12px] font-bold uppercase tracking-widest text-slate-400">
+            <Text className="text-[12px] font-bold uppercase tracking-widest text-texto-apagado">
               ¿Qué hacemos?
             </Text>
           </View>
@@ -80,17 +80,17 @@ export function Menu({
                   accessibilityState={{ selected: aqui }}
                   accessibilityLabel={`${entrada.titulo}. ${entrada.descripcion}`}
                   className={`gap-0.5 rounded-2xl border p-4 ${
-                    aqui ? 'border-brand-bright bg-sky-50' : 'border-slate-200 bg-white'
+                    aqui ? 'border-acento bg-sky-50' : 'border-linea bg-capa'
                   }`}
                 >
                   <Text
                     className={`text-[15px] font-semibold ${
-                      aqui ? 'text-brand-bright' : 'text-slate-900'
+                      aqui ? 'text-acento-texto' : 'text-texto'
                     }`}
                   >
                     {entrada.titulo}
                   </Text>
-                  <Text className="text-[12.5px] leading-5 text-slate-500">
+                  <Text className="text-[12.5px] leading-5 text-texto-apagado">
                     {entrada.descripcion}
                   </Text>
                 </Pressable>
@@ -98,14 +98,14 @@ export function Menu({
             })}
           </ScrollView>
 
-          <View className="gap-3 border-t border-slate-100 px-5 py-4">
+          <View className="gap-3 border-t border-linea px-5 py-4">
             {email ? (
-              <Text className="text-[12px] text-slate-400" numberOfLines={1}>
+              <Text className="text-[12px] text-texto-apagado" numberOfLines={1}>
                 {email}
               </Text>
             ) : null}
             <Pressable onPress={onSalir} accessibilityRole="button" hitSlop={8}>
-              <Text className="text-[13px] font-semibold text-rose-600">
+              <Text className="text-[13px] font-semibold text-fallo">
                 Cerrar sesión
               </Text>
             </Pressable>

@@ -111,8 +111,18 @@ function Bloque() {
     router.replace('/inicio');
   }, [router]);
 
+  /**
+   * Clearing the block: queue the work, then grant the minutes.
+   *
+   * Both buttons on the paid screen come through here, because the
+   * bookkeeping is identical for both — the minutes were earned, and a
+   * learner who chooses to keep studying instead of opening Instagram
+   * must not forfeit them or the choice is a trap. Only `destino`
+   * differs: back to the app they were reaching for, or into the
+   * drill.
+   */
   const pagar = useCallback(
-    (intentos: readonly IntentoDelPeaje[]) => {
+    (intentos: readonly IntentoDelPeaje[], destino: () => Promise<void> | void) => {
       if (intentos.length > 0) {
         const ahora = new Date();
         const preguntas = bloqueo.sesion?.preguntas ?? [];
@@ -164,6 +174,16 @@ function Bloque() {
          questions and get nothing. */
       concedido.current = true;
       void nativo.conceder(MINUTOS_DESBLOQUEO).then(async () => {
+        await destino();
+      });
+      return;
+    },
+    [cola, bloqueo, nativo],
+  );
+
+  const cobrarYAbrir = useCallback(
+    (intentos: readonly IntentoDelPeaje[]) =>
+      pagar(intentos, async () => {
         /* Back to the app they were reaching for, if the platform
            lets us. It said "Abrir la app" and went to Inicio, which
            is a label that lies — and after eight questions, lying is
@@ -174,10 +194,17 @@ function Bloque() {
         const handle = await almacenPeaje.leerAppBloqueada();
         if (handle) await nativo.abrirApp(handle);
         salir();
-      });
-      return;
-    },
-    [cola, bloqueo, nativo, salir],
+      }),
+    [pagar, nativo, salir],
+  );
+
+  /* The drill rather than Inicio: a learner who taps "Seguir
+     practicando" asked for exercises, and landing them on a dashboard
+     would be the same kind of lie as "Abrir la app" was. */
+  const seguirPracticando = useCallback(
+    (intentos: readonly IntentoDelPeaje[]) =>
+      pagar(intentos, () => router.replace('/entrenar')),
+    [pagar, router],
   );
 
   const usarEmergencia = useCallback(() => {
@@ -212,7 +239,8 @@ function Bloque() {
       minutosDeEmergencia={MINUTOS_DE_EMERGENCIA}
       alResponder={bloqueo.responder}
       alAvanzar={bloqueo.avanzar}
-      alPagar={pagar}
+      alPagar={cobrarYAbrir}
+      alSeguirPracticando={seguirPracticando}
       alSaltar={salir}
     />
   );

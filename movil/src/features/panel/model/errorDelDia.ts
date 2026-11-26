@@ -1,4 +1,4 @@
-import type { EstadoOpcion } from '@/shared/pregunta/components/OpcionRespuesta';
+import type { EstadoOpcion } from '@/shared/ui';
 import type { Letra } from '@/shared/model/icfes';
 
 /**
@@ -23,7 +23,7 @@ export function estadoDeOpcion({
   if (elegida === null) return 'pendiente';
   if (letra === correcta) return 'correcta';
   if (letra === elegida) return 'fallada';
-  return 'descartada';
+  return 'apagada';
 }
 
 /**

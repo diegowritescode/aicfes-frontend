@@ -28,15 +28,15 @@ export function AvisoConexion({
       accessibilityLiveRegion="polite"
       className={
         bloqueo
-          ? 'gap-2 rounded-2xl border border-slate-200 bg-white p-5'
-          : 'rounded-xl bg-amber-50 px-4 py-2.5'
+          ? 'gap-2 rounded-2xl border border-linea bg-capa p-5'
+          : 'rounded-xl bg-fallo-suave px-4 py-2.5'
       }
     >
       <Text
         className={
           bloqueo
-            ? 'text-[14px] leading-6 text-slate-600'
-            : 'text-[12.5px] leading-5 text-amber-800'
+            ? 'text-[14px] leading-6 text-texto-apagado'
+            : 'text-[12.5px] leading-5 text-fallo'
         }
       >
         {anuncio.mensaje}

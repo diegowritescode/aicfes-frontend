@@ -16,7 +16,7 @@ export function BotonMenu({ onPress }: { onPress: () => void }) {
       className="gap-[5px] py-1"
     >
       {[0, 1, 2].map((i) => (
-        <View key={i} className="h-[2px] w-[22px] rounded-full bg-slate-700" />
+        <View key={i} className="h-[2px] w-[22px] rounded-full bg-texto" />
       ))}
     </Pressable>
   );

@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Redirect, useRouter } from 'expo-router';
+import { Texto } from '@/shared/ui';
 import { useSesion } from '@/features/sesion/hooks/useSesion';
 import { PantallaBloqueo } from '@/features/bloqueo/components/PantallaBloqueo';
 import { SelectorDeApps } from '@/features/bloqueo/components/SelectorDeApps';
@@ -21,19 +22,30 @@ export default function RutaBloqueo() {
   const [eligiendo, setEligiendo] = useState(false);
   const bloqueo = useBloqueo();
 
-  if (cargando) return <SafeAreaView className="flex-1 bg-white" />;
+  /* `fondo` on both screens: the permission steps and the app rows
+     are `capa` cards, and a card separates from the page by being
+     whiter than it — on white there was nothing to separate from. */
+  if (cargando) return <SafeAreaView className="flex-1 bg-fondo" />;
   if (!autenticado) return <Redirect href="/entrar" />;
 
   if (eligiendo) {
     return (
-      <SafeAreaView className="flex-1 bg-white" edges={['top', 'bottom']}>
-        <View className="flex-row items-center justify-between px-4 py-2">
-          <Pressable onPress={() => setEligiendo(false)} className="px-2 py-1">
-            <Text className="text-[15px] text-brand-bright">Listo</Text>
+      <SafeAreaView className="flex-1 bg-fondo" edges={['top', 'bottom']}>
+        <View className="min-h-toque flex-row items-center justify-between px-5 py-2">
+          <Pressable
+            onPress={() => setEligiendo(false)}
+            accessibilityRole="button"
+            className="min-h-toque justify-center pr-3"
+          >
+            <Texto
+              estilo="cuerpo"
+              style={{ fontFamily: 'Inter_600SemiBold' }}
+              className="text-acento-texto"
+            >
+              Listo
+            </Texto>
           </Pressable>
-          <Text className="text-[13px] text-slate-500">
-            Lo que marques queda bloqueado
-          </Text>
+          <Texto estilo="apoyo">Lo que marques queda bloqueado</Texto>
         </View>
 
         {/* Every change applies the block at once. No Block button:
@@ -46,7 +58,7 @@ export default function RutaBloqueo() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-white" edges={['top', 'bottom']}>
+    <SafeAreaView className="flex-1 bg-fondo" edges={['top', 'bottom']}>
       <PantallaBloqueo
         alElegirApps={() => setEligiendo(true)}
         alVolver={() => router.back()}

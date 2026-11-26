@@ -33,25 +33,25 @@ export function AvisoDeDenuncias() {
       accessibilityRole="button"
       accessibilityLabel={`${pendientes.mensaje}. Abrir denuncias.`}
       className={`gap-1 rounded-2xl border p-4 ${
-        grave ? 'border-red-200 bg-red-50' : 'border-amber-200 bg-amber-50'
+        grave ? 'border-alerta bg-alerta-suave' : 'border-fallo bg-fallo-suave'
       }`}
     >
       <Text
         className={`text-[11.5px] font-bold uppercase tracking-widest ${
-          grave ? 'text-red-700' : 'text-amber-700'
+          grave ? 'text-alerta' : 'text-fallo'
         }`}
       >
         Denuncias
       </Text>
-      <Text className="text-[15px] font-semibold leading-6 text-slate-900">
+      <Text className="text-[15px] font-semibold leading-6 text-texto">
         {pendientes.mensaje}
       </Text>
       {pendientes.urgencia === 'muy_atrasada' ? (
-        <Text className="text-[13px] leading-5 text-red-700">
+        <Text className="text-[13px] leading-5 text-alerta">
           Quien denunció espera que alguien mire.
         </Text>
       ) : null}
-      <Text className="text-[13px] text-slate-500">Toque para revisarlas</Text>
+      <Text className="text-[13px] text-texto-apagado">Toca para revisarlas</Text>
     </Pressable>
   );
 }

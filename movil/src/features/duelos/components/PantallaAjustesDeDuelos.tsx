@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Pressable, ScrollView, Switch, Text, TextInput, View } from 'react-native';
-import { Boton } from '@/shared/ui/Boton';
+import { Pressable, ScrollView, Switch, TextInput, View } from 'react-native';
+import { Boton, Tarjeta, Texto } from '@/shared/ui';
 import { Aviso } from '@/shared/ui/Aviso';
 import { EsqueletoLista } from '@/shared/ui/Esqueleto';
 import { useRouter } from 'expo-router';
@@ -33,15 +33,13 @@ export function PantallaAjustesDeDuelos({ onVolver }: { onVolver: () => void }) 
 
   return (
     <ScrollView className="flex-1" contentContainerClassName="gap-7 px-5 py-6">
-      <Text className="text-[22px] font-bold text-slate-900">Duelos: mi cuenta</Text>
+      <Texto estilo="titulo">Duelos: mi cuenta</Texto>
 
       <View className="gap-3">
-        <Text className="text-[13px] font-semibold uppercase tracking-wide text-slate-500">
-          Mi nombre en la app
-        </Text>
-        <Text className="text-[13px] leading-5 text-slate-600">
+        <Texto estilo="rotulo">Mi nombre en la app</Texto>
+        <Texto estilo="apoyo">
           Es como lo encuentran sus compañeros. No use su nombre completo ni su colegio.
-        </Text>
+        </Texto>
         <TextInput
           value={borrador || actual?.alias || ''}
           onChangeText={(t) => {
@@ -52,16 +50,20 @@ export function PantallaAjustesDeDuelos({ onVolver }: { onVolver: () => void }) 
           autoCapitalize="none"
           autoCorrect={false}
           maxLength={16}
-          className="rounded-xl border border-slate-300 px-4 py-3 text-[15px] text-slate-900"
+          /* Only the face is inline: a radius or a fill in a style
+             object wins over the compiled class and the field loses
+             it. */
+          style={{ fontFamily: 'Inter_400Regular' }}
+          className="min-h-boton rounded-medio border-[1.5px] border-borde-control bg-capa px-4 text-[15px] text-texto"
         />
         {perfil.falloDeAlias ? <Aviso mensaje={perfil.falloDeAlias.mensaje} /> : null}
         {guardado ? (
-          <Text className="text-[13px] text-emerald-700">Nombre guardado.</Text>
+          <Texto estilo="apoyo" className="text-ganado">Nombre guardado.</Texto>
         ) : null}
         <Boton
           cargando={perfil.guardandoAlias}
           deshabilitado={perfil.guardandoAlias || borrador.trim().length === 0}
-          onPress={async () => {
+          alTocar={async () => {
             const r = await perfil.ponerAlias(borrador.trim()).catch(() => null);
             if (r) {
               setGuardado(true);
@@ -76,28 +78,26 @@ export function PantallaAjustesDeDuelos({ onVolver }: { onVolver: () => void }) 
       {/* The legal gate, said in plain words rather than as a notice
           nobody reads. */}
       <View className="gap-3">
-        <Text className="text-[13px] font-semibold uppercase tracking-wide text-slate-500">
-          Autorización del acudiente
-        </Text>
+        <Texto estilo="rotulo">Autorización del acudiente</Texto>
         {actual?.tutorAutorizoEn ? (
-          <Text className="text-[13px] leading-5 text-slate-600">
+          <Texto estilo="apoyo">
             Autorizado. Ya puede retar y ser retado.
-          </Text>
+          </Texto>
         ) : (
           <>
-            <Text className="text-[13px] leading-5 text-slate-600">
+            <Texto estilo="apoyo">
               Para que otros estudiantes lo encuentren por su nombre, la ley colombiana pide la
               autorización de su papá, mamá o acudiente. Muéstrele esta pantalla antes de
               continuar.
-            </Text>
-            <Text className="text-[13px] leading-5 text-slate-600">
+            </Texto>
+            <Texto estilo="apoyo">
               Sin esto, la app funciona completa: entrenar, simulacros, el peaje y repasar
               errores. Lo único que no funciona son los duelos.
-            </Text>
+            </Texto>
             <Boton
               cargando={perfil.guardandoAutorizacion}
               deshabilitado={perfil.guardandoAutorizacion}
-              onPress={() => void perfil.declararAutorizacion()}
+              alTocar={() => void perfil.declararAutorizacion()}
             >
               Mi acudiente autoriza
             </Boton>
@@ -108,12 +108,10 @@ export function PantallaAjustesDeDuelos({ onVolver }: { onVolver: () => void }) 
       <View className="gap-3">
         <View className="flex-row items-center justify-between">
           <View className="flex-1 pr-4">
-            <Text className="text-[15px] font-semibold text-slate-900">
-              Que otros me encuentren
-            </Text>
-            <Text className="text-[13px] leading-5 text-slate-600">
+            <Texto estilo="pregunta">Que otros me encuentren</Texto>
+            <Texto estilo="apoyo">
               Si lo apaga, nadie lo encuentra por su nombre. Conserva el nombre y sus duelos.
-            </Text>
+            </Texto>
           </View>
           <Switch
             value={actual?.aliasBuscable ?? false}
@@ -123,31 +121,34 @@ export function PantallaAjustesDeDuelos({ onVolver }: { onVolver: () => void }) 
       </View>
 
       <View className="gap-3">
-        <Text className="text-[13px] font-semibold uppercase tracking-wide text-slate-500">
-          Bloqueados
-        </Text>
+        <Texto estilo="rotulo">Bloqueados</Texto>
         {moderacion.bloqueados.length === 0 ? (
-          <Text className="text-[13px] text-slate-500">No ha bloqueado a nadie.</Text>
+          <Texto estilo="apoyo">No ha bloqueado a nadie.</Texto>
         ) : (
           moderacion.bloqueados.map((b) => (
-            <View
-              key={b.bloqueado.id}
-              className="flex-row items-center justify-between rounded-xl bg-slate-50 px-4 py-3"
-            >
-              <Text className="text-[15px] text-slate-800">{b.bloqueado.alias}</Text>
-              <Pressable
-                disabled={moderacion.bloqueando}
-                onPress={() => void moderacion.desbloquear(b.bloqueado.id)}
-              >
-                <Text className="text-[13px] text-brand-bright">Desbloquear</Text>
-              </Pressable>
-            </View>
+            <Tarjeta key={b.bloqueado.id} variante="plana">
+              <View className="flex-row items-center justify-between gap-3">
+              <Texto estilo="opcion">{b.bloqueado.alias}</Texto>
+                <Pressable
+                  disabled={moderacion.bloqueando}
+                  onPress={() => void moderacion.desbloquear(b.bloqueado.id)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Desbloquear a ${b.bloqueado.alias ?? 'esta persona'}`}
+                  accessibilityState={{ disabled: moderacion.bloqueando }}
+                  className="min-h-toque justify-center"
+                >
+                  <Texto estilo="apoyo" className="text-acento-texto">
+                    Desbloquear
+                  </Texto>
+                </Pressable>
+              </View>
+            </Tarjeta>
           ))
         )}
-        <Text className="text-[12px] leading-5 text-slate-500">
+        <Texto estilo="apoyo">
           Si alguien lo molesta, bloquéelo o denúncielo desde el duelo. Al denunciar lo bloqueamos
           de inmediato.
-        </Text>
+        </Texto>
       </View>
 
       {/* The way in for whoever moderates, and the only one.
@@ -162,12 +163,12 @@ export function PantallaAjustesDeDuelos({ onVolver }: { onVolver: () => void }) 
       <Pressable
         onPress={() => router.push('/moderacion')}
         accessibilityRole="button"
-        className="py-2"
+        className="min-h-toque justify-center"
       >
-        <Text className="text-center text-[12px] text-slate-400">Moderación</Text>
+        <Texto estilo="apoyo" className="text-center">Moderación</Texto>
       </Pressable>
 
-      <Boton variante="contorno" onPress={onVolver}>
+      <Boton variante="contorno" alTocar={onVolver}>
         Volver
       </Boton>
     </ScrollView>

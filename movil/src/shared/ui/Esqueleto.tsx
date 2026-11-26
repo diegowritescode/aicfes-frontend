@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { Animated, View } from 'react-native';
+import { Tarjeta } from './moleculas/Tarjeta';
 
 /**
  * The shape of what is loading, instead of a spinner.
@@ -37,6 +38,9 @@ function usePulso() {
 export function Bloque({
   alto = 'h-4',
   ancho = 'w-full',
+  /* A text-line placeholder keeps a small radius: at `chico` and up
+     a 12px-tall bar reads as a pill rather than as a line of text,
+     and the skeleton stops predicting what arrives. */
   redondeo = 'rounded-lg',
 }: {
   alto?: string;
@@ -47,7 +51,7 @@ export function Bloque({
   return (
     <Animated.View
       style={{ opacity: opacidad }}
-      className={`bg-slate-200 ${alto} ${ancho} ${redondeo}`}
+      className={`bg-linea ${alto} ${ancho} ${redondeo}`}
     />
   );
 }
@@ -71,15 +75,20 @@ export function EsqueletoPregunta() {
         <Bloque alto="h-4" ancho="w-48" />
       </View>
 
-      <View className="gap-2 rounded-2xl border border-slate-100 bg-white p-4">
+      {/* The stimulus sits on `capa-alta` in `Contexto`, so the
+          placeholder for it does too: a skeleton that draws a white
+          card where a tinted panel arrives makes the surface change
+          under the learner's eyes. */}
+      <Tarjeta variante="plana" className="gap-2">
         <Bloque alto="h-3.5" />
         <Bloque alto="h-3.5" />
         <Bloque alto="h-3.5" ancho="w-2/3" />
-      </View>
+      </Tarjeta>
 
+      {/* 60pt and `medio`, the exact height and radius of `Opcion`. */}
       <View className="gap-2.5">
         {[0, 1, 2, 3].map((i) => (
-          <Bloque key={i} alto="h-14" redondeo="rounded-2xl" />
+          <Bloque key={i} alto="h-[60px]" redondeo="rounded-medio" />
         ))}
       </View>
     </View>
@@ -94,21 +103,21 @@ export function EsqueletoPanel() {
       accessibilityRole="progressbar"
       accessibilityLabel="Cargando tu progreso"
     >
+      {/* Raised cards, because that is what arrives: the dashboard's
+          figures are the thing the learner acts on. */}
       <View className="flex-row gap-3">
-        <View className="flex-1 gap-2 rounded-2xl border border-slate-100 bg-white p-4">
-          <Bloque alto="h-3" ancho="w-16" />
-          <Bloque alto="h-7" ancho="w-12" />
-        </View>
-        <View className="flex-1 gap-2 rounded-2xl border border-slate-100 bg-white p-4">
-          <Bloque alto="h-3" ancho="w-16" />
-          <Bloque alto="h-7" ancho="w-12" />
-        </View>
+        {[0, 1].map((i) => (
+          <Tarjeta key={i} className="flex-1 gap-2">
+            <Bloque alto="h-3" ancho="w-16" />
+            <Bloque alto="h-7" ancho="w-12" />
+          </Tarjeta>
+        ))}
       </View>
 
       <View className="gap-2">
         <Bloque alto="h-3" ancho="w-40" />
         {[0, 1, 2].map((i) => (
-          <Bloque key={i} alto="h-16" redondeo="rounded-2xl" />
+          <Bloque key={i} alto="h-16" redondeo="rounded-tarjeta" />
         ))}
       </View>
     </View>
@@ -120,7 +129,7 @@ export function EsqueletoLista({ filas = 4 }: { filas?: number }) {
   return (
     <View className="gap-2.5" accessibilityRole="progressbar" accessibilityLabel="Cargando">
       {Array.from({ length: filas }, (_, i) => (
-        <Bloque key={i} alto="h-20" redondeo="rounded-2xl" />
+        <Bloque key={i} alto="h-20" redondeo="rounded-tarjeta" />
       ))}
     </View>
   );

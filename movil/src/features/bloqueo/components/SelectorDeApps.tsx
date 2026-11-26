@@ -44,7 +44,7 @@ export function SelectorDeApps({
   if (fallo) {
     return (
       <View className="flex-1 items-center justify-center px-6">
-        <Text className="text-center text-[14px] leading-6 text-slate-600">{fallo}</Text>
+        <Text className="text-center text-[14px] leading-6 text-texto-apagado">{fallo}</Text>
       </View>
     );
   }
@@ -52,7 +52,7 @@ export function SelectorDeApps({
   if (!Picker) {
     return (
       <View className="flex-1 items-center justify-center">
-        <Text className="text-[13px] text-slate-500">Cargando tus apps…</Text>
+        <Text className="text-[13px] text-texto-apagado">Cargando tus apps…</Text>
       </View>
     );
   }

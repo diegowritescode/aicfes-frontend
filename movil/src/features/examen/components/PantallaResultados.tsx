@@ -1,7 +1,15 @@
 import { useEffect } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Boton } from '@/shared/ui/Boton';
+import {
+  BarraRespuesta,
+  Boton,
+  Cifra,
+  Encabezado,
+  FilaMateria,
+  Tarjeta,
+  Texto,
+} from '@/shared/ui';
 import { Aviso } from '@/shared/ui/Aviso';
 import { NOMBRE_AREA, type Area } from '@/shared/model/icfes';
 import type { useExamen } from '../hooks/useExamen';
@@ -35,18 +43,13 @@ export function PantallaResultados({
   const flojas = areasMasFlojas(resumen.porArea);
 
   return (
-    <SafeAreaView className="flex-1 bg-wash">
-      <ScrollView contentContainerClassName="gap-6 px-5 py-8">
+    <SafeAreaView className="flex-1 bg-fondo">
+      <ScrollView contentContainerClassName="gap-5 px-5 py-6">
+        <Encabezado rotulo="Sesión terminada" />
+
         <View className="gap-1.5">
-          <Text className="text-[12px] font-bold uppercase tracking-widest text-slate-400">
-            Sesión terminada
-          </Text>
-          <Text className="text-[32px] font-bold tracking-tight text-slate-900">
-            {resumen.correctas} de {resumen.total}
-          </Text>
-          <Text className="text-[15px] text-slate-600">
-            {resumen.porcentaje}% de respuestas correctas.
-          </Text>
+          <Cifra valor={resumen.correctas} unidad={`de ${resumen.total} correctas`} />
+          <Texto estilo="apoyo">{resumen.porcentaje}% de respuestas correctas.</Texto>
         </View>
 
         {/* A run that was not saved has to say so. Silence here is how
@@ -61,45 +64,34 @@ export function PantallaResultados({
 
         {flojas.length > 0 ? (
           <View className="gap-3">
-            <Text className="text-[13px] font-bold uppercase tracking-widest text-slate-500">
-              Por área
-            </Text>
-            {flojas.map((a) => (
-              <View key={a.area} className="gap-2 rounded-2xl border border-slate-200 bg-white p-4">
-                <View className="flex-row items-baseline justify-between">
-                  <Text className="text-[14.5px] font-semibold text-slate-800">
-                    {NOMBRE_AREA[a.area as Area] ?? a.area}
-                  </Text>
-                  <Text className="text-[14px] font-bold text-slate-700">{a.porcentaje}%</Text>
-                </View>
-                <View className="h-2 overflow-hidden rounded-full bg-slate-100">
-                  <View
-                    className={`h-full rounded-full ${a.porcentaje < 70 ? 'bg-alerta' : 'bg-exito'}`}
-                    style={{ width: `${Math.max(2, a.porcentaje)}%` }}
-                  />
-                </View>
-                <Text className="text-[12.5px] text-slate-500">
-                  {a.correct} de {a.total} correctas
-                </Text>
-              </View>
-            ))}
+            <Encabezado rotulo="Por área" />
+            <Tarjeta className="gap-4">
+              {flojas.map((a) => (
+                <FilaMateria
+                  key={a.area}
+                  nombre={NOMBRE_AREA[a.area as Area] ?? a.area}
+                  porcentaje={a.porcentaje}
+                  detalle={`${a.correct} de ${a.total} correctas`}
+                />
+              ))}
+            </Tarjeta>
           </View>
         ) : null}
-
-        <View className="gap-2">
-          {/* Only when the session exists and was saved: a plan is
-              written from a session, and offering one that cannot be
-              written is a promise we would break on the next tap. */}
-          {examen.sessionId && alVerPlan && !guardar.isError ? (
-            <Boton onPress={() => alVerPlan(examen.sessionId!)} ancho>
-              Ver mi plan de estudio
-            </Boton>
-          ) : null}
-          <Boton variante="contorno" onPress={alSalir} ancho>
-            Volver al inicio
-          </Boton>
-        </View>
       </ScrollView>
+
+      <BarraRespuesta>
+        {/* Only when the session exists and was saved: a plan is
+            written from a session, and offering one that cannot be
+            written is a promise we would break on the next tap. */}
+        {examen.sessionId && alVerPlan && !guardar.isError ? (
+          <Boton alTocar={() => alVerPlan(examen.sessionId!)}>
+            Ver mi plan de estudio
+          </Boton>
+        ) : null}
+        <Boton variante="contorno" alTocar={alSalir}>
+          Volver al inicio
+        </Boton>
+      </BarraRespuesta>
     </SafeAreaView>
   );
 }

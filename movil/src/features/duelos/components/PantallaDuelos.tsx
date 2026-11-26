@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, Text, TextInput, View } from 'react-native';
-import { Boton } from '@/shared/ui/Boton';
+import { Avatar, Boton, Chip, Personaje, Tarjeta, Texto } from '@/shared/ui';
 import { Aviso } from '@/shared/ui/Aviso';
 import { EsqueletoLista } from '@/shared/ui/Esqueleto';
 import { useAmigos, useBuscarJugadores, useMisDuelos, useModeracion, usePerfilDeDuelos } from '../hooks/useDuelos';
@@ -13,6 +13,12 @@ import type { Duelo } from '../api/esquemas';
  * Opens on what needs an answer, not on a search box. A learner with a
  * pending challenge should see it before anything else; one with none
  * is the only one who needs the search.
+ *
+ * The hierarchy is this screen's whole argument. A duel the learner
+ * can act on is a raised `Tarjeta`; one they are only waiting on is
+ * `plana`. The flat list this replaced rendered both the same way, so
+ * «te toca» was indistinguishable from «no hay nada que hacer» — the
+ * one distinction the screen exists to draw.
  */
 export function PantallaDuelos({
   onJugar,
@@ -28,6 +34,10 @@ export function PantallaDuelos({
   /* Who is being reported, or null. Held here rather than in each row
      so only one modal can be open. */
   const [denunciando, setDenunciando] = useState<{ id: string; alias: string } | null>(null);
+  /* The search panel, folded away until asked for. The screen opens on
+     what is waiting, and a text field above that is a question the
+     learner with pending duels did not ask. */
+  const [buscando, setBuscando] = useState(false);
 
   if (cargandoPerfil || duelos.cargando) {
     return (
@@ -44,20 +54,49 @@ export function PantallaDuelos({
     return <Puerta perfil={perfil} onAjustes={onAjustes} />;
   }
 
+  /* `enCurso` is two different situations and only one of them is a
+     move: a round still to play, and a round already handed in. The
+     count and the card hierarchy both follow this split. */
+  const porJugar = duelos.enCurso.filter((d) => !d.miMarcador);
+  const esperando = duelos.enCurso.filter((d) => d.miMarcador);
+  const pendientes = duelos.porAceptar.length + porJugar.length;
+
+  /* Nothing at all: no invitations, no rounds, no friends, nothing
+     finished. Not an error — nobody has challenged them yet — so the
+     search becomes the one thing to do rather than a footnote. */
+  const vacio =
+    duelos.porAceptar.length === 0 &&
+    duelos.enCurso.length === 0 &&
+    duelos.enviados.length === 0 &&
+    duelos.terminados.length === 0 &&
+    amigos.amigos.length === 0 &&
+    amigos.porResponder.length === 0;
+
   return (
     <ScrollView
       className="flex-1"
-      contentContainerClassName="gap-6 px-5 py-6"
+      contentContainerClassName="gap-6 px-5 py-5"
       refreshControl={
         <RefreshControl refreshing={duelos.recargando} onRefresh={duelos.recargar} />
       }
     >
+      <View className="min-h-[34px] flex-row items-center justify-between">
+        <Texto estilo="titulo">Duelos</Texto>
+        {pendientes > 0 ? (
+          <Chip tono="acento">
+            {pendientes === 1 ? '1 por jugar' : `${pendientes} por jugar`}
+          </Chip>
+        ) : null}
+      </View>
+
       {duelos.fallo ? (
         <Aviso mensaje="No pudimos cargar sus duelos" detalle={duelos.fallo.mensaje} />
       ) : null}
 
+      {vacio && !duelos.fallo ? <Vacio /> : null}
+
       {duelos.porAceptar.length > 0 ? (
-        <Seccion titulo="Lo están esperando">
+        <Seccion rotulo="Lo están esperando">
           {duelos.porAceptar.map((d) => (
             <Invitacion
               key={d.id}
@@ -81,55 +120,62 @@ export function PantallaDuelos({
         </Seccion>
       ) : null}
 
-      {duelos.enCurso.length > 0 ? (
-        <Seccion titulo="Su turno">
-          {duelos.enCurso.map((d) => (
-            <Fila key={d.id} duelo={d}>
-              {d.miMarcador ? (
-                <Text className="text-[13px] text-slate-500">
-                  Entregado. Falta {d.contra?.alias ?? 'su rival'}.
-                </Text>
-              ) : (
+      {porJugar.length > 0 ? (
+        <Seccion rotulo="Te toca">
+          {porJugar.map((d) => (
+            <FilaDeDuelo
+              key={d.id}
+              duelo={d}
+              apoyo="5 preguntas. Juegue cuando pueda."
+              accion={
                 <Boton
-                  tamano="medio"
-                  onPress={() => onJugar(d.id, d.contra?.alias ?? 'su rival', d.contra?.id ?? null)}
+                  ancho={false}
+                  etiqueta={`Jugar contra ${d.contra?.alias ?? 'su rival'}`}
+                  alTocar={() => onJugar(d.id, d.contra?.alias ?? 'su rival', d.contra?.id ?? null)}
                 >
                   Jugar
                 </Boton>
-              )}
-            </Fila>
+              }
+            />
+          ))}
+        </Seccion>
+      ) : null}
+
+      {esperando.length > 0 ? (
+        <Seccion rotulo="Esperando">
+          {esperando.map((d) => (
+            <FilaDeDuelo
+              key={d.id}
+              duelo={d}
+              plana
+              apoyo={`Respondió. Falta ${d.contra?.alias ?? 'su rival'}.`}
+            />
           ))}
         </Seccion>
       ) : null}
 
       {amigos.porResponder.length > 0 ? (
-        <Seccion titulo="Te quieren agregar">
+        <Seccion rotulo="Te quieren agregar">
           {amigos.porResponder.map((a) => (
-            <View
-              key={a.id}
-              className="flex-row items-center justify-between rounded-xl bg-slate-50 px-4 py-3"
-            >
-              <Text className="text-[15px] font-semibold text-slate-800">
-                {a.amigo.alias}
-              </Text>
-              <View className="flex-row gap-2">
-                <Boton
-                  tamano="medio"
-                  variante="suave"
-                  deshabilitado={amigos.respondiendo}
-                  onPress={() => void amigos.responder({ id: a.id, acepta: true })}
-                >
-                  Aceptar
-                </Boton>
-                <Pressable
-                  onPress={() => void amigos.responder({ id: a.id, acepta: false })}
-                  accessibilityRole="button"
-                  className="justify-center px-2"
-                >
-                  <Text className="text-[13px] text-slate-500">No</Text>
-                </Pressable>
-              </View>
-            </View>
+            <FilaDePersona key={a.id} nombre={a.amigo.alias ?? 'Alguien'}>
+              <Boton
+                variante="plano"
+                ancho={false}
+                etiqueta={`Aceptar a ${a.amigo.alias ?? 'esta persona'}`}
+                deshabilitado={amigos.respondiendo}
+                alTocar={() => void amigos.responder({ id: a.id, acepta: true })}
+              >
+                Aceptar
+              </Boton>
+              <Pressable
+                onPress={() => void amigos.responder({ id: a.id, acepta: false })}
+                accessibilityRole="button"
+                accessibilityLabel={`Rechazar a ${a.amigo.alias ?? 'esta persona'}`}
+                className="min-h-toque justify-center px-2"
+              >
+                <Texto estilo="apoyo">No</Texto>
+              </Pressable>
+            </FilaDePersona>
           ))}
         </Seccion>
       ) : null}
@@ -138,73 +184,79 @@ export function PantallaDuelos({
           duelling the same three classmates. Typing an alias every
           time is friction with no purpose. */}
       {amigos.amigos.length > 0 ? (
-        <Seccion titulo="Tus amigos">
+        <Seccion rotulo="Tus amigos">
           {amigos.amigos.map((a) => (
-            <View
-              key={a.id}
-              className="flex-row items-center justify-between rounded-xl bg-slate-50 px-4 py-3"
-            >
-              <Text className="text-[15px] font-semibold text-slate-800">
-                {a.amigo.alias}
-              </Text>
+            <FilaDePersona key={a.id} nombre={a.amigo.alias ?? 'Rival'}>
               <Boton
-                tamano="medio"
-                variante="suave"
+                variante="plano"
+                ancho={false}
+                etiqueta={`Retar a ${a.amigo.alias ?? 'su amigo'}`}
                 deshabilitado={duelos.retando}
-                onPress={() => void duelos.retar(a.amigo.id)}
+                alTocar={() => void duelos.retar(a.amigo.id)}
               >
                 Retar
               </Boton>
-            </View>
+            </FilaDePersona>
           ))}
         </Seccion>
       ) : null}
 
-      <Buscador
-        onRetar={duelos.retar}
-        retando={duelos.retando}
-        fallo={duelos.falloAlRetar}
-        onAgregar={amigos.pedir}
-        agregando={amigos.pidiendo}
-      />
-
       {duelos.enviados.length > 0 ? (
-        <Seccion titulo="Retos que envió">
+        <Seccion rotulo="Retos que envió">
           {duelos.enviados.map((d) => (
-            <Fila key={d.id} duelo={d}>
-              <Text className="text-[13px] text-slate-500">Sin responder todavía</Text>
-            </Fila>
+            <FilaDeDuelo key={d.id} duelo={d} plana apoyo="Sin responder todavía" />
           ))}
         </Seccion>
       ) : null}
 
       {duelos.terminados.length > 0 ? (
-        <Seccion titulo="Terminados">
+        <Seccion rotulo="Terminados">
           {duelos.terminados.map((d) => (
-            <Fila key={d.id} duelo={d}>
-              <Text
-                className={`text-[13px] font-semibold ${
-                  d.gane === null
-                    ? 'text-slate-500'
-                    : d.gane
-                      ? 'text-emerald-700'
-                      : 'text-slate-500'
-                }`}
-              >
-                {d.gane === null ? 'Empate' : d.gane ? 'Ganó' : 'Perdió'}
-                {d.miMarcador && d.marcadorDelOtro
-                  ? ` ${d.miMarcador.aciertos}–${d.marcadorDelOtro.aciertos}`
-                  : ''}
-              </Text>
-            </Fila>
+            <FilaDeDuelo
+              key={d.id}
+              duelo={d}
+              plana
+              apoyo={marcadorDicho(d)}
+              accion={
+                /* Green only when this learner won: a duel won is the
+                   one thing on this list that was earned. A tie says
+                   so in words, because a neutral «3–3» leaves the
+                   reader to work out what happened. */
+                <Chip tono={d.gane ? 'ganado' : 'neutro'}>
+                  {d.gane === null ? 'Empate' : d.gane ? 'Ganaste' : 'Perdiste'}
+                </Chip>
+              }
+            />
           ))}
         </Seccion>
       ) : null}
 
-      <Pressable onPress={onAjustes} className="py-2">
-        <Text className="text-center text-[13px] text-brand-bright">
+      {/* The search, and the only `principal` on the screen when there
+          is nothing waiting. With duels pending it stays `contorno`:
+          the answer then is the «Jugar» inside a card above, and a
+          second filled button would make neither of them the answer. */}
+      {buscando ? (
+        <Buscador
+          onRetar={duelos.retar}
+          retando={duelos.retando}
+          fallo={duelos.falloAlRetar}
+          onAgregar={amigos.pedir}
+          agregando={amigos.pidiendo}
+        />
+      ) : (
+        <Boton variante={vacio ? 'principal' : 'contorno'} alTocar={() => setBuscando(true)}>
+          Buscar a alguien
+        </Boton>
+      )}
+
+      <Pressable
+        onPress={onAjustes}
+        accessibilityRole="button"
+        className="min-h-toque justify-center"
+      >
+        <Texto estilo="apoyo" className="text-center text-acento-texto">
           Mi nombre, privacidad y bloqueados
-        </Text>
+        </Texto>
       </Pressable>
 
       {denunciando ? (
@@ -217,6 +269,38 @@ export function PantallaDuelos({
       ) : null}
     </ScrollView>
   );
+}
+
+/**
+ * Nobody has challenged them yet.
+ *
+ * Not an error, and not written as one. The character is in `espera`,
+ * which is what `docs/PERSONAJE.md` allows it here: it records the
+ * result of a duel and has nothing to record. It does not speak.
+ */
+function Vacio() {
+  return (
+    <View className="items-center gap-4 py-6">
+      <Personaje pose="espera" tamano={88} />
+      <View className="gap-1.5">
+        <Texto estilo="pregunta" className="text-center">
+          Todavía nadie lo ha retado
+        </Texto>
+        <Texto estilo="apoyo" className="text-center">
+          Busque a un compañero por su nombre en la app. Los dos resuelven las mismas 5
+          preguntas cuando puedan.
+        </Texto>
+      </View>
+    </View>
+  );
+}
+
+/** What a finished duel says, score included when there is one. */
+function marcadorDicho(duelo: Duelo): string {
+  if (duelo.miMarcador && duelo.marcadorDelOtro) {
+    return `${duelo.miMarcador.aciertos} contra ${duelo.marcadorDelOtro.aciertos}`;
+  }
+  return 'Terminado';
 }
 
 /**
@@ -237,11 +321,11 @@ function Puerta({
 
   return (
     <View className="flex-1 justify-center gap-5 px-5">
-      <Text className="text-[22px] font-bold text-slate-900">Duelos</Text>
-      <Text className="text-[15px] leading-6 text-slate-600">
+      <Texto estilo="titulo">Duelos</Texto>
+      <Texto estilo="cuerpo">
         Rete a un compañero: los dos resuelven las mismas 5 preguntas cuando puedan. Gana quien
         acierte más.
-      </Text>
+      </Texto>
 
       {faltaAutorizacion ? (
         <Aviso
@@ -257,7 +341,7 @@ function Puerta({
         />
       )}
 
-      <Boton onPress={onAjustes}>{faltaAutorizacion ? 'Ir a autorizar' : 'Escoger nombre'}</Boton>
+      <Boton alTocar={onAjustes}>{faltaAutorizacion ? 'Ir a autorizar' : 'Escoger nombre'}</Boton>
     </View>
   );
 }
@@ -281,90 +365,154 @@ function Buscador({
   const [agregado, setAgregado] = useState<string | null>(null);
 
   return (
-    <Seccion titulo="Retar a alguien">
+    <Seccion rotulo="Buscar a alguien">
       <TextInput
         value={busqueda.termino}
         onChangeText={busqueda.setTermino}
         placeholder="Nombre de su compañero"
         autoCapitalize="none"
         autoCorrect={false}
-        className="rounded-xl border border-slate-300 px-4 py-3 text-[15px] text-slate-900"
+        accessibilityLabel="Nombre de su compañero"
+        /* Only the font face is inline. The border, the radius and the
+           fill stay in the className: a `borderRadius` or a
+           `backgroundColor` in a style object wins over the compiled
+           class and the field loses its fill. */
+        style={{ fontFamily: 'Inter_400Regular' }}
+        className="min-h-boton rounded-medio border-[1.5px] border-borde-control bg-capa px-4 text-[15px] text-texto"
       />
 
       {fallo ? <Aviso mensaje={fallo.mensaje} /> : null}
 
       {busqueda.termino.trim().length >= 2 && busqueda.resultados.length === 0 && !busqueda.buscando ? (
-        <Text className="text-[13px] text-slate-500">
-          Nadie con ese nombre. Pregúntele cómo se llama en la app.
-        </Text>
+        <Texto estilo="apoyo">Nadie con ese nombre. Pregúntele cómo se llama en la app.</Texto>
       ) : null}
 
       {busqueda.resultados.map((j) => (
-        <View
-          key={j.id}
-          className="flex-row items-center justify-between rounded-xl bg-slate-50 px-4 py-3"
-        >
-          <Text className="text-[15px] font-semibold text-slate-800">{j.alias}</Text>
-          <View className="flex-row items-center gap-3">
-            {/* Adding is offered beside challenging, because after
-                one duel with someone you will want the second
-                without typing their name again. */}
-            {agregado === j.id ? (
-              <Text className="text-[13px] text-slate-500">Pedido</Text>
-            ) : (
-              <Pressable
-                disabled={agregando}
-                onPress={async () => {
-                  const r = await onAgregar(j.id).catch(() => null);
-                  if (r) setAgregado(j.id);
-                }}
-                accessibilityRole="button"
-              >
-                <Text className="text-[13px] text-brand-bright">Agregar</Text>
-              </Pressable>
-            )}
+        <FilaDePersona key={j.id} nombre={j.alias ?? 'Rival'}>
+          {/* Adding is offered beside challenging, because after one
+              duel with someone you will want the second without
+              typing their name again. */}
+          {agregado === j.id ? (
+            <Chip>Pedido</Chip>
+          ) : (
+            <Pressable
+              disabled={agregando}
+              onPress={async () => {
+                const r = await onAgregar(j.id).catch(() => null);
+                if (r) setAgregado(j.id);
+              }}
+              accessibilityRole="button"
+              accessibilityLabel={`Agregar a ${j.alias ?? 'esta persona'}`}
+              accessibilityState={{ disabled: agregando }}
+              className="min-h-toque justify-center px-2"
+            >
+              <Texto estilo="apoyo" className="text-acento-texto">
+                Agregar
+              </Texto>
+            </Pressable>
+          )}
 
-            {retado === j.id ? (
-              <Text className="text-[13px] text-emerald-700">Reto enviado</Text>
-            ) : (
-              <Boton
-                tamano="medio"
-                variante="suave"
-                deshabilitado={retando}
-                onPress={async () => {
-                  const r = await onRetar(j.id).catch(() => null);
-                  if (r) setRetado(j.id);
-                }}
-              >
-                Retar
-              </Boton>
-            )}
-          </View>
-        </View>
+          {retado === j.id ? (
+            <Chip tono="ganado">Reto enviado</Chip>
+          ) : (
+            <Boton
+              variante="plano"
+              ancho={false}
+              etiqueta={`Retar a ${j.alias ?? 'esta persona'}`}
+              deshabilitado={retando}
+              alTocar={async () => {
+                const r = await onRetar(j.id).catch(() => null);
+                if (r) setRetado(j.id);
+              }}
+            >
+              Retar
+            </Boton>
+          )}
+        </FilaDePersona>
       ))}
     </Seccion>
   );
 }
 
-function Seccion({ titulo, children }: { titulo: string; children: React.ReactNode }) {
+function Seccion({ rotulo, children }: { rotulo: string; children: React.ReactNode }) {
   return (
-    <View className="gap-3">
-      <Text className="text-[13px] font-semibold uppercase tracking-wide text-slate-500">
-        {titulo}
-      </Text>
+    <View className="gap-2.5">
+      <Texto estilo="rotulo">{rotulo}</Texto>
       {children}
     </View>
   );
 }
 
-function Fila({ duelo, children }: { duelo: Duelo; children: React.ReactNode }) {
+/**
+ * One duel, as a card.
+ *
+ * `plana` is not decoration here: it is how the screen says «this one
+ * is not your move». A raised card is something to act on, and a row
+ * that is only news must not be able to pass for one.
+ */
+function FilaDeDuelo({
+  duelo,
+  apoyo,
+  accion,
+  plana = false,
+}: {
+  duelo: Duelo;
+  apoyo: string;
+  accion?: React.ReactNode;
+  plana?: boolean;
+}) {
+  const nombre = duelo.contra?.alias ?? 'Rival';
+
   return (
-    <View className="flex-row items-center justify-between rounded-xl bg-slate-50 px-4 py-3">
-      <Text className="text-[15px] font-semibold text-slate-800">
-        {duelo.contra?.alias ?? 'Rival'}
-      </Text>
-      {children}
-    </View>
+    <Tarjeta variante={plana ? 'plana' : 'alzada'}>
+      <View className="flex-row items-center justify-between gap-3">
+        <View className="flex-1 flex-row items-center gap-3">
+          <Avatar nombre={nombre} />
+          <View className="flex-1 gap-0.5">
+            {/* 14px semibold Inter, the artifact's name size. Not a
+                `Texto` style, because the scale has no 14px semibold
+                and inventing one here would put a fifteenth size in
+                the system by the back door. The face is still named
+                outright — a family plus a weight does not resolve. */}
+            <Text style={{ fontFamily: 'Inter_600SemiBold' }} className="text-[14px] text-texto">
+              {nombre}
+            </Text>
+            <Texto estilo="apoyo">{apoyo}</Texto>
+          </View>
+        </View>
+        {accion}
+      </View>
+    </Tarjeta>
+  );
+}
+
+/**
+ * Someone who is not a duel: a friend, a request, a search result.
+ *
+ * `plana`, because none of these is the reason the screen is open.
+ */
+function FilaDePersona({
+  nombre,
+  children,
+}: {
+  nombre: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <Tarjeta variante="plana">
+      <View className="flex-row items-center justify-between gap-3">
+        <View className="flex-1 flex-row items-center gap-3">
+          <Avatar nombre={nombre} />
+          <Text
+            style={{ fontFamily: 'Inter_600SemiBold' }}
+            className="flex-1 text-[14px] text-texto"
+          >
+            {nombre}
+          </Text>
+        </View>
+        <View className="flex-row items-center gap-1">{children}</View>
+      </View>
+    </Tarjeta>
   );
 }
 
@@ -391,34 +539,57 @@ function Invitacion({
   onBloquear?: () => void;
   onDenunciar?: () => void;
 }) {
+  const nombre = duelo.contra?.alias ?? 'Alguien';
+
   return (
-    <View className="gap-3 rounded-xl border border-brand-bright/30 bg-brand-bright/5 px-4 py-3">
-      <Text className="text-[15px] font-semibold text-slate-900">
-        {duelo.contra?.alias ?? 'Alguien'} lo retó
-      </Text>
-      <Text className="text-[13px] text-slate-600">5 preguntas. Juegue cuando pueda.</Text>
-      <View className="flex-row gap-2">
-        <Boton tamano="medio" deshabilitado={respondiendo} onPress={onAceptar}>
-          Aceptar
-        </Boton>
-        <Boton tamano="medio" variante="contorno" deshabilitado={respondiendo} onPress={onRechazar}>
-          No, gracias
-        </Boton>
+    <Tarjeta className="gap-3">
+      <View className="flex-row items-center gap-3">
+        <Avatar nombre={nombre} />
+        <View className="flex-1 gap-0.5">
+          <Text style={{ fontFamily: 'Inter_600SemiBold' }} className="text-[14px] text-texto">
+            {nombre} lo retó
+          </Text>
+          <Texto estilo="apoyo">5 preguntas. Juegue cuando pueda.</Texto>
+        </View>
       </View>
+
+      <View className="flex-row gap-2">
+        <View className="flex-1">
+          <Boton deshabilitado={respondiendo} alTocar={onAceptar}>
+            Aceptar
+          </Boton>
+        </View>
+        <View className="flex-1">
+          <Boton variante="contorno" deshabilitado={respondiendo} alTocar={onRechazar}>
+            No, gracias
+          </Boton>
+        </View>
+      </View>
+
       {onBloquear || onDenunciar ? (
-        <View className="flex-row gap-5 pt-1">
+        <View className="flex-row gap-5">
           {onBloquear ? (
-            <Pressable onPress={onBloquear} accessibilityRole="button">
-              <Text className="text-[12px] text-slate-500">Bloquear</Text>
+            <Pressable
+              onPress={onBloquear}
+              accessibilityRole="button"
+              accessibilityLabel={`Bloquear a ${nombre}`}
+              className="min-h-toque justify-center"
+            >
+              <Texto estilo="apoyo">Bloquear</Texto>
             </Pressable>
           ) : null}
           {onDenunciar ? (
-            <Pressable onPress={onDenunciar} accessibilityRole="button">
-              <Text className="text-[12px] text-slate-500">Denunciar</Text>
+            <Pressable
+              onPress={onDenunciar}
+              accessibilityRole="button"
+              accessibilityLabel={`Denunciar a ${nombre}`}
+              className="min-h-toque justify-center"
+            >
+              <Texto estilo="apoyo">Denunciar</Texto>
             </Pressable>
           ) : null}
         </View>
       ) : null}
-    </View>
+    </Tarjeta>
   );
 }

@@ -1,39 +1,36 @@
-import { useEffect, useState } from 'react';
-import { RefreshControl, ScrollView, Text, View } from 'react-native';
+import { useEffect } from 'react';
+import { RefreshControl, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Redirect, useRouter } from 'expo-router';
-import { Boton } from '@/shared/ui/Boton';
+import { Avatar, BarraPestanas, Boton, Chip, FilaMateria, Tarjeta, Texto } from '@/shared/ui';
 import { Aviso } from '@/shared/ui/Aviso';
 import { AvisoConexion } from '@/shared/conexion/AvisoConexion';
 import { EsqueletoPanel } from '@/shared/ui/Esqueleto';
 import { useConexion } from '@/shared/conexion/useConexion';
-import { Menu } from '@/shared/navegacion/Menu';
-import { BotonMenu } from '@/shared/navegacion/BotonMenu';
 import { AvisoDeDenuncias } from '@/features/moderacion/components/AvisoDeDenuncias';
 import { AvisoDeDuelos } from '@/features/duelos/components/AvisoDeDuelos';
 import { AvisoDeTiempo } from '@/features/bloqueo/components/AvisoDeTiempo';
-import { usePerfilDeDuelos } from '@/features/duelos/hooks/useDuelos';
+import { useMisDuelos } from '@/features/duelos/hooks/useDuelos';
 import { useLote } from '@/features/offline/hooks/useLote';
 import { useCola } from '@/features/offline/hooks/useCola';
-import { useRecordatorio } from '@/features/recordatorio/hooks/useRecordatorio';
-import { TarjetaRecordatorio } from '@/features/recordatorio/components/TarjetaRecordatorio';
-import { temaMasFlojo } from '@/features/recordatorio/model/mensaje';
 import { NOMBRE_AREA } from '@/shared/model/icfes';
-import { useAccionesSesion, useSesion } from '@/features/sesion/hooks/useSesion';
-import { useDesgloseXp, useErrorDelDia, useLogros, usePanel } from '@/features/panel/hooks/usePanel';
+import { useSesion } from '@/features/sesion/hooks/useSesion';
+import { useErrorDelDia, usePanel } from '@/features/panel/hooks/usePanel';
 import { ResumenErrorDelDia } from '@/features/panel/components/ResumenErrorDelDia';
-import { SeccionLogros } from '@/features/panel/components/SeccionLogros';
-import { DesgloseXp } from '@/features/panel/components/DesgloseXp';
 import { esRespondible } from '@/features/panel/model/errorDelDia';
-import {
-  avanceDeNivel,
-  filasDeArea,
-  misionesPendientes,
-  muestraRacha,
-} from '@/features/panel/model/reglas';
+import { filasDeArea, muestraRacha } from '@/features/panel/model/reglas';
 
 /**
  * The dashboard.
+ *
+ * Short on purpose. It had grown the level, the streak card, the XP
+ * breakdown, the day's missions, the achievements and a reminder
+ * setting — eight sections of self-measurement before the learner
+ * reached anything to do. None of it was deleted: it moved to «Yo»,
+ * the tab for looking at yourself. What stays here is what is true
+ * today and what to do about it — time earned, the day's question, a
+ * duel someone is waiting on, how the subjects stand, and one button
+ * into practice.
  *
  * Pull to refresh, because a phone is the one place people expect it
  * and because finishing a session elsewhere should be visible here
@@ -42,23 +39,14 @@ import {
 export default function RutaInicio() {
   const router = useRouter();
   const { sesion, cargando: cargandoSesion, autenticado } = useSesion();
-  /* Read here so the drawer can show Denuncias to whoever moderates.
-     The query is shared with the duels screen, so this costs no extra
-     request. */
-  const perfilDuelos = usePerfilDeDuelos();
-  const { salir } = useAccionesSesion();
   const { panel, cargando, fallo, recargar } = usePanel();
   const { pregunta } = useErrorDelDia();
-  const { logros } = useLogros();
-  const { desglose } = useDesgloseXp();
   const conexion = useConexion();
-  const [menuAbierto, setMenuAbierto] = useState(false);
+  /* The same query `AvisoDeDuelos` reads, so naming the one duel that
+     is waiting costs no extra request. */
+  const duelos = useMisDuelos();
   const lote = useLote();
   const cola = useCola();
-  /* The route reads the dashboard and hands the topic down, because a
-     feature may not import another feature. */
-  const temaDeHoy = temaMasFlojo(panel?.areaProgress ?? []);
-  const recordatorio = useRecordatorio(temaDeHoy);
 
   /* Top the offline pool up here, on the screen the learner opens
      most, and only with a connection. The toll runs when there is no
@@ -83,44 +71,72 @@ export default function RutaInicio() {
   if (!autenticado) return <Redirect href="/entrar" />;
 
   const filas = panel ? filasDeArea(panel) : [];
-  const misiones = panel ? misionesPendientes(panel) : [];
+
+  /* The server knows an email and no name. The part before the `@` is
+     the closest thing to one the app has, and «Hola, diego» reads as a
+     database row where «Hola, Diego» reads as a greeting — hence the
+     capital. Asking for a real name is the proper fix and it costs a
+     new field on an account made by a minor; this is the honest
+     stopgap until that exists. */
+  const nombre = (() => {
+    const local = sesion?.email?.split('@')[0] ?? '';
+    if (!local) return null;
+    return local.charAt(0).toUpperCase() + local.slice(1);
+  })();
+
+  /* One duel, named, and only when someone is actually waiting on
+     this learner: a challenge to accept, or a round they have not
+     played. `AvisoDeDuelos` keeps the rest — it is the only thing
+     that can say «3 duelos te esperan» without stacking three cards
+     on a dashboard this just stopped being. The two never render
+     together. */
+  const esperando = [
+    ...duelos.porAceptar,
+    ...duelos.enCurso.filter((d) => !d.miMarcador),
+  ];
+  const dueloUnico = esperando.length === 1 ? esperando[0]! : null;
 
   return (
-    <SafeAreaView className="flex-1 bg-wash">
-      {/* The dashboard says how you are doing; where to go next lives
-          behind this button. It had grown four navigation cards on top
-          of the level, the streak, the missions, the achievements, the
-          XP breakdown and a reminder. */}
-      <View className="flex-row items-center justify-between px-5 pt-3">
-        <BotonMenu onPress={() => setMenuAbierto(true)} />
-      </View>
-
+    <SafeAreaView className="flex-1 bg-fondo">
       <ScrollView
         contentContainerClassName="gap-5 px-5 py-6"
         refreshControl={
           <RefreshControl refreshing={cargando} onRefresh={() => void recargar()} />
         }
       >
-        <View className="gap-1">
-          <Text className="text-[12px] font-bold uppercase tracking-widest text-slate-400">
-            Tu progreso
-          </Text>
-          <Text className="text-[22px] font-bold text-slate-900">{sesion?.email}</Text>
+        <View className="flex-row items-start justify-between gap-3">
+          <View className="flex-1 gap-1">
+            <Texto estilo="titulo">{nombre ? `Hola, ${nombre}` : 'Hola'}</Texto>
+            {/* The validated design says «38 días para el examen»
+                here. Nothing in the API carries an exam date, and a
+                countdown to a date we picked is the one number on
+                this screen a learner can check against reality and
+                catch us inventing. The line stays out until the
+                backend sends one. */}
+            {/* Said out loud, because a learner who knows they skipped
+                yesterday and sees the streak unbroken would otherwise
+                think the number is wrong. */}
+            {panel && muestraRacha(panel) && panel.streak.perdonUsado ? (
+              <Texto estilo="apoyo" className="text-ganado">
+                Te perdonamos un día
+              </Texto>
+            ) : null}
+          </View>
+
+          {/* A streak of zero is a reproach, not encouragement. */}
+          {panel && muestraRacha(panel) ? (
+            <Chip tono="ganado">
+              {panel.streak.currentDays === 1
+                ? '1 día'
+                : `${panel.streak.currentDays} días`}
+            </Chip>
+          ) : null}
         </View>
 
         {/* Above the learner's own numbers, and only on a phone that
             holds a moderation token. Reports are the one thing here
             with someone else waiting on the other end. */}
         <AvisoDeDenuncias />
-
-        {/* Same reasoning, and the other case of someone waiting:
-            a challenge sent at noon was invisible until the learner
-            happened to open the duels screen. */}
-        <AvisoDeDuelos />
-
-        {/* Only while there is earned time left. The budget is
-            usage-based, so nobody can work it out from the clock. */}
-        <AvisoDeTiempo />
 
         {/* Before the error, because with no network the network is the
             explanation — and a failure message about the server is
@@ -131,165 +147,102 @@ export default function RutaInicio() {
           <Aviso mensaje={fallo.mensaje} detalle={fallo.detalle} />
         ) : null}
 
+        {/* Only while there is earned time left. The budget is
+            usage-based, so nobody can work it out from the clock.
+            This is also the design's «Tienes tiempo» panel: the two
+            were the same card, so there is one of them. */}
+        <AvisoDeTiempo alGanarMas={() => router.push('/peaje')} />
+
         {cargando && !panel ? <EsqueletoPanel /> : null}
 
-        {panel ? (
-          <>
-            <View className="flex-row gap-3">
-              <View className="flex-1 gap-1 rounded-2xl border border-slate-200 bg-white p-4">
-                <Text className="text-[11.5px] font-bold uppercase tracking-widest text-slate-400">
-                  Nivel
-                </Text>
-                <Text className="text-[24px] font-bold text-slate-900">{panel.level.level}</Text>
-                <View className="h-1.5 overflow-hidden rounded-full bg-slate-100">
-                  <View
-                    className="h-full rounded-full bg-brand-bright"
-                    style={{ width: `${avanceDeNivel(panel) * 100}%` }}
-                  />
-                </View>
-                <Text className="text-[12px] text-slate-500">
-                  {panel.level.currentXp} de {panel.level.nextLevelXp} XP
-                </Text>
-              </View>
+        {/* Nothing to say is said by saying nothing: an empty card
+            takes the same room as a useful one.
 
-              {/* A streak of zero is a reproach, not encouragement. */}
-              {muestraRacha(panel) ? (
-                <View className="flex-1 gap-1 rounded-2xl border border-slate-200 bg-white p-4">
-                  <Text className="text-[11.5px] font-bold uppercase tracking-widest text-slate-400">
-                    Racha
-                  </Text>
-                  <Text className="text-[24px] font-bold text-slate-900">
-                    {panel.streak.currentDays}
-                  </Text>
-                  <Text className="text-[12px] text-slate-500">
-                    {panel.streak.currentDays === 1 ? 'día seguido' : 'días seguidos'}
-                  </Text>
-                  {/* Said out loud, because a learner who knows they
-                      skipped yesterday and sees the streak unbroken
-                      would otherwise think the number is wrong. */}
-                  {panel.streak.perdonUsado ? (
-                    <Text className="text-[11px] leading-4 text-emerald-700">
-                      Te perdonamos un día
-                    </Text>
-                  ) : null}
-                </View>
-              ) : null}
-            </View>
-
-            {/* Nothing to say is said by saying nothing: an empty card
-                takes the same room as a useful one. */}
-            {/* One line, not the whole question. A Lectura Crítica item
-                carries its stimulus — an email, a paragraph — and
-                answering it here pushed everything else off the
-                screen. The dashboard summarises; the question gets its
-                own route.
-
-                Answerable only when the server sent the options and
-                the right answer: an older backend sends neither, and
-                an invitation to a question that cannot be answered is
-                worse than no invitation. */}
-            {pregunta && !pregunta.resueltoHoy && esRespondible(pregunta) ? (
-              <ResumenErrorDelDia
-                pregunta={pregunta}
-                onAbrir={() => router.push('/pregunta-del-dia')}
-              />
-            ) : null}
-
-            <View className="gap-3">
-              <Text className="text-[13px] font-bold uppercase tracking-widest text-slate-500">
-                Por área, lo más flojo primero
-              </Text>
-              {filas.map((f) => (
-                <View key={f.area} className="gap-2 rounded-2xl border border-slate-200 bg-white p-4">
-                  <View className="flex-row items-baseline justify-between">
-                    <Text className="text-[14px] font-semibold text-slate-800">
-                      {NOMBRE_AREA[f.area]}
-                    </Text>
-                    <Text className="text-[14px] font-bold text-slate-700">
-                      {f.medida ? `${f.porcentaje}%` : '—'}
-                    </Text>
-                  </View>
-                  <View className="h-2 overflow-hidden rounded-full bg-slate-100">
-                    <View
-                      className={`h-full rounded-full ${
-                        f.porcentaje < 70 ? 'bg-alerta' : 'bg-exito'
-                      }`}
-                      style={{ width: `${f.medida ? Math.max(2, f.porcentaje) : 0}%` }}
-                    />
-                  </View>
-                  <Text className="text-[12.5px] text-slate-500">
-                    {f.medida
-                      ? `${f.aciertos} de ${f.preguntas} correctas`
-                      : 'Todavía sin practicar'}
-                  </Text>
-                </View>
-              ))}
-            </View>
-
-            {/* Right after the level, because that is the number it
-                explains. */}
-            <DesgloseXp datos={desglose} />
-
-            {misiones.length > 0 ? (
-              <View className="gap-3">
-                <Text className="text-[13px] font-bold uppercase tracking-widest text-slate-500">
-                  Retos de hoy
-                </Text>
-                {misiones.slice(0, 3).map((m) => (
-                  <View key={m.id} className="gap-2 rounded-2xl border border-slate-200 bg-white p-4">
-                    <Text className="text-[14px] font-semibold text-slate-800">{m.title}</Text>
-                    <View className="h-1.5 overflow-hidden rounded-full bg-slate-100">
-                      <View
-                        className="h-full rounded-full bg-brand-bright"
-                        style={{ width: `${Math.min(100, (m.progress / m.target) * 100)}%` }}
-                      />
-                    </View>
-                    <Text className="text-[12px] text-slate-500">
-                      {m.progress} de {m.target} · {m.xpReward} XP
-                    </Text>
-                  </View>
-                ))}
-              </View>
-            ) : null}
-
-            {/* After the day's missions: those are for today, these are
-                what the weeks add up to. */}
-            <SeccionLogros logros={logros} />
-
-            {/* Last, because it is a setting and not today's work. */}
-            <TarjetaRecordatorio
-              activo={recordatorio.activo}
-              hora={recordatorio.hora}
-              permiso={recordatorio.permiso}
-              temaDeHoy={recordatorio.temaDeHoy}
-              onActivar={(h) => void recordatorio.activar(h)}
-              onCancelar={() => void recordatorio.cancelar()}
-            />
-          </>
+            Answerable only when the server sent the options and the
+            right answer: an older backend sends neither, and an
+            invitation to a question that cannot be answered is worse
+            than no invitation. */}
+        {pregunta && !pregunta.resueltoHoy && esRespondible(pregunta) ? (
+          <ResumenErrorDelDia
+            pregunta={pregunta}
+            onAbrir={() => router.push('/pregunta-del-dia')}
+          />
         ) : null}
 
+        {/* Someone sent a challenge at noon and it was invisible until
+            the learner happened to open the duels screen — which, for
+            someone who did not know a duel existed, is never. There is
+            nowhere else this can reach them: reminders here are local
+            notifications scheduled on the device, so nothing can be
+            pushed while the app is closed. */}
+        {dueloUnico ? (
+          /* `plana` rather than raised: someone else's move on you is
+             context for the day, not the day's work. */
+          <Tarjeta variante="plana" className="flex-row items-center gap-3">
+            {dueloUnico.contra?.alias ? (
+              <Avatar nombre={dueloUnico.contra.alias} tamano="chico" />
+            ) : null}
+            <View className="flex-1 gap-0.5">
+              {/* Named rather than counted. «Camilo» is a person; «1
+                  duelo pendiente» is a chore. */}
+              <Texto estilo="cuerpo" style={{ fontFamily: 'Inter_600SemiBold' }}>
+                {dueloUnico.contra?.alias ?? 'Te retaron'}
+              </Texto>
+              {/* Five questions is the server's round size, said in
+                  the same words the duels screen uses. The subject is
+                  deliberately absent: a duel carries no area in its
+                  payload, and naming one here would be a guess the
+                  learner catches the moment the round opens. */}
+              <Texto estilo="apoyo">5 preguntas</Texto>
+            </View>
+            <Boton
+              variante="contorno"
+              ancho={false}
+              alTocar={() => router.push('/duelos')}
+              etiqueta={
+                dueloUnico.contra?.alias
+                  ? `Jugar tu duelo contra ${dueloUnico.contra.alias}`
+                  : 'Jugar tu duelo'
+              }
+            >
+              Jugar
+            </Boton>
+          </Tarjeta>
+        ) : (
+          <AvisoDeDuelos />
+        )}
+
+        {panel ? (
+          <View className="gap-3">
+            <Texto estilo="rotulo">Tus materias</Texto>
+
+            {/* One card holding the rows, not a card each. Five
+                bordered cards in a column made five subjects read as
+                five separate verdicts; they are one picture of where
+                the learner stands, and `filasDeArea` already puts the
+                weakest at the top. */}
+            <Tarjeta className="gap-[14px]">
+              {filas.map((f) => (
+                <FilaMateria
+                  key={f.area}
+                  nombre={NOMBRE_AREA[f.area]}
+                  porcentaje={f.porcentaje}
+                  medida={f.medida}
+                />
+              ))}
+            </Tarjeta>
+          </View>
+        ) : null}
+
+        {/* The screen's one reason to exist. Inside the scroll rather
+            than pinned above the tab bar: the dashboard is read top to
+            bottom and this is its conclusion, not a toolbar — and two
+            fixed bars stacked at the bottom leave the subjects reading
+            through a 150px gap. */}
+        <Boton alTocar={() => router.push('/entrenar')}>Practicar</Boton>
       </ScrollView>
 
-      <Menu
-        esModerador={perfilDuelos.perfil?.esModerador ?? false}
-        abierto={menuAbierto}
-        rutaActual="/inicio"
-        email={sesion?.email}
-        onCerrar={() => setMenuAbierto(false)}
-        onIr={(ruta) => {
-          setMenuAbierto(false);
-          router.push(ruta as never);
-        }}
-        onSalir={() => {
-          setMenuAbierto(false);
-          /* Navigate explicitly rather than waiting for the session
-             query to re-render this screen into its own `<Redirect>`.
-             Leaving is an action the learner took; it should not
-             depend on a cache notification arriving. */
-          void salir().then(() => router.replace('/entrar'));
-        }}
-      />
+      <BarraPestanas />
     </SafeAreaView>
   );
 }
-

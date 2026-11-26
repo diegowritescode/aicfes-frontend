@@ -9,6 +9,18 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { crearClienteConsultas } from '@/core/http/consultas';
 import { opcionesDePersistencia } from '@/core/http/persistencia';
 import { conectarRenovacion } from '@/features/sesion/api/peticiones';
+import { useFonts } from 'expo-font';
+import {
+  Nunito_600SemiBold,
+  Nunito_700Bold,
+  Nunito_800ExtraBold,
+} from '@expo-google-fonts/nunito';
+import {
+  Inter_400Regular,
+  Inter_500Medium,
+  Inter_600SemiBold,
+  Inter_700Bold,
+} from '@expo-google-fonts/inter';
 
 /**
  * The shell every screen sits in.
@@ -25,6 +37,27 @@ conectarRenovacion();
 
 export default function Layout() {
   const [cliente] = useState(crearClienteConsultas);
+
+  /* The two brand faces. Without them `font-marca` and `font-texto`
+     resolve to nothing and every screen falls back to the system
+     face — which is why the first build of the redesign looked
+     nothing like the mockup even though the colours were right.
+     Nunito carries numbers and headings; Inter carries everything a
+     learner reads at length. */
+  const [fuentesListas] = useFonts({
+    Nunito_600SemiBold,
+    Nunito_700Bold,
+    Nunito_800ExtraBold,
+    Inter_400Regular,
+    Inter_500Medium,
+    Inter_600SemiBold,
+    Inter_700Bold,
+  });
+
+  /* Nothing renders until they are in. A flash of system type
+     followed by the real one is worse than a beat of splash screen,
+     and the splash is already purple. */
+  if (!fuentesListas) return null;
 
   /* Persisting rather than plain: without this the cache dies with the
      process, so the app is blank with no connection. The provider

@@ -12,16 +12,16 @@ import type { PasoLegible } from '../model/permisos';
  */
 export function ChipDePermiso({ paso }: { paso: PasoLegible }) {
   const estilo = paso.bloqueadoPorElSistema
-    ? 'border-red-200 bg-red-50'
+    ? 'border-alerta bg-alerta-suave'
     : paso.concedido
-      ? 'border-emerald-200 bg-emerald-50'
-      : 'border-amber-200 bg-amber-50';
+      ? 'border-ganado bg-ganado-suave'
+      : 'border-fallo bg-fallo-suave';
 
   const color = paso.bloqueadoPorElSistema
-    ? 'text-red-700'
+    ? 'text-alerta'
     : paso.concedido
-      ? 'text-emerald-700'
-      : 'text-amber-700';
+      ? 'text-ganado'
+      : 'text-fallo';
 
   return (
     <View className={`gap-1 rounded-xl border px-3.5 py-2.5 ${estilo}`}>
@@ -29,11 +29,11 @@ export function ChipDePermiso({ paso }: { paso: PasoLegible }) {
         <Text className={`text-[13px] font-semibold ${color}`}>
           {paso.concedido ? '✓' : paso.bloqueadoPorElSistema ? '!' : '○'}
         </Text>
-        <Text className="flex-1 text-[14px] font-semibold text-slate-800">
+        <Text className="flex-1 text-[14px] font-semibold text-texto">
           {paso.nombre}
         </Text>
         {!paso.requerido ? (
-          <Text className="text-[11px] text-slate-400">opcional</Text>
+          <Text className="text-[11px] text-texto-apagado">opcional</Text>
         ) : null}
       </View>
 
@@ -41,7 +41,7 @@ export function ChipDePermiso({ paso }: { paso: PasoLegible }) {
           granted it is noise, and a wall of explanations is what made
           the bench unreadable. */}
       {!paso.concedido ? (
-        <Text className="text-[12.5px] leading-[18px] text-slate-600">
+        <Text className="text-[12.5px] leading-[18px] text-texto-apagado">
           {paso.bloqueadoPorElSistema
             ? 'Android lo bloquea en apps instaladas por fuera de Play. Abre Ajustes → Aplicaciones → AICFES → ⋮ → «Permitir ajustes restringidos», y vuelve.'
             : paso.porQue}

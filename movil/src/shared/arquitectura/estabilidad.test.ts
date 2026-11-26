@@ -185,7 +185,15 @@ describe('una pregunta en pantalla no se recarga sola', () => {
 
     const pantalla = leer('features/offline/components/PantallaPeaje.tsx');
     expect(pantalla).toMatch(/estaPagado\(\{ avanzadas, fallos, disponibles/);
-    expect(pantalla).toMatch(/de \{pedidas\}/);
+    /* The count on screen runs against what the block ASKS, not what
+       it drew. Matched on the prop rather than on a sentence, because
+       the redesign moved the number from a line of text into the
+       progress bar and the property is what matters. */
+    expect(pantalla).toMatch(/total=\{pedidas\}/);
+    /* And the surcharge is visible: the bar grows when you fail,
+       which is what communicates the cost without a word of
+       reproach. */
+    expect(pantalla).toMatch(/recargo=\{pedidas - BASE_DE_PREGUNTAS\}/);
   });
 
   it('una emergencia no borra el avance', () => {

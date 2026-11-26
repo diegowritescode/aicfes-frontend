@@ -16,11 +16,14 @@ export default function RutaModeracion() {
   const { cargando, autenticado } = useSesion();
   const perfil = usePerfilDeDuelos();
 
-  if (cargando) return <SafeAreaView className="flex-1 bg-white" />;
+  /* `fondo`, not raw white. The queue's rows are `capa` cards, and a
+     card separates from the page by being whiter than it — on white
+     they had nothing to separate from. */
+  if (cargando) return <SafeAreaView className="flex-1 bg-fondo" />;
   if (!autenticado) return <Redirect href="/entrar" />;
 
   return (
-    <SafeAreaView className="flex-1 bg-white" edges={['top', 'bottom']}>
+    <SafeAreaView className="flex-1 bg-fondo" edges={['top', 'bottom']}>
       <PantallaModeracion
         esModerador={perfil.perfil?.esModerador ?? false}
         onVolver={() => router.back()}

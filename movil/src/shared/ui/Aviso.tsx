@@ -1,11 +1,13 @@
 import { useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable } from 'react-native';
+import { Tarjeta } from './moleculas/Tarjeta';
+import { Texto } from './atomos/Texto';
 
 /**
  * Something went wrong, said once, where it happened.
  *
  * It announces itself to a screen reader: a learner who cannot see the
- * red box would otherwise tap the button again and wonder why nothing
+ * message would otherwise tap the button again and wonder why nothing
  * happens.
  *
  * `detalle` is the technical cause, hidden behind a tap. A phone has no
@@ -24,17 +26,27 @@ export function Aviso({
   detalle?: string;
 }) {
   const [abierto, setAbierto] = useState(false);
-  const marco = tono === 'error' ? 'bg-rose-50' : 'bg-amber-50';
-  const texto = tono === 'error' ? 'text-rose-700' : 'text-amber-800';
-  const tenue = tono === 'error' ? 'text-rose-400' : 'text-amber-500';
 
   return (
-    <View
+    /* A flat card, never a raised one. A raised card is something the
+       learner acts on, and this is not: the thing to act on is the
+       button that failed, which is still right beside it. Two raised
+       surfaces stacked made neither of them the subject. */
+    <Tarjeta
+      variante="plana"
       accessibilityRole="alert"
       accessibilityLiveRegion="polite"
-      className={`gap-2 rounded-2xl px-4 py-3 ${marco}`}
+      className={`gap-2 ${tono === 'error' ? 'border-l-[3px] border-l-fallo' : ''}`}
     >
-      <Text className={`text-[13.5px] leading-relaxed ${texto}`}>{mensaje}</Text>
+      {/* `fallo`, not `alerta`. Amber says a request did not go
+          through, which is what happened; red is reserved for work
+          that can actually be lost, and a retry loses nothing. The
+          coloured edge carries the tone instead of a tinted fill: a
+          full amber block read as mud and drowned the text it was
+          supposed to carry, the same finding `Explicacion` records. */}
+      <Texto estilo="cuerpo" className={tono === 'error' ? 'text-fallo' : 'text-texto'}>
+        {mensaje}
+      </Texto>
 
       {detalle ? (
         <>
@@ -42,20 +54,24 @@ export function Aviso({
             onPress={() => setAbierto((v) => !v)}
             accessibilityRole="button"
             accessibilityLabel={abierto ? 'Ocultar detalle técnico' : 'Ver detalle técnico'}
+            accessibilityState={{ expanded: abierto }}
             hitSlop={8}
           >
-            <Text className={`text-[11.5px] font-semibold uppercase tracking-wide ${tenue}`}>
+            <Texto estilo="rotulo">
               {abierto ? 'Ocultar detalle' : 'Ver detalle'}
-            </Text>
+            </Texto>
           </Pressable>
 
           {abierto ? (
-            <Text selectable className={`text-[11.5px] leading-5 ${tenue}`}>
+            /* Muted, and selectable so it can be copied into a bug
+               report. It is the quietest thing on the card because
+               the learner is not its reader. */
+            <Texto estilo="apoyo" selectable>
               {detalle}
-            </Text>
+            </Texto>
           ) : null}
         </>
       ) : null}
-    </View>
+    </Tarjeta>
   );
 }

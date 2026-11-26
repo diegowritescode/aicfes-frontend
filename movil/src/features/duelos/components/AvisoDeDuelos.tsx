@@ -1,5 +1,6 @@
-import { Pressable, Text, View } from 'react-native';
+import { Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
+import { Tarjeta, Texto } from '@/shared/ui';
 import { useMisDuelos } from '../hooks/useDuelos';
 
 /**
@@ -45,15 +46,19 @@ export function AvisoDeDuelos() {
       onPress={() => router.push('/duelos')}
       accessibilityRole="button"
       accessibilityLabel={`${texto}. Abrir duelos.`}
-      className="gap-1 rounded-2xl border border-brand-bright/30 bg-brand-bright/5 p-4"
     >
-      <Text className="text-[11.5px] font-bold uppercase tracking-widest text-brand-bright">
-        Duelos
-      </Text>
-      <Text className="text-[15px] font-semibold leading-6 text-slate-900">{texto}</Text>
-      <Text className="text-[13px] text-slate-500">
-        {porAceptar > 0 ? 'Toca para responder' : 'Toca para jugar tu ronda'}
-      </Text>
+      {/* The tinted panel, from the system rather than an opacity on
+          the accent: `bg-acento/5` was a fifth colour nobody chose,
+          and it measured differently over `fondo` than over `capa`. */}
+      <Tarjeta variante="acento" className="gap-1">
+        <Texto estilo="rotulo" className="text-acento-texto">
+          Duelos
+        </Texto>
+        <Texto estilo="pregunta">{texto}</Texto>
+        <Texto estilo="apoyo">
+          {porAceptar > 0 ? 'Toca para responder' : 'Toca para jugar tu ronda'}
+        </Texto>
+      </Tarjeta>
     </Pressable>
   );
 }

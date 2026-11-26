@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Text, View } from 'react-native';
-import { OpcionRespuesta } from '@/shared/pregunta/components/OpcionRespuesta';
+import { View } from 'react-native';
+import { Contexto, Explicacion, Opcion, Tarjeta, Texto } from '@/shared/ui';
 import { rotarOpciones } from '@/shared/pregunta/model/rotacion';
 import {
   letraAnterior,
@@ -94,53 +94,49 @@ export function TarjetaErrorDelDia({
   });
 
   return (
-    <View className="gap-3 rounded-2xl border border-alerta/40 bg-amber-50/60 p-5">
-      <Text className="text-[12px] font-bold uppercase tracking-widest text-slate-600">
-        Tu pregunta de hoy
-      </Text>
-      <Text className="text-[13px] text-slate-600">{fija.motivo}</Text>
+    /* A plain card, not the alert-bordered amber block this used to
+       be. The question of the day is drawn from what the learner got
+       wrong, so framing it in the colours of a failure notice turns
+       the one invitation we most want tapped into a reproach. The
+       reason it was picked is still said — in words, in `motivo`. */
+    <Tarjeta className="gap-3">
+      <Texto estilo="rotulo">Tu pregunta de hoy</Texto>
+      <Texto estilo="apoyo">{fija.motivo}</Texto>
 
-      {fija.contexto ? (
-        <Text className="text-[13.5px] leading-6 text-slate-700">{fija.contexto}</Text>
-      ) : null}
+      {/* Through `Contexto`, so a Lectura Crítica stimulus collapses.
+          Printed in full it pushed the four options off a dashboard
+          that already has a screen's worth above them. */}
+      {fija.contexto ? <Contexto>{fija.contexto}</Contexto> : null}
 
-      <Text className="text-[15px] font-semibold leading-6 text-slate-900">
+      <Texto estilo="pregunta" className="text-[15px] leading-[22px]">
         {fija.pregunta}
-      </Text>
+      </Texto>
 
-      <View className="gap-2">
+      <View className="gap-[9px]">
         {letrasDisponibles(barajado.opciones).map((l) => (
-          <OpcionRespuesta
+          <Opcion
             key={l}
             letra={l}
-            texto={barajado.opciones[l] ?? ''}
             estado={estadoDeOpcion({
               letra: l,
               elegida,
               correcta: barajado.correcta,
             })}
-            bloqueada={respondida}
-            onElegir={() => responder(l)}
-          />
+            alTocar={respondida ? undefined : () => responder(l)}
+          >
+            {barajado.opciones[l] ?? ''}
+          </Opcion>
         ))}
       </View>
 
       {respondida ? (
-        <View className="gap-2 rounded-xl bg-white/80 p-4">
-          <Text
-            className={`text-[14px] font-bold ${acerto ? 'text-emerald-700' : 'text-rose-700'}`}
-          >
-            {/* Naming the text, not the letter: after a shuffle the
-                letter means nothing outside this card. */}
-            {acerto
-              ? 'Correcta.'
-              : `Era: ${barajado.opciones[barajado.correcta] ?? ''}`}
-          </Text>
-          {explicacion ? (
-            <Text className="text-[13.5px] leading-6 text-slate-700">{explicacion}</Text>
-          ) : null}
-        </View>
+        <Explicacion acerto={acerto}>
+          {/* Naming the text, not the letter: after a shuffle the
+              letter means nothing outside this card. */}
+          {explicacion ??
+            (acerto ? 'Correcta.' : `Era: ${barajado.opciones[barajado.correcta] ?? ''}`)}
+        </Explicacion>
       ) : null}
-    </View>
+    </Tarjeta>
   );
 }

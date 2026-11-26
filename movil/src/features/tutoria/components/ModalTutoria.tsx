@@ -10,7 +10,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Boton } from '@/shared/ui/Boton';
+import { Boton, color } from '@/shared/ui';
 import { Aviso } from '@/shared/ui/Aviso';
 import { NOMBRE_AREA, type Letra } from '@/shared/model/icfes';
 import type { ItemGenerado } from '@/shared/pregunta/api/esquemas';
@@ -85,24 +85,24 @@ export function ModalTutoria({
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={intentarSalir}>
-      <SafeAreaView className="flex-1 bg-white">
-        <View className="flex-row items-start justify-between border-b border-slate-200 px-5 py-4">
+      <SafeAreaView className="flex-1 bg-capa">
+        <View className="flex-row items-start justify-between border-b border-linea px-5 py-4">
           <View className="flex-1">
-            <Text className="text-[17px] font-bold text-slate-900">
+            <Text className="text-[17px] font-bold text-texto">
               Repasemos esta pregunta
             </Text>
-            <Text className="mt-0.5 text-[13px] text-slate-500">
+            <Text className="mt-0.5 text-[13px] text-texto-apagado">
               {esperaDefensa
                 ? 'Primero cuéntame qué pensaste'
                 : `Le quedan ${estado?.turnosRestantes ?? 0} mensajes`}
             </Text>
           </View>
-          <Boton variante="suave" onPress={intentarSalir} etiqueta="Cerrar y seguir">
+          <Boton variante="plano" alTocar={intentarSalir} etiqueta="Cerrar y seguir">
             Cerrar
           </Boton>
         </View>
 
-        <View className="flex-row gap-1 border-b border-slate-200 px-4 py-2">
+        <View className="flex-row gap-1 border-b border-linea px-4 py-2">
           {(
             [
               ['pregunta', 'La pregunta'],
@@ -115,12 +115,12 @@ export function ModalTutoria({
               accessibilityRole="tab"
               accessibilityState={{ selected: pestana === clave }}
               className={`min-h-[44px] flex-1 items-center justify-center rounded-full ${
-                pestana === clave ? 'bg-brand-soft/50' : ''
+                pestana === clave ? 'bg-acento-suave/50' : ''
               }`}
             >
               <Text
                 className={`text-[13.5px] font-semibold ${
-                  pestana === clave ? 'text-brand' : 'text-slate-500'
+                  pestana === clave ? 'text-acento-texto' : 'text-texto-apagado'
                 }`}
               >
                 {etiqueta}
@@ -135,15 +135,15 @@ export function ModalTutoria({
         >
           {pestana === 'pregunta' ? (
             <ScrollView contentContainerClassName="gap-4 px-5 py-5">
-              <Text className="text-[11px] font-bold uppercase tracking-widest text-brand-bright">
+              <Text className="text-[11px] font-bold uppercase tracking-widest text-acento-texto">
                 {NOMBRE_AREA[item.area]}
               </Text>
               {item.contexto ? (
-                <View className="rounded-2xl bg-wash p-4">
-                  <Text className="text-[13.5px] leading-6 text-slate-700">{item.contexto}</Text>
+                <View className="rounded-2xl bg-fondo p-4">
+                  <Text className="text-[13.5px] leading-6 text-texto">{item.contexto}</Text>
                 </View>
               ) : null}
-              <Text className="text-[15px] font-semibold leading-6 text-slate-900">
+              <Text className="text-[15px] font-semibold leading-6 text-texto">
                 {item.pregunta}
               </Text>
               <View className="gap-2">
@@ -153,26 +153,26 @@ export function ModalTutoria({
                     <View
                       key={letra}
                       className={`flex-row gap-3 rounded-xl border p-3 ${
-                        suya ? 'border-brand-bright/60 bg-brand-soft/30' : 'border-slate-200'
+                        suya ? 'border-acento/60 bg-acento-suave/30' : 'border-linea'
                       }`}
                     >
                       <View
                         className={`h-6 w-6 items-center justify-center rounded-full ${
-                          suya ? 'bg-brand-bright' : 'bg-slate-100'
+                          suya ? 'bg-acento' : 'bg-capa-alta'
                         }`}
                       >
                         <Text
                           className={`text-[12px] font-bold ${
-                            suya ? 'text-white' : 'text-slate-500'
+                            suya ? 'text-sobre-acento' : 'text-texto-apagado'
                           }`}
                         >
                           {letra}
                         </Text>
                       </View>
-                      <Text className="flex-1 text-[13.5px] leading-5 text-slate-700">
+                      <Text className="flex-1 text-[13.5px] leading-5 text-texto">
                         {item.opciones[letra]}
                         {suya ? (
-                          <Text className="text-[12px] font-semibold text-brand-bright">
+                          <Text className="text-[12px] font-semibold text-acento-texto">
                             {'  · tu respuesta'}
                           </Text>
                         ) : null}
@@ -188,7 +188,7 @@ export function ModalTutoria({
               contentContainerClassName="gap-3 px-5 py-5"
               onContentSizeChange={() => finRef.current?.scrollToEnd({ animated: true })}
             >
-              {cargando ? <Text className="text-[14px] text-slate-500">Abriendo…</Text> : null}
+              {cargando ? <Text className="text-[14px] text-texto-apagado">Abriendo…</Text> : null}
               {fallo ? <Aviso mensaje={fallo.mensaje} detalle={fallo.detalle} /> : null}
 
               {estado?.mensajes.map((m, i) => (
@@ -196,14 +196,14 @@ export function ModalTutoria({
                   key={i}
                   className={`max-w-[85%] rounded-2xl px-4 py-3 ${
                     m.autor === 'estudiante'
-                      ? 'self-end bg-brand-bright'
-                      : 'self-start bg-slate-100'
+                      ? 'self-end bg-acento'
+                      : 'self-start bg-capa-alta'
                   }`}
                 >
                   <Text
                     accessibilityLabel={`${m.autor === 'estudiante' ? 'Usted' : 'Tutor'}: ${m.contenido}`}
                     className={`text-[14px] leading-6 ${
-                      m.autor === 'estudiante' ? 'text-white' : 'text-slate-800'
+                      m.autor === 'estudiante' ? 'text-sobre-acento' : 'text-texto'
                     }`}
                   >
                     {m.contenido}
@@ -212,7 +212,7 @@ export function ModalTutoria({
               ))}
 
               {enviando ? (
-                <Text accessibilityLiveRegion="polite" className="text-[13px] text-slate-500">
+                <Text accessibilityLiveRegion="polite" className="text-[13px] text-texto-apagado">
                   Pensando…
                 </Text>
               ) : null}
@@ -220,9 +220,9 @@ export function ModalTutoria({
             </ScrollView>
           )}
 
-          <View className="gap-3 border-t border-slate-200 px-5 py-4">
+          <View className="gap-3 border-t border-linea px-5 py-4">
             {sinTurnos ? (
-              <Text className="rounded-xl bg-slate-100 px-4 py-3 text-[13.5px] leading-5 text-slate-600">
+              <Text className="rounded-xl bg-capa-alta px-4 py-3 text-[13.5px] leading-5 text-texto-apagado">
                 Hasta aquí llega esta conversación. Intenta la pregunta otra vez con lo que
                 acaban de hablar.
               </Text>
@@ -236,14 +236,14 @@ export function ModalTutoria({
                   placeholder={
                     esperaDefensa ? `Porque pensé que la ${opcionElegida}…` : 'Escribe tu duda'
                   }
-                  placeholderTextColor="#94a3b8"
+                  placeholderTextColor={color.textoApagado}
                   accessibilityLabel={
                     esperaDefensa ? 'Por qué eligió esa opción' : 'Su mensaje'
                   }
-                  className="max-h-28 min-h-[48px] flex-1 rounded-2xl border border-slate-200 px-4 py-3 text-[14px] text-slate-900"
+                  className="max-h-28 min-h-[48px] flex-1 rounded-2xl border border-linea px-4 py-3 text-[14px] text-texto"
                 />
                 <Boton
-                  onPress={mandar}
+                  alTocar={mandar}
                   deshabilitado={!texto.trim() || !estado}
                   cargando={enviando}
                   etiqueta="Enviar"
@@ -254,10 +254,10 @@ export function ModalTutoria({
             )}
 
             <View className="flex-row justify-between gap-2">
-              <Boton variante="suave" onPress={intentarSalir}>
+              <Boton variante="plano" alTocar={intentarSalir}>
                 Seguir sin repasar
               </Boton>
-              <Boton variante="contorno" onPress={onReintentar}>
+              <Boton variante="contorno" alTocar={onReintentar}>
                 Volver a intentar
               </Boton>
             </View>
@@ -265,20 +265,20 @@ export function ModalTutoria({
         </KeyboardAvoidingView>
 
         <Modal visible={confirmandoSalida} transparent animationType="fade">
-          <View className="flex-1 items-center justify-center bg-slate-900/40 px-6">
-            <View className="w-full max-w-sm gap-4 rounded-3xl bg-white p-6">
-              <Text className="text-[16px] font-bold text-slate-900">¿Salir del repaso?</Text>
+          <View className="flex-1 items-center justify-center bg-black/40 px-6">
+            <View className="w-full max-w-sm gap-4 rounded-3xl bg-capa p-6">
+              <Text className="text-[16px] font-bold text-texto">¿Salir del repaso?</Text>
               {/* True, and reassurance rather than warning: the point is
                   to make leaving safe, not frightening. */}
-              <Text className="text-[13.5px] leading-6 text-slate-600">
+              <Text className="text-[13.5px] leading-6 text-texto-apagado">
                 Tu conversación se guarda. Si vuelves a fallar esta pregunta, la retomas donde
                 la dejaste.
               </Text>
               <View className="gap-2">
-                <Boton onPress={() => setConfirmandoSalida(false)} ancho>
+                <Boton alTocar={() => setConfirmandoSalida(false)}>
                   Seguir repasando
                 </Boton>
-                <Boton variante="suave" onPress={onSalir} ancho>
+                <Boton variante="plano" alTocar={onSalir}>
                   Salir
                 </Boton>
               </View>

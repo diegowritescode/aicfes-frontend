@@ -1,8 +1,19 @@
 import { useCallback, useState } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Redirect, useRouter } from 'expo-router';
-import { Boton } from '@/shared/ui/Boton';
+import {
+  BarraRespuesta,
+  Boton,
+  Chip,
+  Cifra,
+  Contexto,
+  Encabezado,
+  Opcion,
+  Progreso,
+  Tarjeta,
+  Texto,
+} from '@/shared/ui';
 import { Aviso } from '@/shared/ui/Aviso';
 import { NOMBRE_AREA, type Letra } from '@/shared/model/icfes';
 import { useSesion } from '@/features/sesion/hooks/useSesion';
@@ -11,8 +22,6 @@ import {
   useModosContrarreloj,
 } from '@/features/contrarreloj/hooks/useContrarreloj';
 import { comoReloj, vaApurado } from '@/features/simulacro/model/reglas';
-import { Enunciado } from '@/shared/pregunta/components/Enunciado';
-import { OpcionRespuesta } from '@/shared/pregunta/components/OpcionRespuesta';
 
 const LETRAS: readonly Letra[] = ['A', 'B', 'C', 'D'];
 
@@ -40,25 +49,22 @@ export default function RutaContrarreloj() {
 
   if (run.estado === 'terminado') {
     return (
-      <SafeAreaView className="flex-1 bg-wash">
-        <ScrollView contentContainerClassName="gap-6 px-5 py-10">
+      <SafeAreaView className="flex-1 bg-fondo">
+        <ScrollView contentContainerClassName="gap-5 px-5 py-6">
+          <Encabezado rotulo="Contrarreloj terminado" />
           <View className="gap-1.5">
-            <Text className="text-[12px] font-bold uppercase tracking-widest text-slate-400">
-              Contrarreloj terminado
-            </Text>
-            <Text className="text-[32px] font-bold text-slate-900">
-              {run.correctas} de {run.respondidas}
-            </Text>
-            <Text className="text-[15px] text-slate-600">
+            <Cifra valor={run.correctas} unidad={`de ${run.respondidas} correctas`} />
+            <Texto estilo="apoyo">
               {run.seAcaboElTiempo
                 ? 'Se acabó el tiempo. Así es el examen real.'
                 : 'Respondiste todas a tiempo.'}
-            </Text>
+            </Texto>
           </View>
-          <Boton onPress={() => router.replace('/inicio')} ancho>
-            Volver al inicio
-          </Boton>
         </ScrollView>
+
+        <BarraRespuesta>
+          <Boton alTocar={() => router.replace('/inicio')}>Volver al inicio</Boton>
+        </BarraRespuesta>
       </SafeAreaView>
     );
   }
@@ -68,100 +74,128 @@ export default function RutaContrarreloj() {
     const apurado = vaApurado(segundos);
 
     return (
-      <SafeAreaView className="flex-1 bg-wash">
-        <View className="flex-row items-center justify-between border-b border-slate-200 bg-white px-5 py-3">
-          <Text className="text-[13.5px] font-semibold text-slate-700">
-            {run.indice + 1} de {run.items.length}
-          </Text>
+      <SafeAreaView className="flex-1 bg-fondo">
+        {/* The clock stays out of the scroll view, pinned opposite the
+            answer bar. It is the one fact this mode exists to show,
+            and a learner who has scrolled into a long stimulus must
+            not lose sight of it. */}
+        <View className="flex-row items-center justify-end border-b border-linea bg-capa px-5 py-3">
           <View
             accessibilityLiveRegion={apurado ? 'polite' : 'none'}
-            className={`rounded-full px-3 py-1 ${apurado ? 'bg-rose-50' : 'bg-slate-100'}`}
+            className="rounded-pildora bg-capa-alta px-3 py-1"
           >
-            <Text
+            <Texto
+              estilo="cuerpo"
+              style={{ fontFamily: 'Nunito_700Bold' }}
               accessibilityLabel={`Tiempo restante ${comoReloj(segundos)}`}
-              className={`text-[15px] font-bold ${apurado ? 'text-rose-700' : 'text-slate-700'}`}
+              className={apurado ? 'text-fallo' : 'text-texto'}
             >
               {comoReloj(segundos)}
-            </Text>
+            </Texto>
           </View>
         </View>
 
-        <ScrollView contentContainerClassName="gap-5 px-5 py-6">
-          <Enunciado item={item} />
+        <ScrollView contentContainerClassName="gap-4 px-5 py-5">
+          <Encabezado
+            rotulo={NOMBRE_AREA[item.area]}
+            derecha={
+              <Chip tono="acento">
+                {run.indice + 1} de {run.items.length}
+              </Chip>
+            }
+          />
 
-          <View className="gap-2.5" accessibilityRole="radiogroup">
+          <Progreso
+            hechas={run.respondidas}
+            total={run.items.length}
+            dicho={`Pregunta ${run.indice + 1} de ${run.items.length}`}
+          />
+
+          {item.contexto ? <Contexto>{item.contexto}</Contexto> : null}
+
+          <Texto estilo="pregunta">{item.pregunta}</Texto>
+
+          <View className="gap-[9px]" accessibilityRole="radiogroup">
             {LETRAS.filter((l) => item.opciones[l]).map((letra) => (
-              <OpcionRespuesta
+              <Opcion
                 key={letra}
                 letra={letra}
-                texto={item.opciones[letra] ?? ''}
                 estado={elegida === letra ? 'elegida' : 'pendiente'}
-                bloqueada={false}
-                onElegir={() => setElegida(letra)}
-              />
+                alTocar={() => setElegida(letra)}
+              >
+                {item.opciones[letra] ?? ''}
+              </Opcion>
             ))}
           </View>
+        </ScrollView>
 
-          {/* No verdict between questions: stopping to read an
-              explanation is the opposite of what this mode trains. */}
+        {/* No verdict between questions: stopping to read an
+            explanation is the opposite of what this mode trains. */}
+        <BarraRespuesta>
           <Boton
-            onPress={() => {
+            alTocar={() => {
               if (!elegida) return;
               run.responder(elegida);
               setElegida(null);
             }}
             deshabilitado={!elegida}
-            tamano="grande"
-            ancho
           >
-            {run.indice === run.items.length - 1 ? 'Terminar' : 'Siguiente'}
+            {elegida
+              ? run.indice === run.items.length - 1
+                ? 'Terminar'
+                : 'Siguiente'
+              : 'Elige una opción'}
           </Boton>
-        </ScrollView>
+        </BarraRespuesta>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-wash">
-      <ScrollView contentContainerClassName="gap-5 px-5 py-8">
+    <SafeAreaView className="flex-1 bg-fondo">
+      <ScrollView contentContainerClassName="gap-5 px-5 py-6">
         <View className="gap-2">
-          <Text className="text-[26px] font-bold tracking-tight text-slate-900">
-            Contrarreloj
-          </Text>
-          <Text className="text-[14.5px] leading-6 text-slate-600">
+          <Texto estilo="titulo-grande">Contrarreloj</Texto>
+          <Texto estilo="cuerpo" className="text-texto-apagado">
             En el examen real tienes 64 segundos por pregunta. Sube la escalera a tu ritmo.
-          </Text>
+          </Texto>
         </View>
 
         {fallo ? <Aviso mensaje={fallo.mensaje} detalle={fallo.detalle} /> : null}
         {run.fallo ? <Aviso mensaje={run.fallo.mensaje} detalle={run.fallo.detalle} /> : null}
 
         {modos.map((m) => (
-          <View key={m.id} className="gap-2 rounded-2xl border border-slate-200 bg-white p-5">
+          <Tarjeta key={m.id} className="gap-2">
             <View className="flex-row items-baseline justify-between">
-              <Text className="text-[16px] font-bold text-slate-900">{m.title}</Text>
-              <Text className="text-[12px] font-semibold text-slate-400">Nivel {m.nivel}</Text>
+              <Texto estilo="cuerpo" style={{ fontFamily: 'Nunito_800ExtraBold' }}>
+                {m.title}
+              </Texto>
+              <Chip>Nivel {m.nivel}</Chip>
             </View>
-            <Text className="text-[13.5px] leading-6 text-slate-600">{m.description}</Text>
-            <Text className="text-[12.5px] font-semibold text-slate-500">
+            <Texto estilo="cuerpo" className="text-texto-apagado">
+              {m.description}
+            </Texto>
+            <Texto estilo="apoyo" style={{ fontFamily: 'Inter_600SemiBold' }}>
               {m.questions} preguntas · {m.segundosPorPregunta}s cada una ·{' '}
               {m.area ? NOMBRE_AREA[m.area] : 'tu área más floja'}
-            </Text>
-            <Boton
-              variante="contorno"
-              onPress={() => run.empezar.mutate(m.id)}
-              cargando={run.empezar.isPending && run.empezar.variables === m.id}
-              deshabilitado={run.empezar.isPending}
-            >
-              Empezar
-            </Boton>
-          </View>
+            </Texto>
+            <View className="mt-1">
+              <Boton
+                variante="contorno"
+                alTocar={() => run.empezar.mutate(m.id)}
+                cargando={run.empezar.isPending && run.empezar.variables === m.id}
+                deshabilitado={run.empezar.isPending}
+              >
+                Empezar
+              </Boton>
+            </View>
+          </Tarjeta>
         ))}
 
         {run.empezar.isPending ? (
-          <Text className="text-center text-[13px] leading-5 text-slate-500">
+          <Texto estilo="apoyo" className="text-center">
             Preparando tus preguntas. Puede tardar un minuto.
-          </Text>
+          </Texto>
         ) : null}
       </ScrollView>
     </SafeAreaView>
