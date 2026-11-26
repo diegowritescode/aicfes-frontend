@@ -81,7 +81,11 @@ export function usarEmergencia(
  * "Hoy no puedo" with nothing else reads as free.
  */
 export function textoDelBoton(restantes: number): string {
-  if (restantes <= 0) return 'Ya usó sus dos salidas de hoy';
-  if (restantes === 1) return 'Hoy no puedo (le queda 1)';
-  return `Hoy no puedo (le quedan ${restantes})`;
+  /* Second person informal, like the rest of the app. These three
+     said "usted" next to screens that say "tú", which reads as two
+     different apps talking — and to a sixteen-year-old the formal
+     one sounds like a bank. */
+  if (restantes <= 0) return 'Ya usaste tus dos salidas de hoy';
+  if (restantes === 1) return 'Hoy no puedo (te queda 1)';
+  return `Hoy no puedo (te quedan ${restantes})`;
 }

@@ -159,8 +159,8 @@ export function PantallaPeaje({
               expires at midnight. */}
           <Text className="text-[13px] leading-5 text-slate-500">
             Son {MINUTOS_DESBLOQUEO} minutos{' '}
-            <Text className="font-semibold">de uso</Text>, no de reloj: puedes
-            repartirlos en el día. Si sales de la app, se pausan.
+            <Text className="font-semibold">adentro de la app</Text>. Si sales, se
+            pausan y te los guardamos para después.
           </Text>
           {/* Out of what was answered, not out of the pool that was
               drawn. The block takes up to the ceiling from the pool

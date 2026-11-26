@@ -74,11 +74,11 @@ describe('el día es el del estudiante', () => {
 describe('lo que dice el botón', () => {
   it('nombra el costo antes del toque', () => {
     // "Hoy no puedo" on its own reads as free.
-    expect(textoDelBoton(2)).toContain('quedan 2');
-    expect(textoDelBoton(1)).toContain('queda 1');
+    expect(textoDelBoton(2)).toContain('te quedan 2');
+    expect(textoDelBoton(1)).toContain('te queda 1');
   });
 
   it('cuando no quedan, lo dice en vez de ofrecer', () => {
-    expect(textoDelBoton(0)).toBe('Ya usó sus dos salidas de hoy');
+    expect(textoDelBoton(0)).toBe('Ya usaste tus dos salidas de hoy');
   });
 });

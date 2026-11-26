@@ -49,7 +49,10 @@ export const TEXTOS_DEL_ESCUDO = {
      by the shield uninstalls the app rather than answering five
      questions. */
   title: 'Esta app está en pausa',
-  subtitle: 'Cinco preguntas y la abres.',
+  /* No scolding and no cheerleading. A learner who feels judged by
+     the shield uninstalls rather than answering five questions, and
+     one who feels patronised does the same. */
+  subtitle: 'Cinco preguntas y entras.',
   primaryButtonLabel: 'Resolverlas',
   /* Named for what it does now: it opens the choices, rather than
      declining on the learner's behalf. */

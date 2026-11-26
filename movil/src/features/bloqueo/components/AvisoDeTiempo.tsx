@@ -56,8 +56,8 @@ export function AvisoDeTiempo() {
         Te {minutos === 1 ? 'queda' : 'quedan'} {minutos} {minutos === 1 ? 'minuto' : 'minutos'} de uso
       </Text>
       <Text className="text-[13px] leading-5 text-slate-500">
-        Repártelos como quieras: solo corren mientras la app esté
-        abierta. Lo que no uses se pierde a medianoche.
+        Solo corren cuando estás adentro, así que puedes dejarlos para
+        después. A medianoche se van.
       </Text>
     </View>
   );
