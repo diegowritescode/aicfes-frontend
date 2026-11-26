@@ -6,7 +6,7 @@ import { useLote } from '@/features/offline/hooks/useLote';
 import { useCola } from '@/features/offline/hooks/useCola';
 import { useBloqueoPersistido } from '@/features/offline/hooks/useBloqueoPersistido';
 import { PantallaPeaje } from '@/features/offline/components/PantallaPeaje';
-import { POR_BLOQUE } from '@/features/offline/model/lote';
+import { TECHO } from '@/features/offline/model/costoDelError';
 import { MINUTOS_DE_EMERGENCIA, textoDelBoton } from '@/features/offline/model/emergencia';
 import { MINUTOS_DESBLOQUEO } from '@/features/offline/model/peaje';
 import { useBloqueo } from '@/features/bloqueo/hooks/useBloqueo';
@@ -42,7 +42,11 @@ function Bloque() {
   /* Held in a ref so the hook can call it exactly once, on the mount
      where there is nothing to resume. Calling it on every render
      would eat the pool several questions at a time for one block. */
-  const tomar = useRef(() => lote.tomarBloque(POR_BLOQUE));
+  /* Drawn up to the ceiling, not the base: a wrong answer lengthens
+     the block, and questions that were never taken from the pool
+     cannot be asked. Unused ones are not wasted — the pool is a
+     local cache and they are still there next time. */
+  const tomar = useRef(() => lote.tomarBloque(TECHO));
   const bloqueo = useBloqueoPersistido(() => tomar.current());
   const nativo = useBloqueo();
 

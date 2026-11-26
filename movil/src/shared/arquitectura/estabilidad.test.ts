@@ -107,6 +107,23 @@ describe('una pregunta en pantalla no se recarga sola', () => {
     expect(ruta).toMatch(/addEventListener\('hardwareBackPress', \(\) => true\)/);
   });
 
+  it('el peaje cobra por fallar, no solo por tocar', () => {
+    /* Reported on the first day of real use, by the person who built
+       it: "puedo simplemente no leer la pregunta, y darle con mi
+       dedo". Clearing the block only required answering, so the toll
+       charged for tapping and tapping is what it got.
+
+       Two properties hold the rescoring. The block draws up to the
+       ceiling, or a mistake has no question to add. And the screen
+       counts against what the block asks, not what it drew. */
+    const ruta = leer('app/peaje.tsx');
+    expect(ruta).toMatch(/tomarBloque\(TECHO\)/);
+
+    const pantalla = leer('features/offline/components/PantallaPeaje.tsx');
+    expect(pantalla).toMatch(/estaPagado\(\{ avanzadas, fallos, disponibles/);
+    expect(pantalla).toMatch(/de \{pedidas\}/);
+  });
+
   it('una emergencia no borra el avance', () => {
     /* Otherwise the way out doubles as a free reset of work already
        done, and answering two questions then escaping is cheaper than

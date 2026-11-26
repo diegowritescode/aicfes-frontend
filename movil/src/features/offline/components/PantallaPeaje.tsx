@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Boton } from '@/shared/ui/Boton';
@@ -6,7 +6,6 @@ import { OpcionRespuesta, type EstadoOpcion } from '@/shared/pregunta/components
 import type { Letra } from '@/shared/model/icfes';
 import {
   esCorrecta,
-  estaPagado,
   MINUTOS_DESBLOQUEO,
   preguntaActual,
   puedeEmpezar,
@@ -14,6 +13,12 @@ import {
   type EstadoDelPeaje,
   type IntentoDelPeaje,
 } from '../model/peaje';
+import {
+  avisoDeRecargo,
+  cuantasPide,
+  esperaAntesDeSeguir,
+  estaPagado,
+} from '../model/costoDelError';
 import type { PreguntaDelLote } from '../api/esquemas';
 
 /**
@@ -77,18 +82,31 @@ export function PantallaPeaje({
     (letra: Letra) => {
       if (elegida !== null || !pregunta) return;
       setElegida(letra);
+      const acertada = esCorrecta(pregunta, letra);
+      setEsperando(esperaAntesDeSeguir(acertada));
       alResponder({
         itemId: pregunta.id,
         elegida: letra,
-        correcta: esCorrecta(pregunta, letra),
+        correcta: acertada,
         tiempoMs: Date.now() - inicioRef.current,
       });
     },
     [elegida, pregunta, alResponder],
   );
 
+  /* Counts down while the explanation is on screen after a mistake.
+     Zero when the answer was right, so nothing is held. */
+  const [esperando, setEsperando] = useState(0);
+
+  useEffect(() => {
+    if (esperando <= 0) return;
+    const t = setTimeout(() => setEsperando((n) => n - 1), 1000);
+    return () => clearTimeout(t);
+  }, [esperando]);
+
   const seguir = useCallback(() => {
     setElegida(null);
+    setEsperando(0);
     alAvanzar();
     inicioRef.current = Date.now();
   }, [alAvanzar]);
@@ -115,7 +133,13 @@ export function PantallaPeaje({
     );
   }
 
-  if (estaPagado(estado)) {
+  /* How many this block asks, given the mistakes so far. Recomputed
+     rather than stored: a resumed block has to arrive at the same
+     number it had when the learner left. */
+  const fallos = intentos.filter((i) => !i.correcta).length;
+  const pedidas = Math.min(cuantasPide(fallos), preguntas.length);
+
+  if (estaPagado({ avanzadas, fallos, disponibles: preguntas.length })) {
     const r = resumen(estado);
     return (
       <SafeAreaView className="flex-1 bg-wash">
@@ -131,10 +155,15 @@ export function PantallaPeaje({
           <Text className="text-[13px] leading-5 text-slate-400">
             El tiempo corre solo mientras la tengas abierta.
           </Text>
+          {/* Out of what was answered, not out of the pool that was
+              drawn. The block takes up to the ceiling from the pool
+              so a mistake has something to add — reporting against
+              that number would tell someone who answered five
+              perfectly that they got 5 of 8. */}
           <Text className="text-[14.5px] leading-6 text-slate-600">
-            {r.acertadas} de {r.total} correctas.{' '}
-            {r.acertadas === r.total
-              ? 'Las cinco bien.'
+            {r.acertadas} de {r.respondidas} correctas.{' '}
+            {r.acertadas === r.respondidas
+              ? 'Todas bien.'
               : 'Las que fallaste vuelven más adelante.'}
           </Text>
           <Boton onPress={() => alPagar(intentos)} ancho>
@@ -156,7 +185,7 @@ export function PantallaPeaje({
       <ScrollView contentContainerClassName="gap-5 px-5 py-6">
         <View className="gap-1.5">
           <Text className="text-[12px] font-bold uppercase tracking-widest text-slate-400">
-            Pregunta {avanzadas + 1} de {preguntas.length}
+            Pregunta {avanzadas + 1} de {pedidas}
           </Text>
           <Text className="text-[13px] leading-5 text-slate-500">
             Responde y sigues. No importa si fallas.
@@ -218,9 +247,26 @@ export function PantallaPeaje({
           </View>
         ) : null}
 
+        {/* Said when a mistake lengthens the block. Without it the
+            number grows unexplained, and a learner concludes the app
+            is broken or unfair — either way it ends uninstalled. */}
+        {respondida && !acerto ? (
+          <Text className="text-center text-[13px] text-amber-700">
+            {avisoDeRecargo({ fallos, pedidas })}
+          </Text>
+        ) : null}
+
         {respondida ? (
-          <Boton onPress={seguir} ancho>
-            {avanzadas + 1 >= preguntas.length ? 'Terminar' : 'Siguiente'}
+          /* Held for a few seconds after a wrong answer only. A
+              correct one moves on at once: the pause is what a
+              mistake costs in attention, not a tax on everyone that
+              teaches staring at a timer. */
+          <Boton onPress={seguir} ancho deshabilitado={esperando > 0}>
+            {esperando > 0
+              ? `Lee la explicación… ${esperando}`
+              : avanzadas + 1 >= pedidas
+                ? 'Terminar'
+                : 'Siguiente'}
           </Boton>
         ) : null}
 
