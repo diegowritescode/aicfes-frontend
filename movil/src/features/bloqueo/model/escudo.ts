@@ -26,14 +26,23 @@ export const SELECCION = 'peaje';
 export const ACCION_PRINCIPAL = { type: 'openApp' } as const;
 
 /**
- * And the secondary: nothing. Deliberately.
+ * The secondary button also opens the app — to a different screen.
  *
- * The module offers `snooze` here, which would hand out minutes from
- * the shield itself. That is the counted emergency, and it belongs
- * inside the app where it can be counted — a shield button has no
- * memory of how many times it was pressed today.
+ * It used to be `close`, which dismissed the shield and did nothing
+ * else. Reported as a real problem: from the shield there appeared
+ * to be no way out but the exercises, when in fact the counted
+ * emergency was one tap inside the toll. A way out nobody can find
+ * is a way out that does not exist.
+ *
+ * Not `snooze`, which the module also offers and which would hand
+ * out minutes from the shield itself. The shield has no memory of
+ * how many times it was pressed today, so a snooze button is an
+ * unlimited one — and an unlimited way out is the button a
+ * procrastinator presses every time, which is the toll not existing.
+ *
+ * Opening the app keeps the count where the count lives.
  */
-export const ACCION_SECUNDARIA = 'close' as const;
+export const ACCION_SECUNDARIA = { type: 'openApp' } as const;
 
 export const TEXTOS_DEL_ESCUDO = {
   /* Second person, informal, no scolding. A learner who feels judged
@@ -42,7 +51,9 @@ export const TEXTOS_DEL_ESCUDO = {
   title: 'Esta app está en pausa',
   subtitle: 'Cinco preguntas y la abres.',
   primaryButtonLabel: 'Resolverlas',
-  secondaryButtonLabel: 'Ahora no',
+  /* Named for what it does now: it opens the choices, rather than
+     declining on the learner's behalf. */
+  secondaryButtonLabel: 'Ver opciones',
 } as const;
 
 /**

@@ -18,11 +18,15 @@ import { pulsacionQueAbrio, type InteraccionDelEscudo } from '../model/llegadaDe
  */
 export function useLlegadaDelEscudo(): {
   llego: boolean;
+  /* Which button. `primary` goes straight to the exercises;
+     `secondary` opens the choices, where the counted emergency is. */
+  boton: 'primary' | 'secondary' | null;
   /** Which app was shielded, when the module could say. */
   appBloqueada: string | null;
   atendido: () => void;
 } {
   const [llego, setLlego] = useState(false);
+  const [boton, setBoton] = useState<'primary' | 'secondary' | null>(null);
   const [appBloqueada, setAppBloqueada] = useState<string | null>(null);
   /* Guards the window between deciding to navigate and the navigation
      happening — draining is destructive, so a second read in that gap
@@ -44,6 +48,7 @@ export function useLlegadaDelEscudo(): {
     const pulsacion = pulsacionQueAbrio(pulsaciones);
     if (pulsacion) {
       navegando.current = true;
+      setBoton(pulsacion.button);
       setAppBloqueada(pulsacion.target ?? null);
       setLlego(true);
     }
@@ -70,5 +75,5 @@ export function useLlegadaDelEscudo(): {
        are answered, which is long after this runs. */
   }, []);
 
-  return { llego, appBloqueada, atendido };
+  return { llego, boton, appBloqueada, atendido };
 }

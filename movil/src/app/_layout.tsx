@@ -53,7 +53,7 @@ export default function Layout() {
  */
 function LlevarAlPeaje() {
   const router = useRouter();
-  const { llego, appBloqueada, atendido } = useLlegadaDelEscudo();
+  const { llego, boton, appBloqueada, atendido } = useLlegadaDelEscudo();
 
   useEffect(() => {
     if (!llego) return;
@@ -65,13 +65,16 @@ function LlevarAlPeaje() {
     /* `replace`, not `push`: the toll is where this launch belongs,
        and leaving Inicio underneath would make the back gesture —
        which the toll blocks — the one way out of a block. */
-    router.replace('/peaje');
+    /* Each button to its own screen. Sending someone who asked for
+       the choices into the exercises is the opposite of what they
+       tapped. */
+    router.replace(boton === 'secondary' ? '/salida' : '/peaje');
 
     /* Released once the trip is made, so the next block routes too.
        Without this the second time a learner opened Instagram in a
        session left them wherever they were. */
     atendido();
-  }, [llego, appBloqueada, atendido, router]);
+  }, [llego, boton, appBloqueada, atendido, router]);
 
   return null;
 }

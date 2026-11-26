@@ -48,11 +48,16 @@ export function pulsacionQueAbrio(
 ): InteraccionDelEscudo | null {
   const limite = ahora - SEGUNDOS_DE_GRACIA * 1000;
 
-  /* The most recent qualifying one. Several can queue if the learner
+  /* Both buttons open the app now, to different screens: `primary`
+     is "Resolverlas" and `secondary` is "Ver opciones". Filtering to
+     `primary` would send someone who asked for the choices straight
+     into the exercises — which is the opposite of what they tapped.
+
+     The most recent qualifying one. Several can queue if the learner
      tapped twice while the app was starting. */
   return (
     [...interacciones]
-      .filter((i) => i.button === 'primary' && i.timestamp >= limite)
+      .filter((i) => i.timestamp >= limite)
       .sort((a, b) => b.timestamp - a.timestamp)[0] ?? null
   );
 }

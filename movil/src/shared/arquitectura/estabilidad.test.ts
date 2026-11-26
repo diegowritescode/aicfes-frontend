@@ -107,6 +107,27 @@ describe('una pregunta en pantalla no se recarga sola', () => {
     expect(ruta).toMatch(/addEventListener\('hardwareBackPress', \(\) => true\)/);
   });
 
+  it('la salida de emergencia sigue contada', () => {
+    /* The shield's second button opens this screen rather than
+       granting minutes itself. The module offers a native `snooze`
+       that would be one tap fewer — and unlimited, because the
+       shield has no memory of how many times it was pressed today.
+       An unlimited way out is the button a procrastinator presses
+       every time, which is the toll not existing.
+
+       So: the shield opens the app, and the count stays where a
+       count can live. */
+    const escudo = leer('features/bloqueo/model/escudo.ts');
+    expect(escudo).toMatch(/ACCION_SECUNDARIA = \{ type: 'openApp' \}/);
+    expect(escudo).not.toMatch(/type: 'snooze'/);
+
+    const salida = leer('app/salida.tsx');
+    expect(salida).toMatch(/puedeUsarEmergencia\(uso\)/);
+    expect(salida).toMatch(/guardarEmergencias\(siguiente\)/);
+    /* And back does not walk past it, as it does not in the toll. */
+    expect(salida).toMatch(/hardwareBackPress', \(\) => true/);
+  });
+
   it('la limpieza no revoca los minutos ganados', () => {
     /* Reported from a real phone, and the worst failure this feature
        can have: eight questions answered, back to Inicio, open
@@ -172,9 +193,14 @@ describe('una pregunta en pantalla no se recarga sola', () => {
        launch that resumed on another screen. */
     const layout = leer('app/_layout.tsx');
     expect(layout).toMatch(/useLlegadaDelEscudo\(\)/);
+    /* Each shield button to its own screen: Resolverlas to the
+       exercises, Ver opciones to the choices where the counted
+       emergency lives. Sending the second one to the exercises is
+       the opposite of what was tapped. */
+    expect(layout).toMatch(/boton === 'secondary' \? '\/salida' : '\/peaje'/);
     /* `replace`, not `push`: leaving Inicio underneath would make the
-       back gesture — which the toll blocks — the way out of a block. */
-    expect(layout).toMatch(/router\.replace\('\/peaje'\)/);
+       back gesture — which both screens block — the way out. */
+    expect(layout).toMatch(/router\.replace\(/);
   });
 
   it('el escudo abre la app en vez de solo cerrarse', () => {

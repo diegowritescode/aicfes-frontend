@@ -33,10 +33,22 @@ describe('qué cuenta como venir del escudo', () => {
     expect(vieneDelEscudo([], AHORA)).toBe(false);
   });
 
-  it('"Ahora no" no abre el peaje', () => {
-    /* The secondary button declines. A learner who said no and then
-       found the exercises anyway would have been ignored. */
-    expect(vieneDelEscudo([pulsacion('secondary', 1)], AHORA)).toBe(false);
+  it('"Ver opciones" también abre la app', () => {
+    /* Both buttons open AICFES now, to different screens. The
+       secondary used to be `close`, and from the shield there
+       appeared to be no way out but the exercises — when the counted
+       emergency was one tap inside the toll. A way out nobody can
+       find is a way out that does not exist. */
+    expect(vieneDelEscudo([pulsacion('secondary', 1)], AHORA)).toBe(true);
+  });
+
+  it('dice cuál botón fue, para no mandarlos a la pantalla equivocada', () => {
+    /* Sending someone who asked for the choices into the exercises
+       is the opposite of what they tapped. */
+    expect(pulsacionQueAbrio([pulsacion('secondary', 1)], AHORA)?.button).toBe(
+      'secondary',
+    );
+    expect(pulsacionQueAbrio([pulsacion('primary', 1)], AHORA)?.button).toBe('primary');
   });
 
   it('una pulsación de ayer no cuenta', () => {
@@ -61,12 +73,13 @@ describe('cuál pulsación', () => {
     expect(elegida?.timestamp).toBe(AHORA - 2000);
   });
 
-  it('ignora las de "Ahora no" aunque sean más recientes', () => {
+  it('la última gana, sea cual sea el botón', () => {
+    /* Tapping Resolverlas and then Ver opciones means they changed
+       their mind, and the second tap is the one to honour. */
     const elegida = pulsacionQueAbrio(
       [pulsacion('primary', 10), pulsacion('secondary', 1)],
       AHORA,
     );
-    expect(elegida?.button).toBe('primary');
-    expect(elegida?.timestamp).toBe(AHORA - 10_000);
+    expect(elegida?.button).toBe('secondary');
   });
 });
