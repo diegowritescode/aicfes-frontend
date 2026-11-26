@@ -147,13 +147,20 @@ export function PantallaPeaje({
           <Text className="text-[26px] font-bold tracking-tight text-slate-900">
             Listo. {MINUTOS_DESBLOQUEO} minutos de uso.
           </Text>
-          {/* "De uso" is load-bearing: the native budget only runs down
-              while the blocked app is in the foreground, so closing it
-              pauses the clock. Saying "15 minutos" would read as a
-              deadline and make the app look broken when there is time
-              left an hour later. */}
-          <Text className="text-[13px] leading-5 text-slate-400">
-            El tiempo corre solo mientras la tengas abierta.
+          {/* "De uso" is load-bearing and was not enough on its own:
+              the first real user expected the block to come back at a
+              fixed clock time. The budget only runs down while the
+              blocked app is in the foreground — more generous than a
+              timer, and invisible unless it is spelled out. */}
+          {/* A balance, not a session. The budget only runs down
+              while the blocked app is in the foreground, so it can be
+              spent across the whole day — which the first real user
+              worked out before the screen said it. Unspent time
+              expires at midnight. */}
+          <Text className="text-[13px] leading-5 text-slate-500">
+            Son {MINUTOS_DESBLOQUEO} minutos{' '}
+            <Text className="font-semibold">de uso</Text>, no de reloj: puedes
+            repartirlos en el día. Si sales de la app, se pausan.
           </Text>
           {/* Out of what was answered, not out of the pool that was
               drawn. The block takes up to the ceiling from the pool
@@ -166,8 +173,14 @@ export function PantallaPeaje({
               ? 'Todas bien.'
               : 'Las que fallaste vuelven más adelante.'}
           </Text>
+          {/* Not "Abrir la app". Launching another app is a runtime
+              capability (`getCapabilities().openApplication`) that
+              this phone reports as false, so the label promised
+              something that did not happen and the learner landed on
+              Inicio. It is still attempted — where it works, it
+              works — but the words no longer depend on it. */}
           <Boton onPress={() => alPagar(intentos)} ancho>
-            Abrir la app
+            Listo, ya puedes entrar
           </Boton>
         </View>
       </SafeAreaView>

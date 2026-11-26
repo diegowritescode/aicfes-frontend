@@ -11,6 +11,7 @@ import { Menu } from '@/shared/navegacion/Menu';
 import { BotonMenu } from '@/shared/navegacion/BotonMenu';
 import { AvisoDeDenuncias } from '@/features/moderacion/components/AvisoDeDenuncias';
 import { AvisoDeDuelos } from '@/features/duelos/components/AvisoDeDuelos';
+import { AvisoDeTiempo } from '@/features/bloqueo/components/AvisoDeTiempo';
 import { usePerfilDeDuelos } from '@/features/duelos/hooks/useDuelos';
 import { useLote } from '@/features/offline/hooks/useLote';
 import { useCola } from '@/features/offline/hooks/useCola';
@@ -116,6 +117,10 @@ export default function RutaInicio() {
             a challenge sent at noon was invisible until the learner
             happened to open the duels screen. */}
         <AvisoDeDuelos />
+
+        {/* Only while there is earned time left. The budget is
+            usage-based, so nobody can work it out from the clock. */}
+        <AvisoDeTiempo />
 
         {/* Before the error, because with no network the network is the
             explanation — and a failure message about the server is
