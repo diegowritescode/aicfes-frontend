@@ -1,36 +1,36 @@
 import { useEffect, useState } from 'react';
 import { AppState, Text, View } from 'react-native';
-import { nativo } from '../api/nativo';
+import { useBloqueo } from '../hooks/useBloqueo';
+import { textoDeSaldos, type AppConSaldo } from '../model/saldos';
 
 /**
- * How much of the earned time is left.
+ * The earned time, when there is any.
  *
- * The first real user asked whether the block would come back at a
- * fixed clock time, which it does not — the budget only runs down
- * while the blocked app is in the foreground. The honest answer is
- * more generous than a timer and impossible to guess, so it has to
- * be shown somewhere.
+ * The first version read `getRemainingUnlockSeconds`, a single
+ * whole-block number — and said 15 while Instagram had 0, because
+ * answering for a second app had replaced the first app's budget
+ * rather than adding to it.
  *
- * Read on every return to the foreground rather than ticked down:
- * the native side meters in thirty-second steps, so a smooth
- * countdown here would be a lie told once a second. The module's own
- * documentation says not to render it as one.
+ * Now each app has its own grant, and the module cannot report what
+ * is left on a targeted one: it says so, and it is why this shows
+ * what was granted rather than counting down. "Hasta 15 min" is what
+ * can honestly be said; a ticking number would be invented.
  */
 export function AvisoDeTiempo() {
-  const [segundos, setSegundos] = useState(0);
+  const bloqueo = useBloqueo();
+  const [saldos, setSaldos] = useState<readonly AppConSaldo[]>([]);
 
   useEffect(() => {
     let vivo = true;
 
     const leer = async () => {
-      const r = await nativo.segundosRestantes();
-      if (vivo && r.ok) setSegundos(r.valor ?? 0);
+      const s = await bloqueo.leerSaldos();
+      if (vivo) setSaldos(s);
     };
 
     void leer();
 
-    /* Coming back from the blocked app is exactly when the number
-       changed, and the only moment it can be read accurately. */
+    /* Coming back from a blocked app is when this changed. */
     const suscripcion = AppState.addEventListener('change', (estado) => {
       if (estado === 'active') void leer();
     });
@@ -39,25 +39,22 @@ export function AvisoDeTiempo() {
       vivo = false;
       suscripcion.remove();
     };
+    /* `bloqueo` is rebuilt every render; depending on it would loop. */
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  if (segundos <= 0) return null;
-
-  /* Rounded up, and in minutes. Seconds would imply a precision the
-     thirty-second metering does not have. */
-  const minutos = Math.ceil(segundos / 60);
+  const texto = textoDeSaldos(saldos);
+  if (!texto) return null;
 
   return (
     <View className="gap-1 rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
       <Text className="text-[11.5px] font-bold uppercase tracking-widest text-emerald-700">
         Tiempo ganado
       </Text>
-      <Text className="text-[15px] font-semibold leading-6 text-slate-900">
-        Te {minutos === 1 ? 'queda' : 'quedan'} {minutos} {minutos === 1 ? 'minuto' : 'minutos'} de uso
-      </Text>
+      <Text className="text-[15px] font-semibold leading-6 text-slate-900">{texto}</Text>
       <Text className="text-[13px] leading-5 text-slate-500">
-        Solo corren cuando estás adentro, así que puedes dejarlos para
-        después. A medianoche se van.
+        Cada app tiene el suyo y solo corre cuando estás adentro. A medianoche se
+        van.
       </Text>
     </View>
   );

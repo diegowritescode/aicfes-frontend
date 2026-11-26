@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { AppState } from 'react-native';
+import { objetivosParaDesbloquear, type AppConSaldo } from '../model/saldos';
 import { nativo } from '../api/nativo';
+import { almacenPeaje } from '@/core/almacenamiento/peaje';
 import {
   aLegible,
   listoParaBloquear,
@@ -95,6 +97,23 @@ export function useBloqueo() {
        AppState listener already handles. */
   }, [siguiente]);
 
+  const leerSaldos = useCallback(async (): Promise<AppConSaldo[]> => {
+    const guardados = await almacenPeaje.leerSaldos<
+      Array<{ handle: string; segundos: number; desde: number }>
+    >();
+    if (!guardados) return [];
+
+    const ahora = Date.now();
+    /* Dropped at midnight, because that is when the module expires
+       an unspent budget. Anything older than a day is stale by
+       definition. */
+    const deHoy = guardados.filter(
+      (g) => new Date(g.desde).toDateString() === new Date(ahora).toDateString(),
+    );
+
+    return deHoy.map((g) => ({ handle: g.handle, segundos: g.segundos }));
+  }, []);
+
   /**
    * Applies the block to whatever is selected.
    *
@@ -150,6 +169,25 @@ export function useBloqueo() {
       return;
     }
 
+    /* `blockSelection` cancels every active unlock — the module says
+       so, and it means ticking one more app in the picker silently
+       took away time already earned. The grants are reissued for
+       what is still on the clock today.
+       
+       Not a loophole: the budget is what was granted, and reissuing
+       it restores what the tick destroyed rather than adding to it.
+       Whatever was already spent is lost, which is the honest cost
+       of a platform that cannot report consumption. */
+    const vivos = await leerSaldos();
+    if (vivos.length > 0) {
+      for (const saldo of vivos) {
+        await nativo.desbloqueoTemporal(saldo.segundos, {
+          handle: saldo.handle,
+          type: 'application',
+        });
+      }
+    }
+
     /* Asked, not assumed. A call that returned without error is not
        the same as a shield that is up, and this is the one place
        where believing the optimistic answer misleads a learner about
@@ -164,7 +202,7 @@ export function useBloqueo() {
     }
 
     setBloqueado(true);
-  }, [pasos]);
+  }, [pasos, leerSaldos]);
 
   const quitarTodo = useCallback(async () => {
     const r = await nativo.desbloquearTodo();
@@ -172,15 +210,71 @@ export function useBloqueo() {
     setBloqueado(false);
   }, []);
 
-  /** Lifts the shield for a number of minutes of *use*. */
+  /**
+   * Gives every blocked app its own budget of use.
+   *
+   * One grant per app rather than one for the block. A whole-block
+   * grant is replaced by the next one, so answering five questions
+   * for Facebook wiped the eight minutes left on Instagram —
+   * reported from real use, and exactly what the module says
+   * happens.
+   *
+   * One round of questions still unlocks everything. Each app just
+   * keeps its own clock.
+   */
   const conceder = useCallback(async (minutos: number) => {
-    const r = await nativo.desbloqueoTemporal(segundosDeDesbloqueo(minutos));
-    if (!r.ok) {
-      setFallo(r.motivo);
-      return false;
+    const segundos = segundosDeDesbloqueo(minutos);
+    const tokens = await nativo.tokensDe(SELECCION);
+
+    const objetivos = tokens.ok
+      ? objetivosParaDesbloquear(tokens.valor ?? [])
+      : [];
+
+    if (objetivos.length === 0) {
+      /* No handles to target — an older module, a selection made of
+         categories, or a read that failed. The whole-block grant is
+         the fallback: worse when several apps are blocked, and far
+         better than granting nothing after five answered questions. */
+      const r = await nativo.desbloqueoTemporal(segundos);
+      if (!r.ok) setFallo(r.motivo);
+      return r.ok;
     }
-    return true;
+
+    let alguno = false;
+    const concedidos: Array<{ handle: string; segundos: number; desde: number }> = [];
+
+    for (const handle of objetivos) {
+      const r = await nativo.desbloqueoTemporal(segundos, {
+        handle,
+        type: 'application',
+      });
+      if (r.ok) {
+        alguno = true;
+        concedidos.push({ handle, segundos, desde: Date.now() });
+      }
+    }
+
+    /* Written down because the module cannot be asked later: a
+       targeted grant is invisible to `getRemainingUnlockSeconds`. */
+    if (concedidos.length > 0) await almacenPeaje.guardarSaldos(concedidos);
+
+    if (!alguno) setFallo('No pudimos darte el tiempo. Intenta de nuevo.');
+    return alguno;
   }, []);
+
+  /**
+   * How much earned time is left, as far as we can tell.
+   *
+   * The module cannot answer this for targeted grants:
+   * `getRemainingUnlockSeconds` reports only the whole-block budget,
+   * and says so. So this is what was granted, not what remains — it
+   * cannot know how much of it was spent.
+   *
+   * Which is why the screen says "hasta 15 min" rather than counting
+   * down. Showing a number that only goes down when the app is
+   * reopened, while the learner watches reels, would be the same
+   * kind of lie that started this.
+   */
 
   /**
    * A few seconds so the shield does not interrupt the screen it
@@ -232,6 +326,7 @@ export function useBloqueo() {
     aplicar,
     quitarTodo,
     conceder,
+    leerSaldos,
     respiro,
     terminarRespiro,
     abrirApp,

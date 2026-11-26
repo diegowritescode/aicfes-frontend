@@ -21,6 +21,7 @@ const CLAVE_SESION = 'aicfes.peaje.sesion';
 const CLAVE_EMERGENCIAS = 'aicfes.peaje.emergencias';
 const CLAVE_DESBLOQUEO = 'aicfes.peaje.desbloqueoHasta';
 const CLAVE_APP = 'aicfes.peaje.appBloqueada';
+const CLAVE_SALDOS = 'aicfes.peaje.saldos';
 
 async function leerJson<T>(clave: string): Promise<T | null> {
   try {
@@ -67,6 +68,14 @@ export const almacenPeaje = {
   leerAppBloqueada: () => leerJson<string>(CLAVE_APP),
 
   guardarAppBloqueada: (handle: string) => escribirJson(CLAVE_APP, handle),
+
+  /* What was granted to each app, and when. Kept here because the
+     module cannot be asked: a targeted grant is invisible to
+     `getRemainingUnlockSeconds`, which reports only the whole-block
+     budget. */
+  leerSaldos: <T>() => leerJson<T>(CLAVE_SALDOS),
+
+  guardarSaldos: (saldos: unknown) => escribirJson(CLAVE_SALDOS, saldos),
 
   guardarEmergencias: (uso: unknown) => escribirJson(CLAVE_EMERGENCIAS, uso),
 

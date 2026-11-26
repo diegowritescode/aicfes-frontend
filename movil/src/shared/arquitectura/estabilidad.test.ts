@@ -128,6 +128,32 @@ describe('una pregunta en pantalla no se recarga sola', () => {
     expect(salida).toMatch(/hardwareBackPress', \(\) => true/);
   });
 
+  it('cada app bloqueada tiene su propio tiempo', () => {
+    /* Reported from real use with two apps blocked: eight minutes
+       left on Instagram, five questions answered for Facebook, and
+       the eight were gone. The module explains it — "A new call
+       replaces any active unlock" — so a whole-block grant cannot
+       serve more than one app.
+
+       Each grant is targeted now, which the module treats
+       independently: "a second targeted grant on the same target
+       replaces the first", the same one and not every one. */
+    const hook = leer('features/bloqueo/hooks/useBloqueo.ts');
+    expect(hook).toMatch(/desbloqueoTemporal\(segundos, \{[\s\S]{0,80}handle,/);
+
+    /* And `blockSelection` cancels every unlock, so ticking one more
+       app in the picker silently destroyed earned time. The grants
+       are reissued after it. */
+    const aplicar = hook.slice(
+      hook.indexOf('const aplicar'),
+      hook.indexOf('const quitarTodo'),
+    );
+    expect(aplicar).toMatch(/leerSaldos\(\)/);
+    expect(aplicar.indexOf('nativo.bloquear')).toBeLessThan(
+      aplicar.indexOf('leerSaldos()'),
+    );
+  });
+
   it('la limpieza no revoca los minutos ganados', () => {
     /* Reported from a real phone, and the worst failure this feature
        can have: eight questions answered, back to Inicio, open

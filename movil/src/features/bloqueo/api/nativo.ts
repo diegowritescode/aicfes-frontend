@@ -85,9 +85,25 @@ export const nativo = {
 
   desbloquearTodo: () => llamar<void>('unblockAll'),
 
-  /** Lifts the shield for `segundos` of *use*, not of clock. */
-  desbloqueoTemporal: (segundos: number) =>
-    llamar<Record<string, unknown>>('temporaryUnlock', segundos),
+  /**
+   * Lifts the shield for `segundos` of *use*, not of clock.
+   *
+   * With a `target`, only that app — and crucially, a later grant on
+   * a *different* target does not replace it. Without one it is a
+   * single whole-block budget that every new call wipes, which cost
+   * a learner eight earned minutes the first time two apps were
+   * blocked at once.
+   */
+  desbloqueoTemporal: (segundos: number, target?: { handle: string; type: string }) =>
+    llamar<Record<string, unknown>>(
+      'temporaryUnlock',
+      segundos,
+      target ? { target } : undefined,
+    ),
+
+  /** The handles of everything in a selection. */
+  tokensDe: (seleccionId: string) =>
+    llamar<Array<{ handle: string; type: string }> | null>('getTokens', seleccionId),
 
   segundosRestantes: () => llamar<number>('getRemainingUnlockSeconds'),
 
