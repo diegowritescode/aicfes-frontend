@@ -65,7 +65,7 @@ export default function RutaYo() {
         }
       >
         <View className="gap-1">
-          <Texto estilo="titulo">Yo</Texto>
+          <Texto estilo="titulo-grande">Yo</Texto>
           {sesion?.email ? <Texto estilo="apoyo">{sesion.email}</Texto> : null}
         </View>
 
@@ -143,16 +143,43 @@ export default function RutaYo() {
             what the weeks add up to. */}
         <SeccionLogros logros={logros} />
 
-        {/* A setting, not today's work — which is the whole reason
-            this screen exists. */}
-        <TarjetaRecordatorio
-          activo={recordatorio.activo}
-          hora={recordatorio.hora}
-          permiso={recordatorio.permiso}
-          temaDeHoy={recordatorio.temaDeHoy}
-          onActivar={(h) => void recordatorio.activar(h)}
-          onCancelar={() => void recordatorio.cancelar()}
-        />
+        {/* Settings, gathered.
+            Two things that were loose: the reminder has always been
+            here, and blocking apps was filed under Entrenar beside
+            the drills — where it had to carry its own heading to
+            explain that it was not one. Neither is today's work; both
+            are decisions you make once.
+            Blocking goes first because it is the one with teeth. */}
+        <View className="gap-3">
+          <Texto estilo="rotulo">Ajustes</Texto>
+
+          <Tarjeta className="gap-2">
+            <View className="flex-row items-baseline justify-between gap-3">
+              <Texto estilo="cuerpo" style={{ fontFamily: 'Inter_600SemiBold' }}>
+                Bloquear apps
+              </Texto>
+              <Texto estilo="apoyo">5 preguntas por entrada</Texto>
+            </View>
+            <Texto estilo="apoyo">
+              Eliges cuáles apps quedan cerradas. Cuando abres una, el peaje te
+              pide cinco preguntas antes de dejarte pasar.
+            </Texto>
+            <View className="mt-1">
+              <Boton variante="contorno" alTocar={() => router.push('/bloqueo')}>
+                Configurar
+              </Boton>
+            </View>
+          </Tarjeta>
+
+          <TarjetaRecordatorio
+            activo={recordatorio.activo}
+            hora={recordatorio.hora}
+            permiso={recordatorio.permiso}
+            temaDeHoy={recordatorio.temaDeHoy}
+            onActivar={(h) => void recordatorio.activar(h)}
+            onCancelar={() => void recordatorio.cancelar()}
+          />
+        </View>
 
         {/* Only on a phone whose account actually moderates. It was
             behind the drawer, which the tab bar replaced, so without

@@ -191,6 +191,13 @@ export function useContrarrelojRun() {
     segundos,
     respondidas: respuestas.length,
     correctas: respuestas.filter((r) => r.isCorrect).length,
+    /* The run itself, not just its score. Everything needed to say
+       WHICH ones went wrong and on what topic was already here and
+       was thrown away when the screen unmounted: the end screen
+       showed «3 de 5 correctas» and nothing else, so a learner
+       finished a round knowing the number and not one of the
+       questions. */
+    respuestas,
     seAcaboElTiempo,
     empezar,
     responder,

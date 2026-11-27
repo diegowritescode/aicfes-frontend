@@ -106,7 +106,7 @@ export default function RutaInicio() {
       >
         <View className="flex-row items-start justify-between gap-3">
           <View className="flex-1 gap-1">
-            <Texto estilo="titulo">{nombre ? `Hola, ${nombre}` : 'Hola'}</Texto>
+            <Texto estilo="titulo-grande">{nombre ? `Hola, ${nombre}` : 'Hola'}</Texto>
             {/* The validated design says «38 días para el examen»
                 here. Nothing in the API carries an exam date, and a
                 countdown to a date we picked is the one number on

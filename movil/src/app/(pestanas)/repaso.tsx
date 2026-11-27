@@ -156,7 +156,7 @@ export default function RutaRepaso() {
     <SafeAreaView className="flex-1 bg-fondo" edges={['top']}>
       <ScrollView className="flex-1" contentContainerClassName="gap-5 px-5 py-5">
         <View className="gap-1.5">
-          <Texto estilo="titulo">Repaso</Texto>
+          <Texto estilo="titulo-grande">Repaso</Texto>
           <Texto estilo="apoyo">
             Lo que fallaste vuelve aquí hasta que deje de fallarse.
           </Texto>

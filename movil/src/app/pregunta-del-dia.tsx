@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Redirect, useRouter } from 'expo-router';
@@ -28,10 +28,28 @@ export default function RutaPreguntaDelDia() {
 
   const volver = useCallback(() => router.replace('/inicio'), [router]);
 
+  /* The question this screen is showing, kept once it arrives.
+     Answering invalidates `error-del-dia` and the server then answers
+     null, so reading the live value on every render unmounted the
+     card the instant the learner picked an option — taking the
+     explanation with it and replacing it with «ya la respondiste».
+     They answered and never found out why they were wrong, which is
+     the only reason the question of the day exists.
+
+     The card already froze its own copy for exactly this reason; the
+     defence was useless while the parent kept removing it.
+
+     `useState` holds the first non-null one it is given: the query is
+     still loading on the first render, so this cannot be decided at
+     mount. */
+  const [congelada, setCongelada] = useState<typeof pregunta>(null);
+  if (!congelada && esRespondible(pregunta)) setCongelada(pregunta);
+
   if (cargandoSesion) return null;
   if (!autenticado) return <Redirect href="/entrar" />;
 
-  const respondible = esRespondible(pregunta);
+  const mostrada = congelada ?? pregunta;
+  const respondible = esRespondible(mostrada);
 
   return (
     <SafeAreaView className="flex-1 bg-fondo">
@@ -53,9 +71,9 @@ export default function RutaPreguntaDelDia() {
 
         {respondible ? (
           <TarjetaErrorDelDia
-            pregunta={pregunta}
+            pregunta={mostrada}
             alResponder={(elegida, acerto) =>
-              registrar.mutate({ elegida, acerto, pregunta })
+              registrar.mutate({ elegida, acerto, pregunta: mostrada })
             }
           />
         ) : null}

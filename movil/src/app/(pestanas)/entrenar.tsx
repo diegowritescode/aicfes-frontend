@@ -231,22 +231,11 @@ export default function RutaEntrenar() {
           ))}
         </View>
 
-        {/* Its own heading, because it is not a way to practice: you
-            do not answer anything here, you decide which apps charge
-            you five questions. Filed under «Otras formas de
-            practicar» it would read as a sixth drill, and someone
-            looking for a session would open it and find a settings
-            page. */}
-        <View className="gap-3">
-          <Encabezado rotulo="Para obligarte a practicar" />
-          <TarjetaModo
-            titulo="Bloquear apps"
-            dato="5 preguntas por entrada"
-            descripcion="Eliges cuáles apps quedan cerradas. Cuando abres una, el peaje te pide cinco preguntas antes de dejarte pasar."
-            etiquetaBoton="Configurar"
-            alTocar={() => router.push('/bloqueo')}
-          />
-        </View>
+        {/* Blocking apps used to sit here under its own heading. It
+            moved to Yo, into «Ajustes»: this screen is where you come
+            to answer questions, and that one is a settings page you
+            configure once and forget. Its own heading was already an
+            admission that it did not belong among the drills. */}
 
         {examen.preparar.isError ? <Aviso
             mensaje={examen.preparar.error.mensaje}

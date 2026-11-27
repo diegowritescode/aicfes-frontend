@@ -6,7 +6,6 @@ import {
   BarraRespuesta,
   Boton,
   Chip,
-  Cifra,
   Contexto,
   Encabezado,
   Opcion,
@@ -22,6 +21,8 @@ import {
   useModosContrarreloj,
 } from '@/features/contrarreloj/hooks/useContrarreloj';
 import { comoReloj, vaApurado } from '@/features/simulacro/model/reglas';
+import { repasoDeRonda } from '@/features/contrarreloj/model/repaso';
+import { RepasoDeLaRonda } from '@/features/contrarreloj/components/RepasoDeLaRonda';
 
 const LETRAS: readonly Letra[] = ['A', 'B', 'C', 'D'];
 
@@ -82,18 +83,16 @@ export default function RutaContrarreloj() {
   if (!autenticado) return <Redirect href="/entrar" />;
 
   if (run.estado === 'terminado') {
+    /* Built here rather than in the hook: it is a view of the run,
+       and recomputing it on a screen that only renders once costs
+       nothing. */
+    const repaso = repasoDeRonda(run.items, run.respuestas);
+
     return (
       <SafeAreaView className="flex-1 bg-fondo">
         <ScrollView contentContainerClassName="gap-5 px-5 py-6">
-          <Encabezado rotulo="Contrarreloj terminado" />
-          <View className="gap-1.5">
-            <Cifra valor={run.correctas} unidad={`de ${run.respondidas} correctas`} />
-            <Texto estilo="apoyo">
-              {run.seAcaboElTiempo
-                ? 'Se acabó el tiempo. Así es el examen real.'
-                : 'Respondiste todas a tiempo.'}
-            </Texto>
-          </View>
+          <Texto estilo="titulo-grande">Terminaste</Texto>
+          <RepasoDeLaRonda repaso={repaso} seAcaboElTiempo={run.seAcaboElTiempo} />
         </ScrollView>
 
         <BarraRespuesta>

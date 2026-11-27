@@ -8,3 +8,6 @@ dist/
 # copy here would silently override the config it was generated from.
 /android
 /ios
+
+# Contraseña del usuario de demo del informe. Local, nunca versionada.
+.demo-clave-informe.txt
