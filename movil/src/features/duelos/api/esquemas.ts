@@ -58,7 +58,28 @@ export const duelo = z.object({
 
 export const listaDeDuelos = z.array(duelo);
 
-export const resultadoBusqueda = z.array(jugador);
+/**
+ * Somebody found by searching, which is more than `jugador` carries.
+ *
+ * Its own schema rather than a field added to `jugador`: that one is
+ * also the opponent in a duel and the other half of a friendship, and
+ * a description has no business travelling to either. Widening it
+ * would serve the text in places nobody asked for it.
+ *
+ * The description is here because it answers the question somebody
+ * about to send a request is actually asking — «is this the Sofía I
+ * know?». The streak and the win-loss record are not here: those stay
+ * behind an accepted friendship.
+ */
+export const jugadorEncontrado = z.object({
+  id: z.string(),
+  alias: z.string().nullable(),
+  descripcion: z.string().nullable(),
+});
+
+export const resultadoBusqueda = z.array(jugadorEncontrado);
+
+export type JugadorEncontrado = z.infer<typeof jugadorEncontrado>;
 
 /**
  * A duel's question.

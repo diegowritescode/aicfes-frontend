@@ -407,7 +407,11 @@ function Buscador({
       ) : null}
 
       {busqueda.resultados.map((j) => (
-        <FilaDePersona key={j.id} nombre={j.alias ?? 'Rival'}>
+        <FilaDePersona
+          key={j.id}
+          nombre={j.alias ?? 'Rival'}
+          descripcion={j.descripcion}
+        >
           {/* Adding is offered beside challenging, because after one
               duel with someone you will want the second without
               typing their name again. */}
@@ -512,9 +516,21 @@ function FilaDeDuelo({
  */
 function FilaDePersona({
   nombre,
+  descripcion,
   children,
 }: {
   nombre: string;
+  /**
+   * Only search results pass this.
+   *
+   * A name alone cannot answer «is this the Sofía I know?», which is
+   * the question somebody about to send a friend request is actually
+   * asking — and getting it wrong means a request to a stranger. The
+   * streak and the win-loss record stay behind an accepted
+   * friendship: those are a record of how somebody plays, not
+   * something they wrote to be found by.
+   */
+  descripcion?: string | null;
   children: React.ReactNode;
 }) {
   return (
@@ -522,12 +538,22 @@ function FilaDePersona({
       <View className="flex-row items-center justify-between gap-3">
         <View className="flex-1 flex-row items-center gap-3">
           <Avatar nombre={nombre} />
-          <Text
-            style={{ fontFamily: 'Inter_600SemiBold' }}
-            className="flex-1 text-[14px] text-texto"
-          >
-            {nombre}
-          </Text>
+          <View className="flex-1 gap-0.5">
+            <Text
+              style={{ fontFamily: 'Inter_600SemiBold' }}
+              className="text-[14px] text-texto"
+            >
+              {nombre}
+            </Text>
+            {descripcion ? (
+              /* Two lines at most. A 120-character description is
+                 short, but a row that grows with its text makes a
+                 list of results impossible to scan. */
+              <Texto estilo="apoyo" numberOfLines={2}>
+                {descripcion}
+              </Texto>
+            ) : null}
+          </View>
         </View>
         <View className="flex-row items-center gap-1">{children}</View>
       </View>

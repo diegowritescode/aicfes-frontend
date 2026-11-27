@@ -92,8 +92,8 @@ export function PantallaAjustesDeDuelos({ onVolver }: { onVolver: () => void }) 
       <View className="gap-3">
         <Texto estilo="rotulo">Una línea sobre mí</Texto>
         <Texto estilo="apoyo">
-          La ven sus amigos cuando abren su perfil. No escriba su teléfono,
-          su dirección ni su colegio.
+          La ve cualquiera que lo encuentre al buscarlo, no solo sus amigos.
+          No escriba su teléfono, su dirección ni su colegio.
         </Texto>
         <TextInput
           value={descripcion ?? ''}
