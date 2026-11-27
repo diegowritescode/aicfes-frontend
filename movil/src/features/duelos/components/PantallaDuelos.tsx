@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, Text, TextInput, View } from 'react-native';
 import { Avatar, Boton, Chip, Personaje, Tarjeta, Texto } from '@/shared/ui';
 import { Aviso } from '@/shared/ui/Aviso';
@@ -34,6 +34,22 @@ export function PantallaDuelos({
   /* Who is being reported, or null. Held here rather than in each row
      so only one modal can be open. */
   const [denunciando, setDenunciando] = useState<{ id: string; alias: string } | null>(null);
+  /* Open one frame after the panel mounts, never in the same one. A
+     `<Modal>` mounted already visible showed a white screen with only
+     its close button on a real phone: Android builds the modal's
+     window on mount, and children rendered in that frame have nowhere
+     to compose. Reported from the review screen, which had the same
+     shape; `estabilidad.test.ts` now fails on it. */
+  const [denunciaAbierta, setDenunciaAbierta] = useState(false);
+
+  useEffect(() => {
+    if (!denunciando) {
+      setDenunciaAbierta(false);
+      return;
+    }
+    const id = requestAnimationFrame(() => setDenunciaAbierta(true));
+    return () => cancelAnimationFrame(id);
+  }, [denunciando]);
   /* The search panel, folded away until asked for. The screen opens on
      what is waiting, and a text field above that is a question the
      learner with pending duels did not ask. */
@@ -261,10 +277,13 @@ export function PantallaDuelos({
 
       {denunciando ? (
         <ModalDenuncia
-          visible
+          visible={denunciaAbierta}
           jugadorId={denunciando.id}
           alias={denunciando.alias}
-          onCerrar={() => setDenunciando(null)}
+          onCerrar={() => {
+            setDenunciaAbierta(false);
+            setDenunciando(null);
+          }}
         />
       ) : null}
     </ScrollView>

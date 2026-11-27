@@ -194,13 +194,23 @@ export function PantallaRepaso({
   const todas = (['A', 'B', 'C', 'D'] as const).filter(
     (l) => barajado.opciones[l] !== undefined,
   );
-  /* Before answering, all four: the learner has to choose among them.
-     After, only the right one and the one they picked — the other two
-     were never in play, and leaving them pushes the explanation, which
-     is the only part with a measured effect, off the screen. */
-  const letras = respondida
-    ? todas.filter((l) => l === barajado.correcta || l === elegida)
-    : todas;
+  /**
+   * Every option stays, before and after answering.
+   *
+   * This used to drop all but the right answer and the one picked,
+   * to keep the explanation on screen. Reported from a real phone as
+   * the screen breaking: «en cuanto undí una, se crasheó, mostró
+   * solamente dos opciones». Two of four vanishing in the same frame
+   * as the tap reads as a failure, not as a summary — nothing asked
+   * for them to go, and nothing explains it.
+   *
+   * The reason they were dropped is also gone: the button moved out
+   * of the `ScrollView` into `BarraRespuesta`, so the explanation no
+   * longer has to compete with it for the fold. Scrolling past two
+   * greyed-out options costs a flick; believing the app crashed
+   * costs the session.
+   */
+  const letras = todas;
 
   return (
     <View className="flex-1">

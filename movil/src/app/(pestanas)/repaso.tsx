@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Redirect, useRouter } from 'expo-router';
@@ -37,9 +37,42 @@ export default function RutaRepaso() {
   const registrar = useRegistrarRepaso(recargar);
 
   const [enSesion, setEnSesion] = useState(false);
+  /**
+   * Which question the tutor is about, and separately whether it is
+   * open.
+   *
+   * Two pieces of state for what looks like one, because mounting a
+   * `<Modal>` that is already `visible` is what broke this panel on a
+   * real phone: it opened to a white screen with nothing but the
+   * Cerrar button. Android builds the modal's window on mount, and a
+   * child rendered in that same frame has nowhere to compose yet.
+   * `PantallaExamen` keeps the same component mounted and toggles
+   * `visible`, which is why the tutor works there and not here.
+   *
+   * The question is kept after closing so the panel fades out with
+   * its content instead of emptying first. `useTutoria` reads the
+   * item only while `visible`, so a closed panel holds no thread.
+   */
   const [tutor, setTutor] = useState<{ error: ErrorPendiente; elegida: Letra } | null>(
     null,
   );
+  const [tutorAbierto, setTutorAbierto] = useState(false);
+
+  /* Opened one frame after the panel mounts, never in the same one.
+     Mounting a `<Modal>` that is already visible gave a white screen
+     with only the Cerrar button on a real phone: Android builds the
+     modal's window on mount, and a child rendered in that same frame
+     has nowhere to compose. Letting the mount land first, then
+     flipping `visible`, is what `PantallaExamen` does by keeping the
+     component mounted all along. */
+  useEffect(() => {
+    if (!tutor) {
+      setTutorAbierto(false);
+      return;
+    }
+    const id = requestAnimationFrame(() => setTutorAbierto(true));
+    return () => cancelAnimationFrame(id);
+  }, [tutor]);
 
   const volver = useCallback(() => router.replace('/inicio'), [router]);
 
@@ -98,9 +131,18 @@ export default function RutaRepaso() {
           <ModalTutoria
             item={aItemDeTutoria(tutor.error)}
             opcionElegida={tutor.elegida}
-            visible
-            onSalir={() => setTutor(null)}
-            onReintentar={() => setTutor(null)}
+            visible={tutorAbierto}
+            /* Cleared as well as closed. Without this the panel stays
+               mounted holding the same question, and asking about it
+               again changes no state, so nothing reopens. */
+            onSalir={() => {
+              setTutorAbierto(false);
+              setTutor(null);
+            }}
+            onReintentar={() => {
+              setTutorAbierto(false);
+              setTutor(null);
+            }}
           />
         ) : null}
       </SafeAreaView>

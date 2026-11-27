@@ -377,4 +377,51 @@ describe('el simulacro es la excepción, y está justificada', () => {
     const pantalla = leer('features/simulacro/components/PantallaSimulacro.tsx');
     expect(pantalla).not.toMatch(/rotarOpciones/);
   });
+  /**
+   * A `<Modal>` is never mounted already open.
+   *
+   * Reported from a real phone: asking the tutor from the review
+   * screen opened a white screen with nothing on it but the Cerrar
+   * button. The panel was mounted by the tap itself and handed a
+   * literal `visible`, so Android was building the modal's window in
+   * the same frame as its children, and the children had nowhere to
+   * compose.
+   *
+   * The screen that works keeps the panel mounted and toggles a
+   * boolean. This checks for the shape that fails: a `<Modal…>` or a
+   * component whose name starts with `Modal` receiving `visible` with
+   * no value — JSX shorthand for `true`.
+   *
+   * Source text rather than a render, because there is no render
+   * environment here. It is narrow on purpose: it catches the one
+   * spelling that shipped this bug, not every way to write it.
+   */
+  it('ningún Modal se monta ya abierto', () => {
+    const rutas = [
+      'app/(pestanas)/repaso.tsx',
+      'features/examen/components/PantallaExamen.tsx',
+      'features/duelos/components/PantallaDuelos.tsx',
+      'features/simulacro/components/PantallaSimulacro.tsx',
+    ];
+
+    const culpables: string[] = [];
+    for (const ruta of rutas) {
+      const fuente = leer(ruta);
+      /* `<Modal` and `<ModalTutoria`, up to the closing bracket of the
+         opening tag, looking for a bare `visible` among the props. */
+      for (const m of fuente.matchAll(/<Modal[A-Za-z]*\b([^>]*?)\/?>/gs)) {
+        const props = m[1] ?? '';
+        if (/\bvisible\s*(?=[\s/>])/.test(props) && !/\bvisible\s*=/.test(props)) {
+          culpables.push(ruta);
+        }
+      }
+    }
+
+    expect(
+      culpables,
+      `estos montan un Modal ya visible: ${culpables.join(', ')}. ` +
+        `En Android el contenido no alcanza a componerse y sale una pantalla ` +
+        `en blanco. Monta el panel cerrado y pasa visible={algo}.`,
+    ).toEqual([]);
+  });
 });
