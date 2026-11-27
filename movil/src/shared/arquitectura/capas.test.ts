@@ -35,7 +35,12 @@ function archivos(dir: string): string[] {
 
 function importaciones(archivo: string): string[] {
   const texto = readFileSync(archivo, 'utf-8');
-  return [...texto.matchAll(/from '(@\/[^']+)'/g)].map((m) => m[1]!);
+  /* Both quote styles. Prettier writes single ones, so every import
+     in the tree has them — which is exactly why reading only those
+     made this check pass on a violation typed by hand. A rule that
+     can be stepped around by pressing a different key is not a
+     rule. */
+  return [...texto.matchAll(/from ['"](@\/[^'"]+)['"]/g)].map((m) => m[1]!);
 }
 
 describe('las capas', () => {

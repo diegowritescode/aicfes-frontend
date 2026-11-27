@@ -43,6 +43,9 @@ const VIGILADAS = [
   'app/simulacro',
   'features/repaso',
   'features/duelos',
+  /* Written in «tú» from the first line, so it joins the watched set
+     now rather than after somebody notices a «usted» in it. */
+  'features/informe',
 ];
 
 /* Forms that only exist in the formal register. `su` is absent on

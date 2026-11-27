@@ -10,6 +10,7 @@ import { temaMasFlojo } from '@/features/recordatorio/model/mensaje';
 import { useAccionesSesion, useSesion } from '@/features/sesion/hooks/useSesion';
 import { useDesgloseXp, useLogros, usePanel } from '@/features/panel/hooks/usePanel';
 import { SeccionLogros } from '@/features/panel/components/SeccionLogros';
+import { TarjetaInforme } from '@/features/informe/components/TarjetaInforme';
 import { DesgloseXp } from '@/features/panel/components/DesgloseXp';
 import { avanceDeNivel, misionesPendientes } from '@/features/panel/model/reglas';
 
@@ -102,6 +103,13 @@ export default function RutaYo() {
         {/* Right after the level, because that is the number it
             explains. */}
         <DesgloseXp datos={desglose} />
+
+        {/* Above the missions, below the level. The level says how
+            much has been done and the report says how it is going,
+            which is the question somebody opens this screen with;
+            today's challenges are what to do next and read better
+            after it. */}
+        <TarjetaInforme />
 
         {misiones.length > 0 ? (
           <View className="gap-3">

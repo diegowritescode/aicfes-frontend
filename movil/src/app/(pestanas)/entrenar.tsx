@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Redirect, useRouter } from 'expo-router';
+import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 import {
   BarraRespuesta,
   Boton,
@@ -142,7 +142,14 @@ export default function RutaEntrenar() {
   const { cargando, autenticado } = useSesion();
   const examen = useExamen();
 
-  const [area, setArea] = useState<Seleccion>('MIXTO');
+  /* The weekly report links here with the area its plan points at, so
+     «practicar» opens already aimed instead of on the mixed default.
+     Read once as the initial state and not watched: re-applying it on
+     every render would undo a learner who then picked another area. */
+  const { area: areaPedida } = useLocalSearchParams<{ area?: string }>();
+  const [area, setArea] = useState<Seleccion>(() =>
+    AREAS.includes(areaPedida as Area) ? (areaPedida as Area) : 'MIXTO',
+  );
   const [dificultad] = useState<Dificultad>('media');
   const [cantidad, setCantidad] = useState<number>(5);
 
