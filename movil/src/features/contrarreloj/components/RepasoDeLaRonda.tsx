@@ -124,24 +124,43 @@ export function RepasoDeLaRonda({
  */
 function FilaDeRepaso({ pregunta }: { pregunta: PreguntaDelRepaso }) {
   const { item, elegida, correcta, acerto, segundos, tema } = pregunta;
+  const opciones = item.opciones;
 
   return (
     <Tarjeta variante="plana" className="gap-2">
       <Texto estilo="cuerpo">{item.pregunta}</Texto>
 
       <View className="flex-row flex-wrap items-center gap-2">
-        {acerto ? (
-          <Chip tono="ganado">Acertaste</Chip>
-        ) : (
-          <>
-            <Chip tono="fallo">Marcaste {elegida ?? '—'}</Chip>
-            <Chip tono="ganado">Era {correcta}</Chip>
-          </>
-        )}
+        {acerto ? <Chip tono="ganado">Acertaste</Chip> : null}
         {/* The per-question time, which `Answer.tiempoMs` has always
             recorded and nothing ever showed. */}
         {segundos !== null ? <Texto estilo="apoyo">{segundos}s</Texto> : null}
       </View>
+
+      {/* The options themselves, not just their letters.
+          «Marcaste D, era B» is useless by the time the learner is
+          reading it: they answered four questions ago and do not
+          remember what B said. Reported from a phone — «sabe que la
+          correcta era la C, pero no recuerda qué decía la C, entonces
+          queda en las mismas».
+          Both lines, and only these two. The four options in full
+          would turn a review into a re-read of the whole round. */}
+      {!acerto ? (
+        <View className="gap-1">
+          <FilaDeOpcion
+            rotulo="Marcaste"
+            letra={elegida}
+            texto={elegida ? opciones[elegida] : undefined}
+            tono="fallo"
+          />
+          <FilaDeOpcion
+            rotulo="Era"
+            letra={correcta}
+            texto={opciones[correcta]}
+            tono="ganado"
+          />
+        </View>
+      ) : null}
 
       <Texto estilo="apoyo">
         {explicacionDe(item, (elegida ?? correcta) as Letra)}
@@ -149,5 +168,42 @@ function FilaDeRepaso({ pregunta }: { pregunta: PreguntaDelRepaso }) {
 
       {tema ? <Texto estilo="apoyo">Tema: {temaLegible(tema)}</Texto> : null}
     </Tarjeta>
+  );
+}
+
+/**
+ * One option, with its letter and what it actually said.
+ *
+ * The text is what makes the letter mean anything. A bank question
+ * can be missing an option the answer refers to — nothing in the
+ * schema requires every letter to be present — so the text is
+ * optional and the letter alone is still shown rather than rendering
+ * an empty row.
+ */
+function FilaDeOpcion({
+  rotulo,
+  letra,
+  texto,
+  tono,
+}: {
+  rotulo: string;
+  letra: string | null;
+  texto: string | undefined;
+  tono: 'fallo' | 'ganado';
+}) {
+  if (!letra) return null;
+
+  return (
+    <View className="flex-row items-start gap-2">
+      {/* The word, not only the colour. Which row is the mistake and
+          which is the answer has to survive being read by someone who
+          cannot tell the two colours apart. */}
+      <Chip tono={tono}>
+        {rotulo} {letra}
+      </Chip>
+      <View className="flex-1">
+        <Texto estilo="apoyo">{texto ?? '—'}</Texto>
+      </View>
+    </View>
   );
 }

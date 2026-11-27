@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { repasoDeRonda, temaLegible } from './repaso';
 import type { ItemGenerado } from '@/shared/pregunta/api/esquemas';
 import type { RespuestaDada } from '@/shared/pregunta/model/reglas';
@@ -183,5 +185,39 @@ describe('el tema se lee como lo escribiría una persona', () => {
        reads as a variable name, not as a subject. */
     expect(temaLegible('leyes-de-newton')).toBe('leyes de newton');
     expect(temaLegible('razonamiento_cuantitativo')).toBe('razonamiento cuantitativo');
+  });
+});
+
+/**
+ * The review has to be readable on its own.
+ *
+ * Reported from a phone, looking at the finished screen: «el usuario
+ * sabe que la correcta era la C, pero no recuerda qué decía la C,
+ * entonces queda en las mismas». The letters were there and the
+ * options were not — and the options were in the item the screen was
+ * already holding.
+ *
+ * A file-reading check, because this project has no render
+ * environment. It pins that the text is passed, not how it looks.
+ */
+describe('el repaso muestra las opciones, no solo sus letras', () => {
+  const componente = readFileSync(
+    join(__dirname, '../components/RepasoDeLaRonda.tsx'),
+    'utf8',
+  );
+
+  it('pasa el texto de la opción marcada', () => {
+    expect(componente).toMatch(/texto=\{elegida \? opciones\[elegida\] : undefined\}/);
+  });
+
+  it('pasa el texto de la correcta', () => {
+    expect(componente).toMatch(/texto=\{opciones\[correcta\]\}/);
+  });
+
+  it('cada fila dice cuál es cuál con palabras, no solo con color', () => {
+    /* Two rows distinguished only by colour are two identical rows
+       for anyone who cannot tell those colours apart. */
+    expect(componente).toMatch(/rotulo="Marcaste"/);
+    expect(componente).toMatch(/rotulo="Era"/);
   });
 });
