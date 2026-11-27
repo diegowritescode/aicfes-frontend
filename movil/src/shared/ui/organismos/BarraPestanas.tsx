@@ -1,6 +1,6 @@
-import { forwardRef } from 'react';
-import { Pressable, Text, type PressableProps, type View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
+import { useTabTrigger } from 'expo-router/ui';
 import { color } from '../tokens';
 
 /**
@@ -19,17 +19,14 @@ import { color } from '../tokens';
  * exam: those are one task each, and a tab bar there is an invitation
  * to abandon a session halfway. The toll in particular runs over
  * another app and has no «somewhere else» to offer. That exclusion is
- * now structural rather than remembered — those routes live outside
- * `app/(pestanas)/`, so there is no way for the bar to appear on them.
+ * structural rather than remembered — those routes live outside
+ * `app/(pestanas)/`, so the bar cannot appear on them.
  *
- * The bar itself is assembled in `app/(pestanas)/_layout.tsx`, which
- * renders one `PestanaBoton` per entry inside a `TabList`. This file
- * holds the list and the button; the navigator holds the bar. That
- * split is what stopped the bar from blinking on every change: when
- * each screen drew its own copy, switching tabs unmounted one bar and
- * mounted another, and the flicker a learner reported was those two
- * events. Nothing here tracks the current route any more — Expo
- * passes `isFocused` in, because it is the navigator that knows.
+ * The bar is assembled in `app/(pestanas)/_layout.tsx`, which renders
+ * one `PestanaBoton` per entry. This file holds the list and the
+ * button; the navigator holds the bar. That split is what stopped the
+ * bar from blinking on every change: when each screen drew its own
+ * copy, switching tabs unmounted one bar and mounted another.
  */
 
 /* Drawn here as paths rather than pulled from an icon package: five
@@ -62,31 +59,49 @@ export type RutaPestana = Pestana['ruta'];
 /**
  * One tab.
  *
- * Takes a ref and spreads the rest because `TabTrigger asChild` hands
- * it the press handler, the focus state and the accessibility role of
- * a real tab. Declaring `isFocused` separately keeps it out of that
- * spread: it is not a `Pressable` prop, and React Native warns when
- * an unknown one reaches the host component.
+ * Driven by `useTabTrigger` rather than by wrapping the button in a
+ * `<TabTrigger asChild>`. That wrapper was tried first and shipped
+ * the bar broken: the five tabs rendered as one horizontal run of
+ * icons and labels, nothing marked the current tab, and tapping did
+ * nothing at all.
+ *
+ * Three separate faults, one cause. `asChild` is implemented with
+ * `@radix-ui/react-slot`, a web component: on React Native it does
+ * not clone a `Pressable`, so neither the press handler nor the
+ * focused flag ever arrived. And the trigger applies its own
+ * `{ flexDirection: 'row', justifyContent: 'space-between' }`, which
+ * in web CSS would be overridden by the child's class but here wins
+ * outright — NativeWind compiles `className` to a style object, and a
+ * style the parent passes down lands on top of it. That is the same
+ * failure the design system already documents for inline styles,
+ * arriving from a library instead of from our own code.
+ *
+ * The hook hands back exactly what the wrapper was supposed to
+ * deliver — `onPress`, `onLongPress`, `isFocused` — with no component
+ * in between and no style of its own, so the button below is plain
+ * React Native and the design survives intact.
  */
-export const PestanaBoton = forwardRef<
-  React.ElementRef<typeof View>,
-  PressableProps & { pestana: Pestana; isFocused?: boolean }
->(function PestanaBoton({ pestana, isFocused = false, ...resto }, ref) {
+export function PestanaBoton({ pestana }: { pestana: Pestana }) {
+  const { triggerProps } = useTabTrigger({ name: pestana.nombre });
+  const activa = triggerProps.isFocused;
+
   return (
     <Pressable
-      ref={ref}
+      onPress={triggerProps.onPress}
+      onLongPress={triggerProps.onLongPress}
       accessibilityRole="tab"
-      accessibilityState={{ selected: isFocused }}
+      accessibilityState={{ selected: activa }}
       accessibilityLabel={pestana.nombre}
       /* 44pt minimum, even though the glyph is 21: the row is at the
-         bottom edge where thumbs are least accurate. */
-      className="min-h-toque min-w-[56px] items-center justify-center gap-[3px]"
-      {...resto}
+         bottom edge where thumbs are least accurate. `flex-1` so the
+         five share the width evenly — without it they bunch up
+         against each other, which is how the broken bar looked. */
+      className="min-h-toque flex-1 items-center justify-center gap-[3px]"
     >
       <Svg width={21} height={21} viewBox="0 0 24 24">
         <Path
           d={ICONOS[pestana.icono]}
-          stroke={isFocused ? color.acentoTexto : color.textoApagado}
+          stroke={activa ? color.acentoTexto : color.textoApagado}
           strokeWidth={1.9}
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -95,10 +110,10 @@ export const PestanaBoton = forwardRef<
       </Svg>
       <Text
         style={{ fontFamily: 'Inter_600SemiBold' }}
-        className={`text-[10px] ${isFocused ? 'text-acento-texto' : 'text-texto-apagado'}`}
+        className={`text-[10px] ${activa ? 'text-acento-texto' : 'text-texto-apagado'}`}
       >
         {pestana.nombre}
       </Text>
     </Pressable>
   );
-});
+}

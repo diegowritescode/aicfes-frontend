@@ -165,11 +165,40 @@ describe('las pantallas de entrada llevan a alguna parte', () => {
     expect(
       layout,
       'el layout de pestañas recorre PESTANAS pero no pasa la ruta de cada entrada a su href',
-    ).toMatch(/href=\{[a-z]+\.ruta\}/);
+    ).toMatch(/href:\s*[a-z]+\.ruta/);
 
-    const literales = [...layout.matchAll(/href=["'{]\s*["'`](\/[^"'`]*)["'`]/g)].map(
-      (m) => m[1]!,
-    );
+    /* Both spellings: `href={p.ruta}` when the triggers are JSX and
+       `href: p.ruta` when they are data. The layout has been written
+       each way, and the check has to survive the next change of
+       mind — what matters is that no path is typed by hand, not
+       which syntax carries it. */
+    /**
+     * No `asChild` anywhere in the bar.
+     *
+     * Expo implements that prop with `@radix-ui/react-slot`, which is
+     * a web component. On React Native it does not clone a
+     * `Pressable`, so neither `onPress` nor `isFocused` reaches the
+     * child — and `TabTrigger` additionally forces
+     * `flexDirection: 'row'` onto whatever it wraps, which beats the
+     * class NativeWind compiled because a style passed down wins over
+     * a compiled one. The same hazard the design system already
+     * documents for inline styles, arriving from a library.
+     *
+     * It shipped: five tabs strung out in a single horizontal row,
+     * nothing marking the current tab, and taps doing nothing at all.
+     * Everything typechecked and every test passed, because nothing
+     * here renders. Until something does, this is the guard.
+     */
+    expect(
+      layout.includes('asChild'),
+      'el layout de pestañas usa asChild: en React Native no entrega onPress ' +
+        'ni isFocused, e impone flexDirection row sobre el diseño. ' +
+        'Usa useTabsWithTriggers y useTabTrigger en su lugar.',
+    ).toBe(false);
+
+    const literales = [
+      ...layout.matchAll(/href[=:]\s*\{?\s*["'`](\/[^"'`]*)["'`]/g),
+    ].map((m) => m[1]!);
     expect(
       literales,
       `el layout de pestañas escribe rutas a mano: ${literales.join(', ')}. ` +
