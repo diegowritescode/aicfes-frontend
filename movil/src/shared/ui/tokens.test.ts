@@ -3,6 +3,24 @@ import { readFileSync, readdirSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { color, control } from './tokens';
 
+/* Every screen and component, not just `shared/ui`: the files that
+   shipped these bugs were features'. Shared by the checks below. */
+const RAIZ_SRC = path.resolve(new URL('../..', import.meta.url).pathname);
+
+function archivosDeInterfaz(): string[] {
+  const salida: string[] = [];
+  const recorrer = (dir: string) => {
+    for (const e of readdirSync(dir)) {
+      if (e === 'node_modules') continue;
+      const completo = path.join(dir, e);
+      if (statSync(completo).isDirectory()) recorrer(completo);
+      else if (/\.tsx$/.test(e) && !/\.test\./.test(e)) salida.push(completo);
+    }
+  };
+  recorrer(RAIZ_SRC);
+  return salida;
+}
+
 /**
  * The tokens, checked rather than trusted.
  *
@@ -197,24 +215,6 @@ describe('ningún color del sistema lleva opacidad', () => {
     'fallo', 'fallo-suave', 'alerta', 'alerta-suave',
   ];
 
-  /* Every screen and component, not just `shared/ui`: the file that
-     shipped this bug was a feature's. */
-  const RAIZ_SRC = path.resolve(new URL('../..', import.meta.url).pathname);
-
-  function archivosDeInterfaz(): string[] {
-    const salida: string[] = [];
-    const recorrer = (dir: string) => {
-      for (const e of readdirSync(dir)) {
-        if (e === 'node_modules') continue;
-        const completo = path.join(dir, e);
-        if (statSync(completo).isDirectory()) recorrer(completo);
-        else if (/\.tsx$/.test(e) && !/\.test\./.test(e)) salida.push(completo);
-      }
-    };
-    recorrer(RAIZ_SRC);
-    return salida;
-  }
-
   it('ni en bg-, text-, border- de ninguna pantalla', () => {
     const culpables: string[] = [];
     /* Longest first: `acento-suave` must match before `acento`, or
@@ -247,6 +247,86 @@ describe('ningún color del sistema lleva opacidad', () => {
         `Los tokens vienen de un objeto JS y la opacidad sobre ellos no es ` +
         `fiable en el dispositivo: el panel del tutor dejó de renderizar por ` +
         `esto. Usa el token tintado (acento-suave, ganado-suave, fallo-suave).`,
+    ).toEqual([]);
+  });
+});
+
+/**
+ * A button sharing a row says so.
+ *
+ * `Boton` defaults to `w-full`, which is right for one that owns its
+ * line and wrong for one in a row: it claims the whole width and
+ * flattens whatever sits beside it.
+ *
+ * It emptied the tutor panel on a real phone. The header is a
+ * `flex-row` holding a title and a Cerrar button; the button took
+ * every pixel, the title collapsed to zero width, and everything
+ * below was pushed off. A dump of the screen had ten nodes and one
+ * piece of text. No exception was thrown and no test failed, which
+ * is why it survived two wrong fixes before the device was read.
+ *
+ * Matched on the source text: a `flex-row` container whose children
+ * include a `<Boton` with no `ancho`. It is narrow by design — it
+ * reads one level of nesting, not every layout — and it catches the
+ * shape that shipped.
+ */
+describe('un botón que comparte fila no reclama todo el ancho', () => {
+  it('cada Boton dentro de un flex-row lleva ancho={false}', () => {
+    const culpables: string[] = [];
+
+    for (const archivo of archivosDeInterfaz()) {
+      const fuente = readFileSync(archivo, 'utf8');
+      const sinComentarios = fuente
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+        .replace(/^\s*\/\/.*$/gm, '');
+
+      /* The `<View>` that actually encloses each `<Boton`, found by
+         walking the opening and closing tags and keeping a stack —
+         not by taking the last `<View` before it, which is usually a
+         sibling that already closed. That shortcut was the first
+         version of this check, and it missed the very header that
+         shipped the bug.
+
+         Deliberately shallow all the same: it reads `<View>` nesting
+         and nothing else. A full JSX parse would catch more and would
+         be a parser living in a test file. */
+      const pila: Array<{ fila: boolean; hijos: number }> = [];
+
+      for (const t of sinComentarios.matchAll(/<View\b([^>]*)>|<\/View>|<Boton\b([^>]*)>/g)) {
+        const texto = t[0];
+
+        if (texto === '</View>') {
+          pila.pop();
+          continue;
+        }
+
+        if (texto.startsWith('<Boton')) {
+          const props = t[2] ?? '';
+          const dentro = pila[pila.length - 1];
+          if (dentro) {
+            if (dentro.fila && dentro.hijos > 0 && !/\bancho=/.test(props)) {
+              culpables.push(path.relative(RAIZ_SRC, archivo));
+            }
+            dentro.hijos += 1;
+          }
+          continue;
+        }
+
+        /* A `<View … />` closes itself: it is a sibling, never a
+           parent. */
+        const props = t[1] ?? '';
+        const padre = pila[pila.length - 1];
+        if (padre) padre.hijos += 1;
+        if (props.trimEnd().endsWith('/')) continue;
+        pila.push({ fila: /\bflex-row\b/.test(props), hijos: 0 });
+      }
+    }
+
+    expect(
+      [...new Set(culpables)],
+      `estos ponen un Boton en una fila sin ancho={false}: ${[...new Set(culpables)].join(', ')}. ` +
+        `El botón reclama w-full y aplasta a lo que tiene al lado: así se vació ` +
+        `el panel del tutor, que abrió mostrando solo su botón de cerrar.`,
     ).toEqual([]);
   });
 });

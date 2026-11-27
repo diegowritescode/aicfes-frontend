@@ -36,7 +36,17 @@ const LETRAS: readonly Letra[] = ['A', 'B', 'C', 'D'];
  * on the conversation, because that is what the learner came for.
  */
 
-/* No opacity suffix on a token colour anywhere in this file.
+/* Every `Boton` inside a row carries `ancho={false}`.
+   The default is `w-full`, which is right for a button that owns its
+   line and wrong for one sharing a row: it claims the whole width and
+   flattens its siblings. That is what emptied this panel on a real
+   phone — it opened showing nothing but Cerrar, and a dump of the
+   screen had ten nodes and one piece of text. The title beside the
+   button had been squeezed to zero width, and everything below it
+   pushed off. `PantallaSimulacro` passes `ancho={false}` on every
+   button in a row, which is why its modal works and this one did not.
+
+   No opacity suffix on a token colour anywhere in this file.
    `bg-acento-suave/50` and `border-acento/60` were the last three in
    the app: the tinted surfaces come from the system
    (`acento-suave`), not from an alpha on the accent, which
@@ -104,7 +114,7 @@ export function ModalTutoria({
                 : `Le quedan ${estado?.turnosRestantes ?? 0} mensajes`}
             </Text>
           </View>
-          <Boton variante="plano" alTocar={intentarSalir} etiqueta="Cerrar y seguir">
+          <Boton variante="plano" ancho={false} alTocar={intentarSalir} etiqueta="Cerrar y seguir">
             Cerrar
           </Boton>
         </View>
@@ -246,6 +256,7 @@ export function ModalTutoria({
                   className="max-h-28 min-h-[48px] flex-1 rounded-2xl border border-linea px-4 py-3 text-[14px] text-texto"
                 />
                 <Boton
+                  ancho={false}
                   alTocar={mandar}
                   deshabilitado={!texto.trim() || !estado}
                   cargando={enviando}
@@ -257,10 +268,10 @@ export function ModalTutoria({
             )}
 
             <View className="flex-row justify-between gap-2">
-              <Boton variante="plano" alTocar={intentarSalir}>
+              <Boton variante="plano" ancho={false} alTocar={intentarSalir}>
                 Seguir sin repasar
               </Boton>
-              <Boton variante="contorno" alTocar={onReintentar}>
+              <Boton variante="contorno" ancho={false} alTocar={onReintentar}>
                 Volver a intentar
               </Boton>
             </View>

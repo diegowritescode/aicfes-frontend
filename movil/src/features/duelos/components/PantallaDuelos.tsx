@@ -260,7 +260,7 @@ export function PantallaDuelos({
           agregando={amigos.pidiendo}
         />
       ) : (
-        <Boton variante={vacio ? 'principal' : 'contorno'} alTocar={() => setBuscando(true)}>
+        <Boton ancho={false} variante={vacio ? 'principal' : 'contorno'} alTocar={() => setBuscando(true)}>
           Buscar a alguien
         </Boton>
       )}

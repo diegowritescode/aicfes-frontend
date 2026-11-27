@@ -182,7 +182,7 @@ function TarjetaDenuncia({
         <Boton variante="plano" deshabilitado={ocupado} alTocar={onRevisada}>
           Revisada
         </Boton>
-        <Boton variante="contorno" deshabilitado={ocupado} alTocar={onDescartada}>
+        <Boton ancho={false} variante="contorno" deshabilitado={ocupado} alTocar={onDescartada}>
           No había nada
         </Boton>
       </View>
@@ -204,7 +204,7 @@ function TarjetaDenuncia({
               >
                 Sí, retirar
               </Boton>
-              <Boton
+              <Boton ancho={false}
                 variante="contorno"
                 alTocar={() => setConfirmarRetiro(false)}
               >
@@ -265,7 +265,7 @@ function PedirToken({
 
       {fallo ? <Aviso mensaje={fallo} /> : null}
 
-      <Boton
+      <Boton ancho={false}
         deshabilitado={valor.trim().length === 0}
         alTocar={async () => {
           const ok = await onGuardar(valor);
@@ -276,7 +276,7 @@ function PedirToken({
         Guardar
       </Boton>
 
-      <Boton variante="contorno" alTocar={onVolver}>
+      <Boton ancho={false} variante="contorno" alTocar={onVolver}>
         Volver
       </Boton>
     </ScrollView>

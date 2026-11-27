@@ -232,7 +232,7 @@ function Marcador({
         </ScrollView>
 
         <BarraRespuesta>
-          <Boton alTocar={onSalir}>Listo</Boton>
+          <Boton ancho={false} alTocar={onSalir}>Listo</Boton>
         </BarraRespuesta>
       </View>
     );
@@ -301,11 +301,11 @@ function Marcador({
           of a duel with someone you know. */}
       <BarraRespuesta>
         {onRevancha ? (
-          <Boton alTocar={onRevancha} cargando={retando} deshabilitado={retando}>
+          <Boton ancho={false} alTocar={onRevancha} cargando={retando} deshabilitado={retando}>
             Revancha
           </Boton>
         ) : null}
-        <Boton variante={onRevancha ? 'plano' : 'principal'} alTocar={onSalir}>
+        <Boton ancho={false} variante={onRevancha ? 'plano' : 'principal'} alTocar={onSalir}>
           Volver
         </Boton>
       </BarraRespuesta>

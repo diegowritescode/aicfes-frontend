@@ -168,7 +168,7 @@ export function PantallaAjustesDeDuelos({ onVolver }: { onVolver: () => void }) 
         <Texto estilo="apoyo" className="text-center">Moderación</Texto>
       </Pressable>
 
-      <Boton variante="contorno" alTocar={onVolver}>
+      <Boton ancho={false} variante="contorno" alTocar={onVolver}>
         Volver
       </Boton>
     </ScrollView>
