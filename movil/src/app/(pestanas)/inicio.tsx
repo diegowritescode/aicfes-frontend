@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { RefreshControl, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Redirect, useRouter } from 'expo-router';
-import { Avatar, Boton, Chip, FilaMateria, Tarjeta, Texto } from '@/shared/ui';
+import { Avatar, Boton, Tarjeta, Texto } from '@/shared/ui';
 import { Aviso } from '@/shared/ui/Aviso';
 import { AvisoConexion } from '@/shared/conexion/AvisoConexion';
 import { EsqueletoPanel } from '@/shared/ui/Esqueleto';
@@ -18,7 +18,7 @@ import { useSesion } from '@/features/sesion/hooks/useSesion';
 import { useErrorDelDia, usePanel } from '@/features/panel/hooks/usePanel';
 import { ResumenErrorDelDia } from '@/features/panel/components/ResumenErrorDelDia';
 import { esRespondible } from '@/features/panel/model/errorDelDia';
-import { filasDeArea, muestraRacha } from '@/features/panel/model/reglas';
+import { areaMasFloja } from '@/features/panel/model/reglas';
 
 /**
  * The dashboard.
@@ -70,7 +70,8 @@ export default function RutaInicio() {
   if (cargandoSesion) return null;
   if (!autenticado) return <Redirect href="/entrar" />;
 
-  const filas = panel ? filasDeArea(panel) : [];
+  /* The one subject this screen names, or null. */
+  const floja = panel ? areaMasFloja(panel) : null;
 
   /* The server knows an email and no name. The part before the `@` is
      the closest thing to one the app has, and «Hola, diego» reads as a
@@ -104,34 +105,20 @@ export default function RutaInicio() {
           <RefreshControl refreshing={cargando} onRefresh={() => void recargar()} />
         }
       >
-        <View className="flex-row items-start justify-between gap-3">
-          <View className="flex-1 gap-1">
-            <Texto estilo="titulo-grande">{nombre ? `Hola, ${nombre}` : 'Hola'}</Texto>
-            {/* The validated design says «38 días para el examen»
-                here. Nothing in the API carries an exam date, and a
-                countdown to a date we picked is the one number on
-                this screen a learner can check against reality and
-                catch us inventing. The line stays out until the
-                backend sends one. */}
-            {/* Said out loud, because a learner who knows they skipped
-                yesterday and sees the streak unbroken would otherwise
-                think the number is wrong. */}
-            {panel && muestraRacha(panel) && panel.streak.perdonUsado ? (
-              <Texto estilo="apoyo" className="text-ganado">
-                Te perdonamos un día
-              </Texto>
-            ) : null}
-          </View>
+        {/* The greeting, and nothing measured beside it.
+            The streak chip used to sit here. It is not a number this
+            screen needs: a dashboard whose job is getting somebody
+            into practice does not also have to tell them how they are
+            doing, and «Yo» is the tab for that. The streak, the
+            forgiven day and the longest run all live there now,
+            together instead of split across two screens.
 
-          {/* A streak of zero is a reproach, not encouragement. */}
-          {panel && muestraRacha(panel) ? (
-            <Chip tono="ganado">
-              {panel.streak.currentDays === 1
-                ? '1 día'
-                : `${panel.streak.currentDays} días`}
-            </Chip>
-          ) : null}
-        </View>
+            The validated design puts «38 días para el examen» here.
+            Nothing in the API carries an exam date, and a countdown to
+            a date we picked is the one number a learner can check
+            against reality and catch us inventing. It stays out until
+            the backend sends one. */}
+        <Texto estilo="titulo-grande">{nombre ? `Hola, ${nombre}` : 'Hola'}</Texto>
 
         {/* Above the learner's own numbers, and only on a phone that
             holds a moderation token. Reports are the one thing here
@@ -216,34 +203,35 @@ export default function RutaInicio() {
           <AvisoDeDuelos />
         )}
 
-        {panel ? (
-          <View className="gap-3">
-            <Texto estilo="rotulo">Tus materias</Texto>
+        {/* One line where five rows with percentages used to be.
+            Those moved to «Yo» intact — nothing was deleted — and what
+            is left is the only thing this screen has to decide: which
+            subject. A learner reading five percentages to work that
+            out was doing the screen's job for it.
 
-            {/* One card holding the rows, not a card each. Five
-                bordered cards in a column made five subjects read as
-                five separate verdicts; they are one picture of where
-                the learner stands, and `filasDeArea` already puts the
-                weakest at the top. */}
-            <Tarjeta className="gap-[14px]">
-              {filas.map((f) => (
-                <FilaMateria
-                  key={f.area}
-                  nombre={NOMBRE_AREA[f.area]}
-                  porcentaje={f.porcentaje}
-                  medida={f.medida}
-                />
-              ))}
-            </Tarjeta>
-          </View>
+            Null when nothing is measured yet, and null when the
+            weakest subject is above 85%: naming one anyway would make
+            the dashboard something that always has a complaint. */}
+        {floja ? (
+          <Texto estilo="apoyo">
+            Lo más flojo: {NOMBRE_AREA[floja.area]}
+          </Texto>
         ) : null}
 
         {/* The screen's one reason to exist. Inside the scroll rather
             than pinned above the tab bar: the dashboard is read top to
-            bottom and this is its conclusion, not a toolbar — and two
-            fixed bars stacked at the bottom leave the subjects reading
-            through a 150px gap. */}
-        <Boton alTocar={() => router.push('/entrenar')}>Practicar</Boton>
+            bottom and this is its conclusion, not a toolbar.
+
+            Carries the weak area, so the button does what the line
+            above it just said. A dashboard that names a subject and
+            then opens a generic picker has named it for nothing. */}
+        <Boton
+          alTocar={() =>
+            router.push(floja ? `/entrenar?area=${floja.area}` : '/entrenar')
+          }
+        >
+          {floja ? `Practicar ${NOMBRE_AREA[floja.area]}` : 'Practicar'}
+        </Boton>
       </ScrollView>
 
     </SafeAreaView>

@@ -37,6 +37,36 @@ export function filasDeArea(panel: Panel): FilaArea[] {
     });
 }
 
+/**
+ * The subject to practise next, if there is one worth naming.
+ *
+ * The dashboard used to carry all five with their percentages. Those
+ * moved to «Yo», the tab for looking at yourself, and what belongs on
+ * a screen whose only job is getting a learner into practice is the
+ * one decision it has to make: which subject.
+ *
+ * Returns null when nothing has been measured. «Lo más flojo:
+ * Matemáticas» said to somebody who has never answered a maths
+ * question is not a finding, it is an alphabetical accident — and
+ * `filasDeArea` sorts unmeasured areas last for exactly that reason.
+ *
+ * Also null when every measured area is at 85% or better. At that
+ * point the weakest subject is not weak, and naming one anyway turns
+ * a dashboard into something that always has a complaint.
+ */
+export function areaMasFloja(panel: Panel): FilaArea | null {
+  const medidas = filasDeArea(panel).filter((f) => f.medida);
+  const primera = medidas[0];
+
+  if (!primera) return null;
+  if (primera.porcentaje >= UMBRAL_SIN_QUEJA) return null;
+
+  return primera;
+}
+
+/** Above this, the weakest subject is not weak enough to name. */
+const UMBRAL_SIN_QUEJA = 85;
+
 /** How far through the current level, as a fraction. */
 export function avanceDeNivel(panel: Panel): number {
   const meta = panel.level.nextLevelXp;

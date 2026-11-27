@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { avanceDeNivel, filasDeArea, misionesPendientes, muestraRacha } from './reglas';
+import {
+  areaMasFloja,
+  avanceDeNivel,
+  filasDeArea,
+  misionesPendientes,
+  muestraRacha,
+} from './reglas';
 import type { Panel } from '../api/esquemas';
 
 function panel(extra: Partial<Panel> = {}): Panel {
@@ -85,5 +91,74 @@ describe('racha', () => {
     expect(
       muestraRacha(panel({ streak: { currentDays: 1, longestDays: 1, nextMilestoneDays: 3, lastStudyDate: '2026-11-22' } })),
     ).toBe(true);
+  });
+});
+
+describe('el área más floja', () => {
+  it('nombra la medida más baja', () => {
+    const floja = areaMasFloja(
+      panel({
+        areaProgress: [
+          { area: 'MAT', accuracy: 40, questions: 10 },
+          { area: 'LC', accuracy: 80, questions: 10 },
+        ],
+      }),
+    );
+
+    expect(floja?.area).toBe('MAT');
+    expect(floja?.porcentaje).toBe(40);
+  });
+
+  it('no nombra un área que nadie ha practicado', () => {
+    /* The same bug this file already documents, in a new place:
+       «Lo más flojo: Matemáticas» said to somebody who has never
+       answered a maths question is an alphabetical accident, not a
+       finding. */
+    const floja = areaMasFloja(
+      panel({
+        areaProgress: [
+          { area: 'MAT', accuracy: 0, questions: 0 },
+          { area: 'LC', accuracy: 70, questions: 10 },
+        ],
+      }),
+    );
+
+    expect(floja?.area).toBe('LC');
+  });
+
+  it('sin nada medido no nombra nada', () => {
+    const floja = areaMasFloja(
+      panel({ areaProgress: [{ area: 'MAT', accuracy: 0, questions: 0 }] }),
+    );
+
+    expect(floja).toBe(null);
+  });
+
+  it('con el panel vacío no nombra nada', () => {
+    expect(areaMasFloja(panel())).toBe(null);
+  });
+
+  it('cuando todo va bien no se queja de nada', () => {
+    /* At 85% and up the weakest subject is not weak, and naming one
+       anyway turns the dashboard into something that always has a
+       complaint. */
+    const floja = areaMasFloja(
+      panel({
+        areaProgress: [
+          { area: 'MAT', accuracy: 88, questions: 20 },
+          { area: 'LC', accuracy: 92, questions: 20 },
+        ],
+      }),
+    );
+
+    expect(floja).toBe(null);
+  });
+
+  it('justo por debajo del umbral sí se nombra', () => {
+    const floja = areaMasFloja(
+      panel({ areaProgress: [{ area: 'CN', accuracy: 84, questions: 20 }] }),
+    );
+
+    expect(floja?.area).toBe('CN');
   });
 });

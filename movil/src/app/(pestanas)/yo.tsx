@@ -1,7 +1,7 @@
 import { RefreshControl, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Redirect, useRouter } from 'expo-router';
-import { Boton, Tarjeta, Texto } from '@/shared/ui';
+import { Boton, FilaMateria, Tarjeta, Texto } from '@/shared/ui';
 import { EsqueletoPanel } from '@/shared/ui/Esqueleto';
 import { usePerfilDeDuelos } from '@/features/duelos/hooks/useDuelos';
 import { useRecordatorio } from '@/features/recordatorio/hooks/useRecordatorio';
@@ -12,7 +12,13 @@ import { useDesgloseXp, useLogros, usePanel } from '@/features/panel/hooks/usePa
 import { SeccionLogros } from '@/features/panel/components/SeccionLogros';
 import { TarjetaInforme } from '@/features/informe/components/TarjetaInforme';
 import { DesgloseXp } from '@/features/panel/components/DesgloseXp';
-import { avanceDeNivel, misionesPendientes } from '@/features/panel/model/reglas';
+import {
+  avanceDeNivel,
+  filasDeArea,
+  misionesPendientes,
+  muestraRacha,
+} from '@/features/panel/model/reglas';
+import { NOMBRE_AREA } from '@/shared/model/icfes';
 
 /**
  * Everything the learner is, rather than what to do next.
@@ -50,6 +56,8 @@ export default function RutaYo() {
   if (!autenticado) return <Redirect href="/entrar" />;
 
   const misiones = panel ? misionesPendientes(panel) : [];
+  /* Weakest first, and unmeasured areas last. */
+  const filas = panel ? filasDeArea(panel) : [];
 
   return (
     <SafeAreaView className="flex-1 bg-fondo">
@@ -70,6 +78,40 @@ export default function RutaYo() {
         </View>
 
         {cargando && !panel ? <EsqueletoPanel /> : null}
+
+        {/* The streak, which used to be a chip on the dashboard.
+            It moved here with the rest of the self-measurement: a
+            screen whose job is getting somebody into practice does not
+            also have to score them, and a learner wondering how they
+            are doing now finds the answer in one place.
+
+            Three facts instead of the chip's one. The chip had room
+            for the current run only, so the longest run and the
+            forgiven day — both already in the API — were never shown
+            anywhere. */}
+        {panel && muestraRacha(panel) ? (
+          <Tarjeta className="gap-2">
+            <Texto estilo="rotulo">Racha</Texto>
+            <Texto estilo="titulo">
+              {panel.streak.currentDays === 1
+                ? '1 día'
+                : `${panel.streak.currentDays} días`}
+            </Texto>
+            {panel.streak.longestDays > panel.streak.currentDays ? (
+              <Texto estilo="apoyo">
+                Su racha más larga fueron {panel.streak.longestDays} días.
+              </Texto>
+            ) : null}
+            {/* Said out loud, because a learner who knows they skipped
+                yesterday and sees the streak unbroken would otherwise
+                think the number is wrong. */}
+            {panel.streak.perdonUsado ? (
+              <Texto estilo="apoyo" className="text-ganado">
+                Le perdonamos un día.
+              </Texto>
+            ) : null}
+          </Tarjeta>
+        ) : null}
 
         {panel ? (
           <Tarjeta className="gap-2">
@@ -103,6 +145,33 @@ export default function RutaYo() {
         {/* Right after the level, because that is the number it
             explains. */}
         <DesgloseXp datos={desglose} />
+
+        {/* The five subjects, moved here whole from the dashboard.
+            Nothing was dropped: the same rows, the same percentages,
+            the same order with the weakest first. What changed is that
+            the dashboard no longer asks a learner to read five numbers
+            to work out what to practise — it names the subject and the
+            button opens it.
+
+            One card holding the rows, not a card each. Five bordered
+            cards in a column made five subjects read as five separate
+            verdicts; they are one picture of where the learner
+            stands. */}
+        {panel && filas.length > 0 ? (
+          <View className="gap-3">
+            <Texto estilo="rotulo">Tus materias</Texto>
+            <Tarjeta className="gap-[14px]">
+              {filas.map((f) => (
+                <FilaMateria
+                  key={f.area}
+                  nombre={NOMBRE_AREA[f.area]}
+                  porcentaje={f.porcentaje}
+                  medida={f.medida}
+                />
+              ))}
+            </Tarjeta>
+          </View>
+        ) : null}
 
         {/* Above the missions, below the level. The level says how
             much has been done and the report says how it is going,
