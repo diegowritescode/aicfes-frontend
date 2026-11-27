@@ -10,7 +10,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Boton, color } from '@/shared/ui';
+import { Boton, color, Texto } from '@/shared/ui';
 import { Aviso } from '@/shared/ui/Aviso';
 import { NOMBRE_AREA, type Letra } from '@/shared/model/icfes';
 import type { ItemGenerado } from '@/shared/pregunta/api/esquemas';
@@ -35,6 +35,15 @@ const LETRAS: readonly Letra[] = ['A', 'B', 'C', 'D'];
  * On a phone two columns do not fit, so it is two tabs. The panel opens
  * on the conversation, because that is what the learner came for.
  */
+
+/* No opacity suffix on a token colour anywhere in this file.
+   `bg-acento-suave/50` and `border-acento/60` were the last three in
+   the app: the tinted surfaces come from the system
+   (`acento-suave`), not from an alpha on the accent, which
+   `AvisoDeDuelos` already records as «a fifth colour nobody chose».
+   They are also where this panel stopped rendering on a real phone —
+   it opened showing nothing but its Cerrar button, and everything
+   below the header, the tabs included, was missing. */
 
 type Pestana = 'pregunta' | 'repaso';
 
@@ -88,9 +97,7 @@ export function ModalTutoria({
       <SafeAreaView className="flex-1 bg-capa">
         <View className="flex-row items-start justify-between border-b border-linea px-5 py-4">
           <View className="flex-1">
-            <Text className="text-[17px] font-bold text-texto">
-              Repasemos esta pregunta
-            </Text>
+            <Texto estilo="titulo">Repasemos esta pregunta</Texto>
             <Text className="mt-0.5 text-[13px] text-texto-apagado">
               {esperaDefensa
                 ? 'Primero cuéntame qué pensaste'
@@ -115,7 +122,7 @@ export function ModalTutoria({
               accessibilityRole="tab"
               accessibilityState={{ selected: pestana === clave }}
               className={`min-h-[44px] flex-1 items-center justify-center rounded-full ${
-                pestana === clave ? 'bg-acento-suave/50' : ''
+                pestana === clave ? 'bg-acento-suave' : ''
               }`}
             >
               <Text
@@ -135,17 +142,13 @@ export function ModalTutoria({
         >
           {pestana === 'pregunta' ? (
             <ScrollView contentContainerClassName="gap-4 px-5 py-5">
-              <Text className="text-[11px] font-bold uppercase tracking-widest text-acento-texto">
-                {NOMBRE_AREA[item.area]}
-              </Text>
+              <Texto estilo="rotulo">{NOMBRE_AREA[item.area]}</Texto>
               {item.contexto ? (
                 <View className="rounded-2xl bg-fondo p-4">
                   <Text className="text-[13.5px] leading-6 text-texto">{item.contexto}</Text>
                 </View>
               ) : null}
-              <Text className="text-[15px] font-semibold leading-6 text-texto">
-                {item.pregunta}
-              </Text>
+              <Texto estilo="pregunta">{item.pregunta}</Texto>
               <View className="gap-2">
                 {LETRAS.filter((l) => item.opciones[l]).map((letra) => {
                   const suya = letra === opcionElegida;
@@ -153,7 +156,7 @@ export function ModalTutoria({
                     <View
                       key={letra}
                       className={`flex-row gap-3 rounded-xl border p-3 ${
-                        suya ? 'border-acento/60 bg-acento-suave/30' : 'border-linea'
+                        suya ? 'border-acento bg-acento-suave' : 'border-linea'
                       }`}
                     >
                       <View
@@ -267,7 +270,7 @@ export function ModalTutoria({
         <Modal visible={confirmandoSalida} transparent animationType="fade">
           <View className="flex-1 items-center justify-center bg-black/40 px-6">
             <View className="w-full max-w-sm gap-4 rounded-3xl bg-capa p-6">
-              <Text className="text-[16px] font-bold text-texto">¿Salir del repaso?</Text>
+              <Texto estilo="titulo">¿Salir del repaso?</Texto>
               {/* True, and reassurance rather than warning: the point is
                   to make leaving safe, not frightening. */}
               <Text className="text-[13.5px] leading-6 text-texto-apagado">

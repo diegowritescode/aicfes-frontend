@@ -166,3 +166,87 @@ describe('la disciplina de los tokens', () => {
     expect(malos).toEqual([]);
   });
 });
+
+/**
+ * No opacity suffix on a token colour.
+ *
+ * `bg-acento/60`, `border-acento-suave/30`: Tailwind writes those by
+ * resolving the colour and applying an alpha, which works for its own
+ * palette and not for ours — these come from a JavaScript object, and
+ * what NativeWind compiles from them is not reliable on a device.
+ *
+ * It is not theoretical. The tutor panel opened on a real phone
+ * showing nothing but its Cerrar button, every row below the header
+ * missing, and the three suffixes left in the app were all in that
+ * file — one of them on the tabs, which is exactly where the render
+ * stopped. `AvisoDeDuelos` had already dropped its own for a
+ * different reason: «a fifth colour nobody chose».
+ *
+ * The tinted surfaces are tokens of their own — `acento-suave`,
+ * `ganado-suave`, `fallo-suave`, `alerta-suave` — so there is a named
+ * colour for every case this would have been used for.
+ *
+ * Tailwind's own palette is left alone: `bg-black/40` behind a dialog
+ * resolves fine, because black is Tailwind's.
+ */
+describe('ningún color del sistema lleva opacidad', () => {
+  const TOKENS = [
+    'fondo', 'capa', 'capa-alta', 'linea', 'borde-control',
+    'texto', 'texto-apagado', 'acento', 'acento-texto', 'acento-suave',
+    'sobre-acento', 'ganado', 'ganado-suave', 'sobre-ganado',
+    'fallo', 'fallo-suave', 'alerta', 'alerta-suave',
+  ];
+
+  /* Every screen and component, not just `shared/ui`: the file that
+     shipped this bug was a feature's. */
+  const RAIZ_SRC = path.resolve(new URL('../..', import.meta.url).pathname);
+
+  function archivosDeInterfaz(): string[] {
+    const salida: string[] = [];
+    const recorrer = (dir: string) => {
+      for (const e of readdirSync(dir)) {
+        if (e === 'node_modules') continue;
+        const completo = path.join(dir, e);
+        if (statSync(completo).isDirectory()) recorrer(completo);
+        else if (/\.tsx$/.test(e) && !/\.test\./.test(e)) salida.push(completo);
+      }
+    };
+    recorrer(RAIZ_SRC);
+    return salida;
+  }
+
+  it('ni en bg-, text-, border- de ninguna pantalla', () => {
+    const culpables: string[] = [];
+    /* Longest first: `acento-suave` must match before `acento`, or
+       `bg-acento-suave/30` is read as `acento` plus leftovers. */
+    const ordenados = [...TOKENS].sort((a, b) => b.length - a.length);
+    const patron = new RegExp(
+      `\\b(?:bg|text|border)-(?:${ordenados.join('|')})\\/\\d`,
+      'g',
+    );
+
+    for (const archivo of archivosDeInterfaz()) {
+      const fuente = readFileSync(archivo, 'utf8');
+      /* Comments stripped first: three of these files explain the
+         rule by quoting the thing it forbids, and a test that reads
+         its own documentation as a violation is a test nobody can
+         keep green. */
+      const sinComentarios = fuente
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+        .replace(/^\s*\/\/.*$/gm, '');
+
+      for (const linea of sinComentarios.split('\n')) {
+        const golpes = linea.match(patron);
+        if (golpes) culpables.push(`${path.relative(RAIZ_SRC, archivo)}: ${golpes.join(', ')}`);
+      }
+    }
+
+    expect(
+      culpables,
+      `estos ponen opacidad sobre un color del sistema: ${culpables.join(' · ')}. ` +
+        `Los tokens vienen de un objeto JS y la opacidad sobre ellos no es ` +
+        `fiable en el dispositivo: el panel del tutor dejó de renderizar por ` +
+        `esto. Usa el token tintado (acento-suave, ganado-suave, fallo-suave).`,
+    ).toEqual([]);
+  });
+});
