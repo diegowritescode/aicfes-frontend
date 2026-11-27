@@ -113,18 +113,34 @@ export function Boton({
       className={[
         'flex-row items-center justify-center gap-2 rounded-medio',
         /* `plano` ignores `tamano`: it is a text link, so it takes the
-           44pt floor and no horizontal padding to speak of. */
-        variante === 'plano' ? 'min-h-toque px-6' : ALTO[tamano],
+           44pt floor and no horizontal padding to speak of. Sharing a
+           row, even that padding is width the other button needs —
+           24pt a side is 48pt of nothing, and it is what pushed
+           «Volver a intentar» off the screen in the tutor. */
+        variante === 'plano' ? (ancho ? 'min-h-toque px-6' : 'min-h-toque px-3') : ALTO[tamano],
         inactivo ? (variante === 'plano' ? 'bg-transparent' : INACTIVO) : FONDO[variante],
-        ancho ? 'w-full' : '',
+        /* A row button has to be able to give width back. Two of them
+           side by side ask for their natural width, and the row does
+           not shrink what has no `shrink`: «Volver a intentar» ran off
+           the right edge of the tutor on a real phone, clipped
+           mid-word. `w-full` already handles the full-width case, so
+           the shrink only applies to the other one. */
+        ancho ? 'w-full' : 'shrink',
       ].join(' ')}
     >
       {cargando ? <ActivityIndicator size="small" color={GIRADOR[variante]} /> : null}
-      <View>
+      {/* The label shrinks with the button. Without this the text keeps
+          its measured width and the padding is what gets clipped, so
+          the button narrows and the word still runs past its edge. */}
+      <View className="shrink">
         <Text
           /* Nunito 700 named outright: a family plus a weight does
              not resolve in React Native. */
           style={{ fontFamily: 'Nunito_700Bold' }}
+          /* One line, always. A label that wraps turns a 56pt button
+             into an 80pt one and breaks the row it sits in; truncating
+             is the lesser failure, and the labels are short verbs. */
+          numberOfLines={1}
           className={[
             tamano === 'compacto' && variante !== 'plano' ? 'text-[14px]' : 'text-[16px]',
             inactivo ? 'text-texto-apagado' : TEXTO[variante],

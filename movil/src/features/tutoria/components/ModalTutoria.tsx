@@ -1,14 +1,6 @@
 import { useRef, useState } from 'react';
-import {
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  Pressable,
-  ScrollView,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Boton, color, Texto } from '@/shared/ui';
 import { Aviso } from '@/shared/ui/Aviso';
@@ -100,6 +92,13 @@ export function ModalTutoria({
     if (!limpio || enviando) return;
     enviar(limpio);
     setTexto('');
+    /* Sending from «La pregunta» moves to the thread, because the
+       thread is the only place the wait is visible. The tutor is a
+       language model and takes seconds to answer; the «Pensando…»
+       line and the learner's own message both live in the other tab,
+       so from this one a send looked like nothing happened at all and
+       the panel read as slow rather than busy. */
+    setPestana('repaso');
   };
 
   return (
@@ -146,10 +145,13 @@ export function ModalTutoria({
           ))}
         </View>
 
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          className="flex-1"
-        >
+        {/* `behavior="padding"` on both platforms, which React
+            Native's own version could not do: on Android it only
+            accepted `undefined`, and inside a modal it had no inset to
+            work from anyway. The panel is already a full-height sheet,
+            so padding at the bottom is the right move — `height` would
+            fight the `flex-1`. */}
+        <KeyboardAvoidingView behavior="padding" className="flex-1">
           {pestana === 'pregunta' ? (
             <ScrollView contentContainerClassName="gap-4 px-5 py-5">
               <Texto estilo="rotulo">{NOMBRE_AREA[item.area]}</Texto>
@@ -267,13 +269,23 @@ export function ModalTutoria({
               </View>
             )}
 
-            <View className="flex-row justify-between gap-2">
-              <Boton variante="plano" ancho={false} alTocar={intentarSalir}>
-                Seguir sin repasar
-              </Boton>
-              <Boton variante="contorno" ancho={false} alTocar={onReintentar}>
-                Volver a intentar
-              </Boton>
+            {/* Both halves, not natural width. «Seguir sin repasar»
+                and «Volver a intentar» together ask for more than the
+                row has, and a row shares nothing it was not told to:
+                the second one ran off the right edge on a real phone,
+                clipped mid-word. `flex-1` on each makes the row the
+                constraint instead of the labels. */}
+            <View className="flex-row gap-2">
+              <View className="flex-1">
+                <Boton variante="plano" alTocar={intentarSalir}>
+                  Seguir sin repasar
+                </Boton>
+              </View>
+              <View className="flex-1">
+                <Boton variante="contorno" alTocar={onReintentar}>
+                  Volver a intentar
+                </Boton>
+              </View>
             </View>
           </View>
         </KeyboardAvoidingView>

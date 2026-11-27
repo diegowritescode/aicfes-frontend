@@ -6,6 +6,7 @@ import { almacenPeaje } from '@/core/almacenamiento/peaje';
 import { StatusBar } from 'expo-status-bar';
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { crearClienteConsultas } from '@/core/http/consultas';
 import { opcionesDePersistencia } from '@/core/http/persistencia';
 import { conectarRenovacion } from '@/features/sesion/api/peticiones';
@@ -66,9 +67,29 @@ export default function Layout() {
   return (
     <PersistQueryClientProvider client={cliente} persistOptions={opcionesDePersistencia}>
       <SafeAreaProvider>
-        <StatusBar style="dark" />
-        <LlevarAlPeaje />
-        <Stack screenOptions={{ headerShown: false }} />
+        {/* Every text field in the app sits above this.
+
+            Android resizes the window for the keyboard through
+            `windowSoftInputMode="adjustResize"`, and from Expo 58 the
+            app is edge-to-edge, where that mode no longer resizes
+            anything — it only reports an inset. So the keyboard opened
+            over the field the learner was typing into and they had to
+            dismiss it to read their own words: «escribo pero no veo lo
+            que escribo».
+
+            `KeyboardAvoidingView` from React Native cannot rescue it:
+            on Android it has no behaviour to apply, and inside a
+            `<Modal>` it is worse, because a modal is a separate window
+            that never inherited the activity's soft-input mode at all.
+            That is why the tutor was the worst of the three.
+
+            This provider reads the real inset and the views from the
+            same package act on it, modal or not. */}
+        <KeyboardProvider>
+          <StatusBar style="dark" />
+          <LlevarAlPeaje />
+          <Stack screenOptions={{ headerShown: false }} />
+        </KeyboardProvider>
       </SafeAreaProvider>
     </PersistQueryClientProvider>
   );

@@ -330,3 +330,38 @@ describe('un botón que comparte fila no reclama todo el ancho', () => {
     ).toEqual([]);
   });
 });
+
+describe('el teclado no se maneja con el KeyboardAvoidingView de React Native', () => {
+  it('ningún archivo lo importa desde react-native', () => {
+    const culpables: string[] = [];
+
+    for (const archivo of archivosDeInterfaz()) {
+      const fuente = readFileSync(archivo, 'utf8');
+      const sinComentarios = fuente
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+        .replace(/^\s*\/\/.*$/gm, '');
+
+      /* Only an import whose source is `react-native` itself. The one
+         from `react-native-keyboard-controller` carries the same name
+         and is the replacement, so matching the name alone would flag
+         the fix. */
+      for (const imp of sinComentarios.matchAll(
+        /import\s*\{([^}]*)\}\s*from\s*'react-native'/g,
+      )) {
+        if (/\bKeyboardAvoidingView\b/.test(imp[1] ?? '')) {
+          culpables.push(path.relative(RAIZ_SRC, archivo));
+        }
+      }
+    }
+
+    expect(
+      [...new Set(culpables)],
+      `estos importan KeyboardAvoidingView de react-native: ${[...new Set(culpables)].join(', ')}. ` +
+        `Desde Expo 58 la app es edge-to-edge: Android ya no redimensiona la ventana para el ` +
+        `teclado, solo reporta un inset, y esa vista no lo lee — en Android ni siquiera acepta ` +
+        `un behavior. Dentro de un Modal es peor, porque un modal es otra ventana. El teclado ` +
+        `tapaba el campo en el tutor, en entrar y en registro. Usa ` +
+        `react-native-keyboard-controller.`,
+    ).toEqual([]);
+  });
+});

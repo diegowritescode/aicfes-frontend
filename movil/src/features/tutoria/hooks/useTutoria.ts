@@ -38,21 +38,53 @@ export function useTutoria(itemId: string | null, opcionElegida: string | null) 
     clienteConsultas.setQueryData(CLAVE(itemId ?? ''), estado);
   };
 
-  const defender = useMutation<EstadoTutoria, Fallo, string>({
+  /* The learner's own message appears the moment they send it.
+
+     The tutor is a language model and takes seconds to answer, and
+     until the reply landed the thread showed no trace of what had
+     just been sent — the input emptied and nothing replaced it, which
+     read as the panel being slow rather than busy.
+
+     Only the message is added, never `turnosRestantes` or
+     `esperaDefensa`: those are the server's count, and a client that
+     decremented them itself would drift from it. The real reply
+     replaces this whole object on success, so the echo never has to
+     be reconciled — and on failure `onError` puts the thread back as
+     it was, because a message that did not send must not stay on
+     screen looking like it did. */
+  const eco = (texto: string): EstadoTutoria | undefined => {
+    const previo = clienteConsultas.getQueryData<EstadoTutoria>(CLAVE(itemId ?? ''));
+    if (!previo) return undefined;
+    clienteConsultas.setQueryData(CLAVE(itemId ?? ''), {
+      ...previo,
+      mensajes: [...previo.mensajes, { autor: 'estudiante' as const, contenido: texto }],
+    });
+    return previo;
+  };
+
+  const deshacerEco = (_fallo: Fallo, _texto: string, previo: EstadoTutoria | undefined) => {
+    if (previo) clienteConsultas.setQueryData(CLAVE(itemId ?? ''), previo);
+  };
+
+  const defender = useMutation<EstadoTutoria, Fallo, string, EstadoTutoria | undefined>({
     mutationFn: async (texto) => {
       const r = await enviarDefensa(itemId!, texto);
       if (!r.ok) throw r.fallo;
       return r.datos;
     },
+    onMutate: eco,
+    onError: deshacerEco,
     onSuccess: guardar,
   });
 
-  const responder = useMutation<EstadoTutoria, Fallo, string>({
+  const responder = useMutation<EstadoTutoria, Fallo, string, EstadoTutoria | undefined>({
     mutationFn: async (texto) => {
       const r = await enviarMensaje(itemId!, texto);
       if (!r.ok) throw r.fallo;
       return r.datos;
     },
+    onMutate: eco,
+    onError: deshacerEco,
     onSuccess: guardar,
   });
 

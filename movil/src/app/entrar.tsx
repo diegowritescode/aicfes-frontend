@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from 'react-native';
+import { Pressable, View } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Boton, Texto } from '@/shared/ui';
@@ -14,9 +15,14 @@ import { useAccionesSesion } from '@/features/sesion/hooks/useSesion';
  * feature's model and the request in its api layer, so this file is
  * about what the learner sees and nothing else.
  *
- * KeyboardAvoidingView is not optional on a phone: without it the
+ * Keyboard handling is not optional on a phone: without it the
  * keyboard covers the password field and the button, and the form
- * becomes unusable on exactly the devices this app is for.
+ * becomes unusable on exactly the devices this app is for. React
+ * Native's `KeyboardAvoidingView` was what did this, and it stopped
+ * working when Expo 58 made the app edge-to-edge — Android no longer
+ * resizes the window for the keyboard, it only reports an inset, and
+ * that view reads neither. `KeyboardAwareScrollView` reads the inset
+ * and also scrolls the focused field into view.
  */
 export default function Entrar() {
   const router = useRouter();
@@ -44,14 +50,18 @@ export default function Entrar() {
        app. On `fondo` the fill is quiet but present, and every other
        screen in the app already sits on it. */
     <SafeAreaView className="flex-1 bg-fondo">
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        className="flex-1"
+      {/* Scrolls the focused field into view, which is the part a
+          plain `KeyboardAvoidingView` never did. Under Expo 58's
+          edge-to-edge the window no longer resizes for the keyboard,
+          so the field a learner was typing into sat behind it and
+          they had to dismiss the keyboard to read their own words.
+          `bottomOffset` keeps a line of breathing room above the
+          keyboard instead of pinning the field to its very edge. */}
+      <KeyboardAwareScrollView
+        bottomOffset={24}
+        contentContainerClassName="flex-grow justify-center gap-6 px-5 py-10"
+        keyboardShouldPersistTaps="handled"
       >
-        <ScrollView
-          contentContainerClassName="flex-grow justify-center gap-6 px-5 py-10"
-          keyboardShouldPersistTaps="handled"
-        >
           <View className="gap-2">
             <Texto estilo="titulo-grande">Entrar</Texto>
             <Texto estilo="apoyo">Sigue donde quedaste.</Texto>
@@ -102,8 +112,7 @@ export default function Entrar() {
               </Texto>
             </Texto>
           </Pressable>
-        </ScrollView>
-      </KeyboardAvoidingView>
+      </KeyboardAwareScrollView>
     </SafeAreaView>
   );
 }
