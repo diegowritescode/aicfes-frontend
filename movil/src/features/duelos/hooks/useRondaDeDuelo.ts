@@ -2,7 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Fallo } from '@/core/http/cliente';
 import { entregarDuelo, leerPreguntasDeDuelo } from '../api/peticiones';
-import type { EntregaHecha, PreguntaDeDuelo } from '../api/esquemas';
+import type { EntregaHecha, MarcaDelRival, PreguntaDeDuelo } from '../api/esquemas';
+import { useSonido } from './useSonido';
 import {
   avance,
   avanzar,
@@ -47,25 +48,76 @@ export function useRondaDeDuelo(dueloId: string) {
   });
 
   const [congeladas, setCongeladas] = useState<readonly PreguntaDeDuelo[] | null>(null);
+  /* Frozen with the questions. The mark cannot change mid-round — the
+     rival either played before this round opened or they did not — and
+     re-reading it from `consulta.data` would make the line above the
+     question flicker if anything ever refetched. */
+  const [marca, setMarca] = useState<MarcaDelRival | null>(null);
   const [ronda, setRonda] = useState<Ronda | null>(null);
   const inicio = useRef<number | null>(null);
   const [entrega, setEntrega] = useState<EntregaHecha | null>(null);
   const [entregando, setEntregando] = useState(false);
   const [falloAlEntregar, setFalloAlEntregar] = useState<Fallo | null>(null);
 
+  /* The clock. Ticks once a second rather than on every frame: this
+     renders the question above it, and sixty re-renders a second of a
+     screen a learner is reading is the kind of thing that empties a
+     battery during a round. */
+  const [segundos, setSegundos] = useState(0);
+
+  const { activo: sonidoActivo, sonar, alternar: alternarSonido } = useSonido();
+
   useEffect(() => {
     if (congeladas !== null) return;
     const llegaron = consulta.data;
-    if (!llegaron || llegaron.length === 0) return;
+    if (!llegaron || llegaron.preguntas.length === 0) return;
 
-    setCongeladas(llegaron);
-    setRonda({ preguntas: llegaron.map((p) => ({ id: p.id })), indice: 0, respuestas: [] });
+    setCongeladas(llegaron.preguntas);
+    setMarca(llegaron.marcaDelRival);
+    setRonda({
+      preguntas: llegaron.preguntas.map((p) => ({ id: p.id })),
+      indice: 0,
+      respuestas: [],
+    });
     inicio.current = Date.now();
   }, [consulta.data, congeladas]);
 
-  const elegir = useCallback((letra: string) => {
-    setRonda((actual) => (actual ? responder(actual, letra) : actual));
-  }, []);
+  /* Runs from the freeze and stops at delivery. Derived from the
+     wall clock rather than counted up, so a round that was
+     backgrounded does not report less time than it took — the server
+     is told the same number it shows here. */
+  useEffect(() => {
+    if (inicio.current === null || entrega) return;
+
+    const id = setInterval(() => {
+      if (inicio.current === null) return;
+      setSegundos(Math.max(0, Math.round((Date.now() - inicio.current) / 1000)));
+    }, 1000);
+
+    return () => clearInterval(id);
+  }, [congeladas, entrega]);
+
+  /**
+   * Choosing an option.
+   *
+   * The sound here cannot be «right» or «wrong», and that is
+   * deliberate: the correct answer does not travel to the phone, or a
+   * duel would be won by whoever reads the HTTP response. So this is a
+   * tick that confirms the tap landed, and right against wrong is
+   * heard at the end, when the server has said which was which.
+   *
+   * Which rules out the obvious version of this feature — a ding per
+   * correct answer during the round. It would need the answers on the
+   * device, and no amount of game feel is worth a duel decided by a
+   * debugger.
+   */
+  const elegir = useCallback(
+    (letra: string) => {
+      setRonda((actual) => (actual ? responder(actual, letra) : actual));
+      sonar('acierto');
+    },
+    [sonar],
+  );
 
   const siguiente = useCallback(() => {
     setRonda((actual) => (actual ? avanzar(actual) : actual));
@@ -100,6 +152,14 @@ export function useRondaDeDuelo(dueloId: string) {
       }
 
       setEntrega(r.datos);
+
+      /* Win and loss sound different, and waiting sounds like nothing.
+         A learner who finishes first has not won anything yet, and a
+         victory tone there would be a promise the duel might break. */
+      if (r.datos.estado === 'terminado') {
+        sonar(r.datos.gane ? 'victoria' : 'derrota');
+      }
+
       /* The duel's state changed on the server — to `terminado` if the
          rival had already played. The list has to be refetched rather
          than patched, because only the server knows which. */
@@ -108,7 +168,7 @@ export function useRondaDeDuelo(dueloId: string) {
     } finally {
       setEntregando(false);
     }
-  }, [ronda, dueloId, entregando, cliente]);
+  }, [ronda, dueloId, entregando, cliente, sonar]);
 
   const actual = ronda ? preguntaActual(ronda) : null;
   const pregunta = actual ? (congeladas?.find((p) => p.id === actual.id) ?? null) : null;
@@ -129,5 +189,13 @@ export function useRondaDeDuelo(dueloId: string) {
     entregando,
     falloAlEntregar,
     entrega,
+    /* The pressure. `marca` is null for whoever opens the duel first,
+       which the screen renders as «nobody has played yet» and never as
+       a rival who scored nothing. */
+    marca,
+    segundos,
+    respondidas: ronda ? ronda.respuestas.length : 0,
+    sonidoActivo,
+    alternarSonido,
   };
 }

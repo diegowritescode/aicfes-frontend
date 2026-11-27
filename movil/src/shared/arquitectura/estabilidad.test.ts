@@ -62,7 +62,15 @@ describe('una pregunta en pantalla no se recarga sola', () => {
        be asserted there — the screen passing the `useQuery` check is
        not enough on its own. */
     const fuente = leer('features/duelos/hooks/useRondaDeDuelo.ts');
-    expect(fuente).toMatch(/setCongeladas\(llegaron\)/);
+    /* `llegaron.preguntas` and not `llegaron`: the round's response
+       grew from a bare array into an object carrying the rival's mark
+       alongside the questions. The freeze is the same, the expression
+       it freezes is one field deeper. */
+    expect(fuente).toMatch(/setCongeladas\(llegaron\.preguntas\)/);
+    /* The mark is frozen with them. It cannot change mid-round — the
+       rival either played before this opened or they did not — and
+       reading it live would make the line above the question flicker. */
+    expect(fuente).toMatch(/setMarca\(llegaron\.marcaDelRival\)/);
     /* And the query itself must not refetch underneath the freeze: a
        refetch that lands between mount and freeze would seed the
        round from a different list. */

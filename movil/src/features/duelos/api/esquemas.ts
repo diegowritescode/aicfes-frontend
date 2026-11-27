@@ -98,7 +98,45 @@ export const preguntaDeDuelo = z.object({
   figura: z.unknown().nullable().optional(),
 });
 
-export const preguntasDeDuelo = z.array(preguntaDeDuelo);
+/**
+ * What the rival scored, when they played first.
+ *
+ * Nullable, and whoever opens a duel first gets null. The screen has
+ * to render that as «nobody has played yet» — a zero would read as
+ * the rival having failed.
+ */
+export const marcaDelRival = z.object({
+  aciertos: z.number(),
+  segundos: z.number(),
+  deCuantas: z.number(),
+});
+
+/**
+ * A duel round, which is no longer just its questions.
+ *
+ * This replaced a bare `z.array(preguntaDeDuelo)`, and that is a
+ * breaking change on purpose: the round used to be played in silence,
+ * so a learner only discovered at the end that they had been racing
+ * somebody. The rival's score was already in the row the server read
+ * and was never sent.
+ *
+ * It does break every installed build — the old schema rejects an
+ * object — which is why this needs its APK shipped alongside the
+ * backend. Hanging the fields off the array instead was tried and
+ * cannot work: `JSON.stringify` drops every non-index property of an
+ * array, so the mark would have been silently absent.
+ */
+export const preguntasDeDuelo = z.object({
+  preguntas: z.array(preguntaDeDuelo),
+  marcaDelRival: marcaDelRival.nullable(),
+  /* Computed on the server so both players are told the same thing by
+     the same rule. */
+  paraGanar: z.number().nullable(),
+  soloPorTiempo: z.boolean(),
+});
+
+export type MarcaDelRival = z.infer<typeof marcaDelRival>;
+export type RondaDeDuelo = z.infer<typeof preguntasDeDuelo>;
 
 export const retoCreado = z.object({
   id: z.string(),

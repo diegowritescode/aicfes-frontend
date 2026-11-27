@@ -11,3 +11,4 @@ dist/
 
 # Contraseña del usuario de demo del informe. Local, nunca versionada.
 .demo-clave-informe.txt
+.clave-sofia-prueba.txt

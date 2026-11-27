@@ -1,4 +1,4 @@
-import { ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import {
   Avatar,
   BarraRespuesta,
@@ -16,7 +16,28 @@ import { EsqueletoPregunta } from '@/shared/ui/Esqueleto';
 import { NOMBRE_AREA } from '@/shared/model/icfes';
 import type { Letra } from '@/shared/model/icfes';
 import { useRondaDeDuelo } from '../hooks/useRondaDeDuelo';
-import type { ResultadoDuelo } from '../api/esquemas';
+import type { MarcaDelRival, ResultadoDuelo } from '../api/esquemas';
+import {
+  estadoDelReloj,
+  lineaDeMarca,
+  loQueHaceFalta,
+  reloj,
+  type EstadoDelReloj,
+} from '../model/presion';
+
+/**
+ * How the clock looks at each pace.
+ *
+ * Amber and not red for slow: running long on a question is the data
+ * that feeds the weakness profile, not an offence, and the palette
+ * already says so — `fallo` is amber in this design for the same
+ * reason.
+ */
+const TONO_DEL_RELOJ: Record<EstadoDelReloj, 'neutro' | 'ganado' | 'fallo'> = {
+  comodo: 'ganado',
+  justo: 'neutro',
+  lento: 'fallo',
+};
 
 /**
  * Playing a duel.
@@ -119,6 +140,12 @@ export function PantallaRondaDeDuelo({
     );
   }
 
+  const estadoReloj = estadoDelReloj({
+    segundos: ronda.segundos,
+    respondidas: ronda.respondidas,
+    deCuantas: ronda.total,
+  });
+
   const letras = Object.keys(ronda.pregunta.opciones).sort() as Letra[];
   /* First name only. The row is 30px tall beside a chip, and a long
      alias wraps it onto two lines. */
@@ -137,10 +164,31 @@ export function PantallaRondaDeDuelo({
               {primerNombre}
             </Text>
           </View>
-          <Chip tono="acento">
-            {ronda.numero} de {ronda.total}
-          </Chip>
+          <View className="flex-row items-center gap-2">
+            {/* The clock. Not a countdown: a duel has no time limit,
+                and a learner cut off mid-question would lose to a
+                clock instead of to a rival — the asynchronous duel
+                exists precisely so an interruption costs nothing. What
+                this shows is pace against the exam's own 64 seconds a
+                question. */}
+            <Chip tono={TONO_DEL_RELOJ[estadoReloj]}>{reloj(ronda.segundos)}</Chip>
+            <Chip tono="acento">
+              {ronda.numero} de {ronda.total}
+            </Chip>
+          </View>
         </View>
+
+        {/* The mark to beat, which is the whole point of this screen's
+            changes. The round used to be played in silence: a learner
+            answered five questions and only found out at the end that
+            they had been racing anybody. The score was already on the
+            server when the round opened. */}
+        <BarraDePresion
+          marca={ronda.marca}
+          contra={primerNombre}
+          sonidoActivo={ronda.sonidoActivo}
+          alternarSonido={ronda.alternarSonido}
+        />
 
         {/* No surcharge in a duel: both players get the same five, and
             failing does not add any. */}
@@ -190,6 +238,66 @@ export function PantallaRondaDeDuelo({
 }
 
 /** The result, once both players have finished. */
+/**
+ * What is at stake, above the question.
+ *
+ * Two lines and never one. «Camilo hizo 3 de 5 en 1:35» is what
+ * happened; «con 4 aciertos le gana» is what to do about it, and a
+ * single sentence carrying both gets read as neither.
+ *
+ * Whoever opens the duel first sees that nobody has played yet, which
+ * is the honest version of an empty mark. A «0 de 5» there would read
+ * as the rival having failed.
+ *
+ * The sound toggle lives here rather than in a settings screen. This
+ * is the screen that makes noise, and a learner who needs it off is in
+ * a classroom right now — a switch they have to go hunting for is one
+ * they will not find, and the app gets closed instead.
+ */
+function BarraDePresion({
+  marca,
+  contra,
+  sonidoActivo,
+  alternarSonido,
+}: {
+  marca: MarcaDelRival | null;
+  contra: string;
+  sonidoActivo: boolean;
+  alternarSonido: () => void;
+}) {
+  const instruccion = loQueHaceFalta(marca);
+
+  return (
+    <Tarjeta variante={marca ? 'acento' : 'plana'} className="gap-1.5">
+      <View className="flex-row items-start justify-between gap-3">
+        <View className="flex-1 gap-1">
+          <Texto
+            estilo="cuerpo"
+            style={{ fontFamily: 'Inter_600SemiBold' }}
+            className={marca ? 'text-acento-texto' : undefined}
+          >
+            {lineaDeMarca(marca, contra)}
+          </Texto>
+          {instruccion ? <Texto estilo="apoyo">{instruccion}</Texto> : null}
+        </View>
+
+        <Pressable
+          onPress={alternarSonido}
+          accessibilityRole="switch"
+          accessibilityState={{ checked: sonidoActivo }}
+          accessibilityLabel={sonidoActivo ? 'Apagar el sonido' : 'Encender el sonido'}
+          /* 44px of touch target around a small glyph: the minimum a
+             thumb can hit, and the one this design system already
+             enforces elsewhere. */
+          hitSlop={12}
+        >
+          <Texto estilo="cuerpo">{sonidoActivo ? '🔊' : '🔇'}</Texto>
+        </Pressable>
+      </View>
+    </Tarjeta>
+  );
+}
+
 function Marcador({
   entrega,
   contra,
