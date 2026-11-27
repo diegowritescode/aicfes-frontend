@@ -22,6 +22,10 @@ const CLAVE_EMERGENCIAS = 'aicfes.peaje.emergencias';
 const CLAVE_DESBLOQUEO = 'aicfes.peaje.desbloqueoHasta';
 const CLAVE_APP = 'aicfes.peaje.appBloqueada';
 const CLAVE_SALDOS = 'aicfes.peaje.saldos';
+/* Permission steps the learner chose to pass over. Persisted because
+   a skip that is forgotten on restart is not a skip: the step the
+   phone will not report would wall the setup again on every launch. */
+const CLAVE_OMITIDOS = 'aicfes.bloqueo.permisosOmitidos';
 
 async function leerJson<T>(clave: string): Promise<T | null> {
   try {
@@ -48,6 +52,11 @@ async function escribirJson(clave: string, valor: unknown): Promise<void> {
 
 export const almacenPeaje = {
   leerSesion: <T>() => leerJson<T>(CLAVE_SESION),
+
+  leerPermisosOmitidos: () => leerJson<string[]>(CLAVE_OMITIDOS),
+
+  guardarPermisosOmitidos: (ids: readonly string[]) =>
+    escribirJson(CLAVE_OMITIDOS, ids),
 
   guardarSesion: (sesion: unknown) => escribirJson(CLAVE_SESION, sesion),
 

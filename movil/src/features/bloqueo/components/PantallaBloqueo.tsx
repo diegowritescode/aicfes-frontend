@@ -103,12 +103,45 @@ export function PantallaBloqueo({
         ) : null}
 
         {bloqueo.siguiente ? (
-          /* The button names what it will ask for. "Pedir el
-             siguiente" told the learner nothing about what screen
-             was about to open, which is why it read as a gamble. */
-          <Boton alTocar={() => void bloqueo.pedirSiguiente()}>
-            {textoDelBoton(bloqueo.siguiente)}
-          </Boton>
+          <>
+            {/* The button names what it will ask for. "Pedir el
+                siguiente" told the learner nothing about what screen
+                was about to open, which is why it read as a gamble. */}
+            <Boton alTocar={() => void bloqueo.pedirSiguiente()}>
+              {textoDelBoton(bloqueo.siguiente)}
+            </Boton>
+
+            {/* The way past a step this phone will not report.
+                Reported from a Xiaomi: «Seguir viva en segundo plano»
+                is read from the system's battery-optimization list,
+                while MIUI's own «Permitir uso en segundo plano» is a
+                different switch that does not write to it. The
+                learner turns it on, Settings shows it on, and the app
+                still reads it off — truthfully, because it is not the
+                same setting.
+
+                Without this the queue stopped there for good: the
+                button kept naming that step, and the optional ones
+                behind it could never be reached. One recommended step
+                walled the whole setup.
+
+                Flat and below, never beside: skipping is the lesser
+                answer, and a learner who can grant it should. The
+                line underneath says what it costs, because a skip
+                offered without a consequence reads as "this does not
+                matter", and then nobody grants it. */}
+            {bloqueo.sePuedeOmitirSiguiente ? (
+              <>
+                <Boton variante="plano" alTocar={() => void bloqueo.omitirSiguiente()}>
+                  Ya lo activé, o lo dejo así
+                </Boton>
+                <Texto estilo="apoyo" className="text-center">
+                  Lo saltamos y seguimos. Si tu teléfono no nos deja verlo, el
+                  bloqueo igual funciona: puede fallar si Android nos apaga.
+                </Texto>
+              </>
+            ) : null}
+          </>
         ) : todoRestringido ? (
           /* Permissions are pending but every one of them is
              restricted by the system, so there is nothing this app

@@ -4,6 +4,7 @@ import {
   bloqueadosPorElSistema,
   listoParaBloquear,
   ordenar,
+  sePuedeOmitir,
   siguientePendiente,
   textoDelBoton,
   type PasoNativo,
@@ -117,5 +118,71 @@ describe('cuándo se puede bloquear', () => {
       aLegible(paso('usageAccess', 'denied')),
     ];
     expect(listoParaBloquear(pasos)).toBe(false);
+  });
+});
+
+/**
+ * Passing over a step whose state the phone will not report.
+ *
+ * Reported from a Xiaomi: the learner turns on «Permitir uso en
+ * segundo plano», Settings shows it on, and the app still reads it
+ * off — truthfully, because MIUI's switch is not the system's
+ * battery-optimization list that `isIgnoringBatteryOptimizations`
+ * measures. Those are two different settings.
+ *
+ * The consequence was not a wrong chip. The queue hands back the
+ * first ungranted step, so an undetectable one was a wall: the button
+ * kept naming it, and every step behind it — all of them optional —
+ * could never be reached. One recommended step stopped the whole
+ * setup.
+ */
+describe('omitir un paso que no se puede detectar', () => {
+  const pasos = [
+    paso('overlay', 'granted'),
+    paso('usageAccess', 'granted'),
+    paso('batteryOptimization', 'denied', false),
+    paso('deviceAdmin', 'denied', false),
+  ].map(aLegible);
+
+  it('sin omitir, el paso que no se detecta tapa a los de atrás', () => {
+    expect(siguientePendiente(pasos)?.id).toBe('batteryOptimization');
+  });
+
+  it('omitido, la fila sigue con el siguiente', () => {
+    expect(siguientePendiente(pasos, ['batteryOptimization'])?.id).toBe('deviceAdmin');
+  });
+
+  it('omitir todos los que faltan deja la fila vacía, no colgada', () => {
+    expect(
+      siguientePendiente(pasos, ['batteryOptimization', 'deviceAdmin']),
+    ).toBeNull();
+  });
+
+  it('el paso omitido sigue en la lista, para concederlo después', () => {
+    /* Skipping is not dismissing. The step keeps its row, its name
+       and its reason, because the learner may well grant it on the
+       next phone they set this up on. */
+    const visibles = ordenar(pasos).map((p) => p.id);
+    expect(visibles).toContain('batteryOptimization');
+  });
+
+  it('un paso obligatorio no se puede omitir', () => {
+    /* Without the required steps the toll blocks nothing. A setup
+       that calls itself finished while the feature does nothing is
+       worse than a wall: nothing says it failed. */
+    const obligatorio = aLegible(paso('overlay', 'denied'));
+    const opcional = aLegible(paso('batteryOptimization', 'denied', false));
+    expect(sePuedeOmitir(obligatorio)).toBe(false);
+    expect(sePuedeOmitir(opcional)).toBe(true);
+  });
+
+  it('omitir un obligatorio no lo saca de la fila', () => {
+    /* Belt and braces: the screen is what refuses to offer the skip,
+       but the queue must not honour one either. */
+    const conObligatorio = [
+      paso('overlay', 'denied'),
+      paso('batteryOptimization', 'denied', false),
+    ].map(aLegible);
+    expect(siguientePendiente(conObligatorio, ['overlay'])?.id).toBe('overlay');
   });
 });

@@ -97,17 +97,63 @@ export function ordenar(pasos: readonly PasoLegible[]): readonly PasoLegible[] {
   });
 }
 
-/** The next step worth asking for, or null when nothing is pending. */
+/**
+ * The next step worth asking for, or null when nothing is pending.
+ *
+ * `omitidos` holds the ids the learner has passed over. They are
+ * skipped here and nowhere else: the step stays in the list, still
+ * says what it is for, and can still be granted later.
+ *
+ * This exists because one step could stop all the others. The queue
+ * hands back the first ungranted step and nothing could move it, so a
+ * step whose state the phone will not report truthfully was a wall:
+ * the button kept naming it, tapping it opened a screen that looked
+ * already-on, and the steps behind it were unreachable for good.
+ *
+ * Reported from a Xiaomi: `batteryOptimization` is read with
+ * `isIgnoringBatteryOptimizations`, which measures the system's
+ * battery-optimization list, while MIUI's own «Permitir uso en
+ * segundo plano» is a separate switch that does not write to it. The
+ * learner turns it on, Settings shows it on, and the app still reads
+ * it off — truthfully, since it is a different setting.
+ *
+ * It is only ever a recommended step that can be skipped, which the
+ * caller enforces by not offering it for a required one. Blocking
+ * cannot work without the required steps, so letting someone past
+ * them would trade a wall for a feature that silently does nothing.
+ */
 export function siguientePendiente(
   pasos: readonly PasoLegible[],
+  omitidos: readonly string[] = [],
 ): PasoLegible | null {
   const ordenados = ordenar(pasos);
   /* A step the system has restricted is skipped: asking for it opens
      a screen where the toggle is greyed out, which reads as the app
      being broken. The screen explains that one separately. */
   return (
-    ordenados.find((p) => !p.concedido && !p.bloqueadoPorElSistema) ?? null
+    ordenados.find(
+      (p) =>
+        !p.concedido &&
+        !p.bloqueadoPorElSistema &&
+        /* A skip only ever applies to a recommended step. The screen
+           already refuses to offer one for a required step, but the
+           queue must not honour it either: the two guards protect
+           different mistakes, and without the required steps the toll
+           blocks nothing at all. */
+        !(omitidos.includes(p.id) && sePuedeOmitir(p)),
+    ) ?? null
   );
+}
+
+/**
+ * Whether the learner may pass over this step for now.
+ *
+ * Never a required one: without those the toll cannot block anything,
+ * and a setup that reports itself finished while the feature does
+ * nothing is worse than a wall, because nothing says it failed.
+ */
+export function sePuedeOmitir(paso: PasoLegible): boolean {
+  return !paso.requerido;
 }
 
 /** Whether blocking can work at all. */

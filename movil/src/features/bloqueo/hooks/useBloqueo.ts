@@ -6,6 +6,7 @@ import { almacenPeaje } from '@/core/almacenamiento/peaje';
 import {
   aLegible,
   listoParaBloquear,
+  sePuedeOmitir,
   siguientePendiente,
   type PasoLegible,
   type PasoNativo,
@@ -84,8 +85,48 @@ export function useBloqueo() {
     return () => suscripcion.remove();
   }, [refrescar]);
 
-  const siguiente = siguientePendiente(pasos);
+  /**
+   * Steps the learner chose to pass over.
+   *
+   * Loaded once and kept on the device. A skip that is forgotten on
+   * restart is not a skip: the step whose state this phone will not
+   * report would wall the setup again on every launch, which is the
+   * failure this exists to end.
+   */
+  const [omitidos, setOmitidos] = useState<readonly string[]>([]);
+
+  useEffect(() => {
+    let vivo = true;
+    void almacenPeaje.leerPermisosOmitidos().then((guardados) => {
+      if (vivo && guardados) setOmitidos(guardados);
+    });
+    return () => {
+      vivo = false;
+    };
+  }, []);
+
+  const siguiente = siguientePendiente(pasos, omitidos);
   const listo = listoParaBloquear(pasos);
+
+  /**
+   * Pass over the step in front, and remember it.
+   *
+   * Only ever a recommended one — `sePuedeOmitir` refuses a required
+   * step, and `siguientePendiente` refuses to honour a skip of one,
+   * because without those the toll blocks nothing and a setup that
+   * calls itself done while the feature is dead is worse than a wall.
+   *
+   * The step keeps its row. Skipping is not dismissing: it can still
+   * be granted later, and on the next launch the app re-reads it, so
+   * a learner who does find the right switch sees it turn green
+   * without having to undo anything.
+   */
+  const omitirSiguiente = useCallback(async () => {
+    if (!siguiente || !sePuedeOmitir(siguiente)) return;
+    const nuevos = [...omitidos, siguiente.id];
+    setOmitidos(nuevos);
+    await almacenPeaje.guardarPermisosOmitidos(nuevos);
+  }, [siguiente, omitidos]);
 
   const pedirSiguiente = useCallback(async () => {
     if (!siguiente) return;
@@ -323,6 +364,9 @@ export function useBloqueo() {
     fallo,
     refrescar,
     pedirSiguiente,
+    omitirSiguiente,
+    /** True when this step can be passed over: recommended, not required. */
+    sePuedeOmitirSiguiente: siguiente ? sePuedeOmitir(siguiente) : false,
     aplicar,
     quitarTodo,
     conceder,
