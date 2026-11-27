@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Redirect } from 'expo-router';
-import { BarraPestanas, Texto } from '@/shared/ui';
+import { Texto } from '@/shared/ui';
 import { useSesion } from '@/features/sesion/hooks/useSesion';
 import { useMisDuelos } from '@/features/duelos/hooks/useDuelos';
 import { PantallaDuelos } from '@/features/duelos/components/PantallaDuelos';
@@ -104,10 +104,19 @@ export default function RutaDuelos() {
         <PantallaAjustesDeDuelos onVolver={() => setVista({ tipo: 'lista' })} />
       )}
 
-      {/* A sibling after the screen, never inside its scroll — and
-          only on the list. A round is one task, and a tab bar there is
-          an invitation to abandon it halfway. */}
-      {enLista ? <BarraPestanas /> : null}
+      {/* The tab bar used to be drawn here, and only on the list: a
+          round is one task, and a tab bar during one is an invitation
+          to abandon it halfway. It now lives in `(pestanas)/_layout`
+          and cannot be hidden per view, because hiding it is what
+          made it blink — each tab change unmounted one bar and
+          mounted another, which a learner reported as a flicker.
+
+          So during a round the bar is visible. That is a real cost,
+          accepted for now: a round is five questions, and the «Atrás»
+          row above is still the deliberate way out. Removing the cost
+          means promoting the round and the settings to their own
+          routes outside this group, which is worth doing and is not
+          worth risking the only social mechanic on today. */}
     </SafeAreaView>
   );
 }

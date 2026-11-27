@@ -1,5 +1,5 @@
-import { Linking, Pressable, ScrollView, Text, View } from 'react-native';
-import { Boton, Texto } from '@/shared/ui';
+import { Linking, Pressable, ScrollView, View } from 'react-native';
+import { Boton, Chip, Encabezado, Tarjeta, Texto } from '@/shared/ui';
 import { Aviso } from '@/shared/ui/Aviso';
 import { EsqueletoLista } from '@/shared/ui/Esqueleto';
 import { ChipDePermiso } from './ChipDePermiso';
@@ -12,6 +12,12 @@ import { useBloqueo } from '../hooks/useBloqueo';
  * In that order because it is the order that works — the picker is
  * useless until the permissions are granted, and showing it first
  * teaches a learner that the feature is broken.
+ *
+ * There is exactly one `principal` button here and it moves: while a
+ * permission is pending it is the one that asks for it, and once they
+ * are all in it becomes the one that picks the apps. Whatever the
+ * learner has to do next is the only filled button on the screen, so
+ * «Volver» is flat and never competes with it.
  */
 export function PantallaBloqueo({
   alElegirApps,
@@ -33,13 +39,11 @@ export function PantallaBloqueo({
   if (bloqueo.disponible === false) {
     return (
       <View className="flex-1 justify-center gap-4 px-5">
-        <Text className="text-[20px] font-bold text-texto">
-          Aquí no podemos bloquear apps
-        </Text>
-        <Text className="text-[14.5px] leading-6 text-texto-apagado">
+        <Texto estilo="titulo">Aquí no podemos bloquear apps</Texto>
+        <Texto estilo="apoyo">
           Esta función necesita la app instalada en un Android. Todo lo demás
           funciona igual.
-        </Text>
+        </Texto>
         <Boton variante="contorno" alTocar={alVolver}>
           Volver
         </Boton>
@@ -47,24 +51,40 @@ export function PantallaBloqueo({
     );
   }
 
+  /* How many are in, for the chip beside the heading. A learner part
+     way through six permissions has no other way to see how far along
+     they are, and the rows themselves do not add up. */
+  const concedidos = bloqueo.pasos.filter((p) => p.concedido).length;
+
+  /* Pending but nothing left to ask for: every remaining permission
+     is restricted by the system. */
+  const todoRestringido =
+    !bloqueo.siguiente && bloqueo.pasos.some((p) => !p.concedido);
+
   return (
     <ScrollView className="flex-1" contentContainerClassName="gap-6 px-5 py-6">
       <View className="gap-2">
-        <Text className="text-[22px] font-bold tracking-tight text-texto">
-          Bloquear apps
-        </Text>
-        <Text className="text-[14px] leading-6 text-texto-apagado">
+        <Texto estilo="titulo-grande">Bloquear apps</Texto>
+        <Texto estilo="apoyo">
           Cuando abras una app bloqueada, te pedimos cinco preguntas. Las
           resuelves y se abre.
-        </Text>
+        </Texto>
       </View>
 
       {bloqueo.fallo ? <Aviso mensaje={bloqueo.fallo} /> : null}
 
       <View className="gap-2.5">
-        <Text className="text-[12px] font-bold uppercase tracking-widest text-texto-apagado">
-          Permisos
-        </Text>
+        <Encabezado
+          rotulo="Permisos"
+          derecha={
+            bloqueo.pasos.length > 0 ? (
+              <Chip tono={bloqueo.listo ? 'ganado' : 'neutro'}>
+                {concedidos} de {bloqueo.pasos.length}
+              </Chip>
+            ) : undefined
+          }
+        />
+
         {ordenar(bloqueo.pasos).map((paso) => (
           <ChipDePermiso key={paso.id} paso={paso} />
         ))}
@@ -73,11 +93,13 @@ export function PantallaBloqueo({
             failed to load — which is exactly how a wrong method name
             surfaced once. Every case now says something. */}
         {bloqueo.pasos.length === 0 ? (
-          <Text className="text-[13.5px] leading-6 text-texto-apagado">
-            {bloqueo.sinPasos
-              ? 'Este teléfono no pide permisos extra.'
-              : 'No pudimos leer los permisos. Cierra y vuelve a abrir la app.'}
-          </Text>
+          <Tarjeta variante="plana">
+            <Texto estilo="apoyo">
+              {bloqueo.sinPasos
+                ? 'Este teléfono no pide permisos extra.'
+                : 'No pudimos leer los permisos. Cierra y vuelve a abrir la app.'}
+            </Texto>
+          </Tarjeta>
         ) : null}
 
         {bloqueo.siguiente ? (
@@ -87,7 +109,7 @@ export function PantallaBloqueo({
           <Boton alTocar={() => void bloqueo.pedirSiguiente()}>
             {textoDelBoton(bloqueo.siguiente)}
           </Boton>
-        ) : bloqueo.pasos.some((p) => !p.concedido) ? (
+        ) : todoRestringido ? (
           /* Permissions are pending but every one of them is
              restricted by the system, so there is nothing this app
              can ask for. Without this the heading sat above six
@@ -96,65 +118,97 @@ export function PantallaBloqueo({
              list above already learned to avoid.
 
              Settings is the only way through, so the screen says so
-             and opens it. */
-          <>
+             and opens it.
+
+             A flat card and not a raised one: the thing to act on is
+             the button under it, and this is the explanation of why
+             there is no other way forward. */
+          <Tarjeta variante="plana" className="gap-3">
             <Texto estilo="apoyo">
               Estos permisos los da Android, no la app. Ábrelos en los ajustes
               del teléfono y vuelve.
             </Texto>
-            <Boton variante="contorno" alTocar={() => void Linking.openSettings()}>
+            <Boton alTocar={() => void Linking.openSettings()}>
               Abrir los ajustes
             </Boton>
-          </>
+          </Tarjeta>
         ) : null}
       </View>
 
       <View className="gap-2.5">
-        <Text className="text-[12px] font-bold uppercase tracking-widest text-texto-apagado">
-          Qué se bloquea
-        </Text>
+        <Encabezado rotulo="Qué se bloquea" />
 
         {bloqueo.listo ? (
           <>
-            <Pressable
-              onPress={alElegirApps}
-              accessibilityRole="button"
-              className="flex-row items-center justify-between rounded-xl border border-linea bg-capa px-4 py-3.5"
-            >
-              {/* "Bloqueada" only when the system says it is. The
-                  screen used to say it on the strength of a selection
-                  being saved, which is not the same thing and told a
-                  learner they were protected when they were not. */}
-              <Text className="text-[15px] text-texto">
-                {bloqueo.appsSeleccionadas === 0
-                  ? 'Escoger apps'
-                  : bloqueo.bloqueado
-                    ? bloqueo.appsSeleccionadas === 1
-                      ? '1 app bloqueada'
-                      : `${bloqueo.appsSeleccionadas} apps bloqueadas`
-                    : bloqueo.appsSeleccionadas === 1
-                      ? '1 app escogida, sin bloquear'
-                      : `${bloqueo.appsSeleccionadas} apps escogidas, sin bloquear`}
-              </Text>
-              <Text className="text-[15px] text-acento-texto">Cambiar</Text>
-            </Pressable>
+            {bloqueo.appsSeleccionadas === 0 ? (
+              /* Nothing picked yet, so this is what the screen is for
+                 and it gets the filled button — unless a permission is
+                 still asking above.
+
+                 `listo` counts only the required steps, so an optional
+                 one left pending puts a permission button and this one
+                 on screen together. Two filled buttons make neither of
+                 them the answer, and the permission is the one the
+                 learner is already looking at. */
+              <Boton
+                variante={bloqueo.siguiente ? 'contorno' : 'principal'}
+                alTocar={alElegirApps}
+              >
+                Escoger apps
+              </Boton>
+            ) : (
+              <Pressable
+                onPress={alElegirApps}
+                accessibilityRole="button"
+                accessibilityLabel={`${
+                  bloqueo.bloqueado
+                    ? `${bloqueo.appsSeleccionadas} ${bloqueo.appsSeleccionadas === 1 ? 'app bloqueada' : 'apps bloqueadas'}`
+                    : `${bloqueo.appsSeleccionadas} ${bloqueo.appsSeleccionadas === 1 ? 'app escogida, sin bloquear' : 'apps escogidas, sin bloquear'}`
+                }. Cambiar`}
+              >
+                <Tarjeta className="flex-row items-center justify-between gap-3">
+                  {/* "Bloqueada" only when the system says it is. The
+                      screen used to say it on the strength of a selection
+                      being saved, which is not the same thing and told a
+                      learner they were protected when they were not. */}
+                  <View className="flex-1 gap-0.5">
+                    <Texto estilo="opcion" style={{ fontFamily: 'Inter_600SemiBold' }}>
+                      {bloqueo.appsSeleccionadas === 1
+                        ? '1 app'
+                        : `${bloqueo.appsSeleccionadas} apps`}
+                    </Texto>
+                    <Texto estilo="apoyo">
+                      {bloqueo.bloqueado ? 'Bloqueadas ahora' : 'Escogidas, sin bloquear'}
+                    </Texto>
+                  </View>
+                  <Texto estilo="cuerpo" className="text-acento-texto">
+                    Cambiar
+                  </Texto>
+                </Tarjeta>
+              </Pressable>
+            )}
 
             {bloqueo.appsSeleccionadas > 0 ? (
-              <Pressable onPress={() => void bloqueo.quitarTodo()} className="py-2">
-                <Text className="text-center text-[13px] text-texto-apagado">
-                  Quitar el bloqueo de todas
-                </Text>
-              </Pressable>
+              <Boton variante="plano" alTocar={() => void bloqueo.quitarTodo()}>
+                Quitar el bloqueo de todas
+              </Boton>
             ) : null}
           </>
         ) : (
-          <Text className="text-[13.5px] leading-6 text-texto-apagado">
-            Primero los permisos de arriba. Sin ellos no podemos bloquear nada.
-          </Text>
+          /* Flat, because there is nothing to act on here: the action
+             is the permission button above. */
+          <Tarjeta variante="plana">
+            <Texto estilo="apoyo">
+              Primero los permisos de arriba. Sin ellos no podemos bloquear nada.
+            </Texto>
+          </Tarjeta>
         )}
       </View>
 
-      <Boton variante="contorno" alTocar={alVolver}>
+      {/* Flat: the screen's own action is one of the buttons above,
+          and a second outlined button at the bottom pulled the eye
+          away from it. */}
+      <Boton variante="plano" alTocar={alVolver}>
         Volver
       </Boton>
     </ScrollView>

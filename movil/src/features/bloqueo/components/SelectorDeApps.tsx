@@ -1,5 +1,6 @@
 import { useEffect, useState, type ComponentType } from 'react';
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
+import { Texto } from '@/shared/ui';
 import { SELECCION } from '../model/escudo';
 
 /**
@@ -44,7 +45,17 @@ export function SelectorDeApps({
   if (fallo) {
     return (
       <View className="flex-1 items-center justify-center px-6">
-        <Text className="text-center text-[14px] leading-6 text-texto-apagado">{fallo}</Text>
+        {/* Announced, because this replaces the whole screen the
+            learner was expecting: a screen reader that says nothing
+            leaves them waiting on a list that is never coming. */}
+        <Texto
+          estilo="cuerpo"
+          className="text-center text-texto-apagado"
+          accessibilityRole="alert"
+          accessibilityLiveRegion="polite"
+        >
+          {fallo}
+        </Texto>
       </View>
     );
   }
@@ -52,7 +63,9 @@ export function SelectorDeApps({
   if (!Picker) {
     return (
       <View className="flex-1 items-center justify-center">
-        <Text className="text-[13px] text-texto-apagado">Cargando tus apps…</Text>
+        <Texto estilo="apoyo" accessibilityLiveRegion="polite">
+          Cargando tus apps…
+        </Texto>
       </View>
     );
   }

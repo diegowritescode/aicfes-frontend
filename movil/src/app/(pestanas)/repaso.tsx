@@ -3,7 +3,6 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Redirect, useRouter } from 'expo-router';
 import {
-  BarraPestanas,
   Boton,
   Chip,
   Personaje,
@@ -255,7 +254,6 @@ export default function RutaRepaso() {
       </ScrollView>
 
       {/* A sibling after the scroll, never inside it. */}
-      <BarraPestanas />
     </SafeAreaView>
   );
 }

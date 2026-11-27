@@ -2,7 +2,14 @@ import { useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Redirect, useRouter } from 'expo-router';
-import { BarraRespuesta, Boton, Encabezado, Texto } from '@/shared/ui';
+import {
+  BarraRespuesta,
+  Boton,
+  Chip,
+  Encabezado,
+  Tarjeta,
+  Texto,
+} from '@/shared/ui';
 import { Aviso } from '@/shared/ui/Aviso';
 import { EsqueletoPregunta } from '@/shared/ui/Esqueleto';
 import { NOMBRE_AREA, type Area, type Dificultad } from '@/shared/model/icfes';
@@ -24,6 +31,76 @@ const AREAS: readonly Area[] = ['MAT', 'LC', 'CN', 'SOC', 'ING'];
 /** Null means "all five, mixed", at the exam's own proportions. */
 type Seleccion = Area | 'MIXTO';
 const CANTIDADES = [5, 10, 15] as const;
+
+/**
+ * The practice modes that are not this drill.
+ *
+ * The drawer used to be the only way in and the tab bar does not have
+ * room for them — five tabs is the ceiling. So they live here, below
+ * the drill, in the order the old menu argued for: practice first,
+ * and the drill itself stays at the top of the screen because it is
+ * the path almost everyone takes.
+ *
+ * Each one carries the fact that decides whether you want it today —
+ * how fast, how long — rather than a pitch.
+ */
+const MODOS = [
+  {
+    ruta: '/contrarreloj',
+    titulo: 'Contrarreloj',
+    dato: 'Escalera de 5 niveles',
+    descripcion:
+      'Respondes con el reloj corriendo. En el examen real tienes 64 segundos por pregunta, y la escalera te lleva hasta ahí.',
+  },
+  {
+    ruta: '/simulacro',
+    titulo: 'Simulacro',
+    dato: '25 a 254 preguntas',
+    descripcion:
+      'El examen completo, con su nota al final. Puedes saltar preguntas y volver atrás, y no sabes si acertaste hasta entregar.',
+  },
+] as const;
+
+/**
+ * One mode, as a card you can read before you tap.
+ *
+ * Same shape as the rungs in contrarreloj and the lengths in
+ * simulacro: title with the fact beside it, one line of what it is,
+ * and the way in. `contorno` and not `principal` — «Empezar» at the
+ * bottom of this screen already spends the accent.
+ */
+function TarjetaModo({
+  titulo,
+  dato,
+  descripcion,
+  etiquetaBoton,
+  alTocar,
+}: {
+  titulo: string;
+  dato: string;
+  descripcion: string;
+  etiquetaBoton: string;
+  alTocar: () => void;
+}) {
+  return (
+    <Tarjeta className="gap-2">
+      <View className="flex-row items-baseline justify-between gap-3">
+        <Texto estilo="cuerpo" style={{ fontFamily: 'Nunito_800ExtraBold' }}>
+          {titulo}
+        </Texto>
+        <Chip>{dato}</Chip>
+      </View>
+      <Texto estilo="cuerpo" className="text-texto-apagado">
+        {descripcion}
+      </Texto>
+      <View className="mt-1">
+        <Boton variante="contorno" alTocar={alTocar} etiqueta={`${etiquetaBoton}: ${titulo}`}>
+          {etiquetaBoton}
+        </Boton>
+      </View>
+    </Tarjeta>
+  );
+}
 
 /**
  * One choice in a row of them.
@@ -136,6 +213,40 @@ export default function RutaEntrenar() {
           </View>
         </View>
 
+        <View className="gap-3">
+          <Encabezado rotulo="Otras formas de practicar" />
+          {MODOS.map((m) => (
+            <TarjetaModo
+              key={m.ruta}
+              titulo={m.titulo}
+              dato={m.dato}
+              descripcion={m.descripcion}
+              etiquetaBoton="Abrir"
+              /* `push` and not `replace`: these are places the learner
+                 goes and comes back from, and the back gesture should
+                 land on Entrenar rather than walk out of the app. */
+              alTocar={() => router.push(m.ruta)}
+            />
+          ))}
+        </View>
+
+        {/* Its own heading, because it is not a way to practice: you
+            do not answer anything here, you decide which apps charge
+            you five questions. Filed under «Otras formas de
+            practicar» it would read as a sixth drill, and someone
+            looking for a session would open it and find a settings
+            page. */}
+        <View className="gap-3">
+          <Encabezado rotulo="Para obligarte a practicar" />
+          <TarjetaModo
+            titulo="Bloquear apps"
+            dato="5 preguntas por entrada"
+            descripcion="Eliges cuáles apps quedan cerradas. Cuando abres una, el peaje te pide cinco preguntas antes de dejarte pasar."
+            etiquetaBoton="Configurar"
+            alTocar={() => router.push('/bloqueo')}
+          />
+        </View>
+
         {examen.preparar.isError ? <Aviso
             mensaje={examen.preparar.error.mensaje}
             detalle={examen.preparar.error.detalle}
@@ -165,6 +276,12 @@ export default function RutaEntrenar() {
           {examen.preparar.isPending ? 'Preparando preguntas…' : 'Empezar'}
         </Boton>
       </BarraRespuesta>
+
+      {/* The tab bar belongs to this state only — the configurator.
+          Once `respondiendo` takes over, the screen returns early and
+          the bar is gone with it: a tab bar during a live drill is an
+          invitation to abandon it. Below the answer bar, because the
+          answer bar is what the learner came for. */}
     </SafeAreaView>
   );
 }

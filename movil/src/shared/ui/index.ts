@@ -21,7 +21,7 @@ export { Encabezado } from './moleculas/Encabezado';
 export { FilaMateria } from './moleculas/FilaMateria';
 export { BarraRespuesta } from './moleculas/BarraRespuesta';
 export { Personaje } from './organismos/Personaje/Personaje';
-export { BarraPestanas } from './organismos/BarraPestanas';
+export { PESTANAS, PestanaBoton, type Pestana, type RutaPestana } from './organismos/BarraPestanas';
 export { POSES, type Pose } from './organismos/Personaje/poses';
 export { sombra } from './sombras';
 export { color, espacio, radio, control, tipo, duracion } from './tokens';

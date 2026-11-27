@@ -1,13 +1,12 @@
-import { Pressable, View } from 'react-native';
+import { forwardRef } from 'react';
+import { Pressable, Text, type PressableProps, type View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
-import { usePathname, useRouter } from 'expo-router';
-import { Text } from 'react-native';
 import { color } from '../tokens';
 
 /**
  * The five places the app goes.
  *
- * This replaces the drawer. A drawer hides navigation behind a tap
+ * This replaced the drawer. A drawer hides navigation behind a tap
  * and a gesture, which is defensible on a dense dashboard and wrong
  * here: the validated design puts the five destinations on screen at
  * all times, so the learner never has to remember what exists.
@@ -19,7 +18,18 @@ import { color } from '../tokens';
  * Deliberately absent from the toll, the duel, the drill and the mock
  * exam: those are one task each, and a tab bar there is an invitation
  * to abandon a session halfway. The toll in particular runs over
- * another app and has no «somewhere else» to offer.
+ * another app and has no «somewhere else» to offer. That exclusion is
+ * now structural rather than remembered — those routes live outside
+ * `app/(pestanas)/`, so there is no way for the bar to appear on them.
+ *
+ * The bar itself is assembled in `app/(pestanas)/_layout.tsx`, which
+ * renders one `PestanaBoton` per entry inside a `TabList`. This file
+ * holds the list and the button; the navigator holds the bar. That
+ * split is what stopped the bar from blinking on every change: when
+ * each screen drew its own copy, switching tabs unmounted one bar and
+ * mounted another, and the flicker a learner reported was those two
+ * events. Nothing here tracks the current route any more — Expo
+ * passes `isFocused` in, because it is the navigator that knows.
  */
 
 /* Drawn here as paths rather than pulled from an icon package: five
@@ -33,65 +43,62 @@ const ICONOS = {
   yo: 'M12 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8M4 21a8 8 0 0 1 16 0',
 } as const;
 
-const PESTANAS = [
+export interface Pestana {
+  readonly ruta: string;
+  readonly icono: keyof typeof ICONOS;
+  readonly nombre: string;
+}
+
+export const PESTANAS: readonly Pestana[] = [
   { ruta: '/inicio', icono: 'casa', nombre: 'Inicio' },
   { ruta: '/entrenar', icono: 'pesa', nombre: 'Entrenar' },
   { ruta: '/duelos', icono: 'espadas', nombre: 'Duelos' },
   { ruta: '/repaso', icono: 'reloj', nombre: 'Repaso' },
   { ruta: '/yo', icono: 'yo', nombre: 'Yo' },
-] as const;
+];
 
-export type RutaPestana = (typeof PESTANAS)[number]['ruta'];
+export type RutaPestana = Pestana['ruta'];
 
-export function BarraPestanas() {
-  const router = useRouter();
-  const ruta = usePathname();
-
+/**
+ * One tab.
+ *
+ * Takes a ref and spreads the rest because `TabTrigger asChild` hands
+ * it the press handler, the focus state and the accessibility role of
+ * a real tab. Declaring `isFocused` separately keeps it out of that
+ * spread: it is not a `Pressable` prop, and React Native warns when
+ * an unknown one reaches the host component.
+ */
+export const PestanaBoton = forwardRef<
+  React.ElementRef<typeof View>,
+  PressableProps & { pestana: Pestana; isFocused?: boolean }
+>(function PestanaBoton({ pestana, isFocused = false, ...resto }, ref) {
   return (
-    <View
-      accessibilityRole="tablist"
-      /* The top line is the only separator. A shadow here would lift
-         the bar above content that is already scrolling under it. */
-      className="flex-row items-center justify-around border-t border-linea bg-capa px-2 pb-3.5 pt-2.5"
+    <Pressable
+      ref={ref}
+      accessibilityRole="tab"
+      accessibilityState={{ selected: isFocused }}
+      accessibilityLabel={pestana.nombre}
+      /* 44pt minimum, even though the glyph is 21: the row is at the
+         bottom edge where thumbs are least accurate. */
+      className="min-h-toque min-w-[56px] items-center justify-center gap-[3px]"
+      {...resto}
     >
-      {PESTANAS.map((p) => {
-        const activa = ruta === p.ruta;
-        return (
-          <Pressable
-            key={p.ruta}
-            onPress={() => {
-              /* Tapping the tab you are on does nothing. Pushing the
-                 same route again stacks a second copy, and the back
-                 gesture then walks through duplicates. */
-              if (activa) return;
-              router.replace(p.ruta as never);
-            }}
-            accessibilityRole="tab"
-            accessibilityState={{ selected: activa }}
-            accessibilityLabel={p.nombre}
-            /* 44pt minimum, even though the glyph is 21: the row is
-               at the bottom edge where thumbs are least accurate. */
-            className="min-h-toque min-w-[56px] items-center justify-center gap-[3px]"
-          >
-            <Svg width={21} height={21} viewBox="0 0 24 24">
-              <Path
-                d={ICONOS[p.icono]}
-                stroke={activa ? color.acentoTexto : color.textoApagado}
-                strokeWidth={1.9}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                fill="none"
-              />
-            </Svg>
-            <Text
-              style={{ fontFamily: 'Inter_600SemiBold' }}
-              className={`text-[10px] ${activa ? 'text-acento-texto' : 'text-texto-apagado'}`}
-            >
-              {p.nombre}
-            </Text>
-          </Pressable>
-        );
-      })}
-    </View>
+      <Svg width={21} height={21} viewBox="0 0 24 24">
+        <Path
+          d={ICONOS[pestana.icono]}
+          stroke={isFocused ? color.acentoTexto : color.textoApagado}
+          strokeWidth={1.9}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          fill="none"
+        />
+      </Svg>
+      <Text
+        style={{ fontFamily: 'Inter_600SemiBold' }}
+        className={`text-[10px] ${isFocused ? 'text-acento-texto' : 'text-texto-apagado'}`}
+      >
+        {pestana.nombre}
+      </Text>
+    </Pressable>
   );
-}
+});

@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { RefreshControl, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Redirect, useRouter } from 'expo-router';
-import { Avatar, BarraPestanas, Boton, Chip, FilaMateria, Tarjeta, Texto } from '@/shared/ui';
+import { Avatar, Boton, Chip, FilaMateria, Tarjeta, Texto } from '@/shared/ui';
 import { Aviso } from '@/shared/ui/Aviso';
 import { AvisoConexion } from '@/shared/conexion/AvisoConexion';
 import { EsqueletoPanel } from '@/shared/ui/Esqueleto';
@@ -242,7 +242,6 @@ export default function RutaInicio() {
         <Boton alTocar={() => router.push('/entrenar')}>Practicar</Boton>
       </ScrollView>
 
-      <BarraPestanas />
     </SafeAreaView>
   );
 }

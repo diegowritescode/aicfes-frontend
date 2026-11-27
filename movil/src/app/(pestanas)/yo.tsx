@@ -1,7 +1,7 @@
 import { RefreshControl, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Redirect, useRouter } from 'expo-router';
-import { BarraPestanas, Boton, Tarjeta, Texto } from '@/shared/ui';
+import { Boton, Tarjeta, Texto } from '@/shared/ui';
 import { EsqueletoPanel } from '@/shared/ui/Esqueleto';
 import { usePerfilDeDuelos } from '@/features/duelos/hooks/useDuelos';
 import { useRecordatorio } from '@/features/recordatorio/hooks/useRecordatorio';
@@ -172,7 +172,6 @@ export default function RutaYo() {
         </Boton>
       </ScrollView>
 
-      <BarraPestanas />
     </SafeAreaView>
   );
 }
