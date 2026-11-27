@@ -66,6 +66,36 @@ export const color = {
   foco: '#6a57e0',
 } as const;
 
+/**
+ * The colours an avatar can be, and the grey for nobody yet.
+ *
+ * Apart from the palette above on purpose, and not reachable through
+ * `color`: these are not roles. `acento` can stop being purple
+ * without touching a class string, which is the point of naming by
+ * role — but an avatar's colour must NOT move, because a learner
+ * recognises a friend in a list by it. Putting them in `color` would
+ * invite the next restyle to change them and break that.
+ *
+ * Fixed rather than theme-derived for the same reason they do not
+ * change for dark mode: the person you recognise cannot be a
+ * different colour in the evening.
+ *
+ * Chosen to carry white text at the weight the initials use.
+ */
+export const colorAvatar = [
+  '#6366F1', // índigo
+  '#0891B2', // cian
+  '#059669', // esmeralda
+  '#D97706', // ámbar
+  '#DC2626', // rojo
+  '#7C3AED', // violeta
+  '#DB2777', // rosa
+  '#2563EB', // azul
+] as const;
+
+/** Nobody yet. Its own colour, so they do not all look like one person. */
+export const colorAvatarSinNombre = '#64748B';
+
 export const espacio = {
   1: 4,
   2: 8,

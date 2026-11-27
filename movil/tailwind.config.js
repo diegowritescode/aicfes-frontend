@@ -9,7 +9,14 @@
  * Names are roles, not hues: `acento` can stop being purple without
  * touching a single class string.
  */
-const { color, espacio, radio, control } = require('./src/shared/ui/tokens.ts');
+const {
+  color,
+  colorAvatar,
+  colorAvatarSinNombre,
+  espacio,
+  radio,
+  control,
+} = require('./src/shared/ui/tokens.ts');
 
 /** @type {import('tailwindcss').Config} */
 module.exports = {
@@ -37,6 +44,17 @@ module.exports = {
         alerta: color.alerta,
         'alerta-suave': color.alertaSuave,
         foco: color.foco,
+        /* Avatars, and the only colours here that are not roles.
+           They are a set to tell people apart by, so a name like
+           `avatar-3` is the honest one — calling one `acento` would
+           put it in the theme, where the next person to restyle the
+           app would change it and break recognition.
+
+           Written as classes rather than passed through `style`
+           because NativeWind compiles what it can see, and an inline
+           colour can beat a compiled class. */
+        ...Object.fromEntries(colorAvatar.map((c, i) => [`avatar-${i}`, c])),
+        'avatar-sin-nombre': colorAvatarSinNombre,
       },
       spacing: Object.fromEntries(Object.entries(espacio).map(([k, v]) => [k, `${v}px`])),
       borderRadius: Object.fromEntries(Object.entries(radio).map(([k, v]) => [k, `${v}px`])),

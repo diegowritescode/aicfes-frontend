@@ -1,12 +1,11 @@
 import { useState } from 'react';
-import { ScrollView, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Redirect, useRouter } from 'expo-router';
-import { Boton, Chip, Tarjeta, Texto } from '@/shared/ui';
+import { Avatar, Boton, Chip, Tarjeta, Texto } from '@/shared/ui';
 import { Aviso } from '@/shared/ui/Aviso';
 import { useSesion } from '@/features/sesion/hooks/useSesion';
 import { useAmigos, usePerfilDeAmigo } from '@/features/duelos/hooks/useDuelos';
-import { Avatar } from '@/features/perfil/components/Avatar';
 import type { Amistad } from '@/features/duelos/api/esquemas';
 
 /**
@@ -64,7 +63,7 @@ export default function RutaAmigos() {
             {amigos.porResponder.map((a) => (
               <Tarjeta key={a.id} className="gap-3">
                 <View className="flex-row items-center gap-3">
-                  <Avatar alias={a.amigo.alias} />
+                  <Avatar nombre={a.amigo.alias ?? ""} />
                   <Texto estilo="cuerpo" style={{ fontFamily: 'Inter_600SemiBold' }}>
                     {a.amigo.alias ?? 'Sin nombre'}
                   </Texto>
@@ -106,20 +105,29 @@ export default function RutaAmigos() {
           </View>
         ) : null}
 
-        {/* Last and quiet: nothing to do here but wait. */}
+        {/* Last, and it says why it can do nothing yet.
+            The first version showed a name, an avatar and a chip
+            reading «pendiente», and that was all. Diego tapped one of
+            these expecting the profile to open: an avatar and a name
+            on a card look exactly like the rows above, which do open.
+            The row cannot open a profile — the server refuses one
+            without an accepted friendship, and it is right to, since
+            a profile readable before the other person agrees turns a
+            friend request into a way to look at their account. So the
+            row has to say so itself. */}
         {amigos.enviadas.length > 0 ? (
           <View className="gap-3">
             <Texto estilo="rotulo">Esperando respuesta</Texto>
+            <Texto estilo="apoyo">
+              Podrás ver su perfil cuando acepten.
+            </Texto>
             {amigos.enviadas.map((a) => (
-              <Tarjeta key={a.id} variante="plana" className="gap-2">
-                <View className="flex-row items-center gap-3">
-                  <Avatar alias={a.amigo.alias} tamano="chico" />
-                  <View className="flex-1">
-                    <Texto estilo="cuerpo">{a.amigo.alias ?? 'Sin nombre'}</Texto>
-                  </View>
-                  <Chip>pendiente</Chip>
-                </View>
-              </Tarjeta>
+              <FilaEnviada
+                key={a.id}
+                amistad={a}
+                alCancelar={() => void amigos.quitar(a.amigo.id)}
+                cancelando={amigos.quitando}
+              />
             ))}
           </View>
         ) : null}
@@ -138,6 +146,71 @@ export default function RutaAmigos() {
   );
 }
 
+/**
+ * A request this learner sent, and the only thing they can do about it.
+ *
+ * Deliberately not tappable, and deliberately not silent about it. The
+ * card above it opens a profile; this one cannot, because the server
+ * will not serve a profile without an accepted friendship. Looking the
+ * same as a row that opens and then doing nothing is the worst of the
+ * three options — it reads as the app being broken.
+ *
+ * «Cancelar» exists because a request with no way out is a dead row
+ * the learner carries forever. It reuses `quitarAmigo`: on the server
+ * a pending request and a friendship are the same record, so removing
+ * either is one call.
+ */
+function FilaEnviada({
+  amistad,
+  alCancelar,
+  cancelando,
+}: {
+  amistad: Amistad;
+  alCancelar: () => void;
+  cancelando: boolean;
+}) {
+  const nombre = amistad.amigo.alias ?? 'Sin nombre';
+
+  return (
+    <Tarjeta variante="plana" className="gap-3">
+      <View className="flex-row items-center gap-3">
+        <Avatar nombre={nombre} tamano="chico" />
+        <View className="flex-1">
+          <Texto estilo="cuerpo">{nombre}</Texto>
+          <Texto estilo="apoyo">Le pediste ser amigos {desdeCuando(amistad.creadoEn)}</Texto>
+        </View>
+        <Chip>pendiente</Chip>
+      </View>
+      <Boton
+        variante="plano"
+        alTocar={alCancelar}
+        deshabilitado={cancelando}
+        etiqueta={`Cancelar la solicitud a ${nombre}`}
+      >
+        Cancelar
+      </Boton>
+    </Tarjeta>
+  );
+}
+
+/**
+ * How long ago, in words rather than a date.
+ *
+ * «hace 3 días» answers the question somebody staring at a pending
+ * request is actually asking. A timestamp makes them do the
+ * subtraction.
+ */
+function desdeCuando(iso: string): string {
+  const cuando = new Date(iso).getTime();
+  if (!Number.isFinite(cuando)) return 'hace un rato';
+
+  const dias = Math.floor((Date.now() - cuando) / 86400000);
+  if (dias < 1) return 'hoy';
+  if (dias === 1) return 'ayer';
+  if (dias < 30) return `hace ${dias} días`;
+  return 'hace más de un mes';
+}
+
 /** One friend, tappable to see their profile. */
 function FilaDeAmigo({
   amistad,
@@ -146,20 +219,46 @@ function FilaDeAmigo({
   amistad: Amistad;
   alAbrir: () => void;
 }) {
+  const nombre = amistad.amigo.alias ?? 'Sin nombre';
+
+  /* The whole row opens the profile, not only the button.
+     The first version put the press on the button alone, and the
+     avatar beside it was a plain `View`. A circle with somebody's
+     initials in it reads as the thing you tap to see that person —
+     Diego tapped Sofía's «S» and nothing happened, with no sign that
+     it was not a control. Either the avatar responds or it should not
+     look like a target; making the row the target is the smaller
+     change and matches `AvisoDeDuelos`.
+
+     The button stays. It is what makes the row's purpose readable to
+     somebody who has not learnt that cards here are tappable, and it
+     is the only part a screen reader announces as a control. */
   return (
-    <Tarjeta className="gap-3">
-      <View className="flex-row items-center gap-3">
-        <Avatar alias={amistad.amigo.alias} />
-        <View className="flex-1">
-          <Texto estilo="cuerpo" style={{ fontFamily: 'Inter_600SemiBold' }}>
-            {amistad.amigo.alias ?? 'Sin nombre'}
+    <Pressable
+      onPress={alAbrir}
+      accessibilityRole="button"
+      accessibilityLabel={`Ver el perfil de ${nombre}`}
+    >
+      {({ pressed }) => (
+        <Tarjeta className="gap-3" style={{ opacity: pressed ? 0.7 : 1 }}>
+          <View className="flex-row items-center gap-3">
+            <Avatar nombre={amistad.amigo.alias ?? ""} />
+            <View className="flex-1">
+              <Texto estilo="cuerpo" style={{ fontFamily: 'Inter_600SemiBold' }}>
+                {nombre}
+              </Texto>
+            </View>
+          </View>
+          {/* Not a `Boton`: it sits inside a Pressable, and a control
+              inside a control is two tap targets over one area and two
+              things for a screen reader to announce. This is the label
+              that says what the row does. */}
+          <Texto estilo="apoyo" className="text-acento">
+            Ver perfil
           </Texto>
-        </View>
-      </View>
-      <Boton variante="contorno" alTocar={alAbrir}>
-        Ver perfil
-      </Boton>
-    </Tarjeta>
+        </Tarjeta>
+      )}
+    </Pressable>
   );
 }
 
@@ -195,7 +294,7 @@ function PerfilDeAmigo({
         {perfil ? (
           <>
             <View className="items-center gap-3">
-              <Avatar alias={perfil.alias} tamano="grande" />
+              <Avatar nombre={perfil.alias ?? ""} tamano="grande" />
               <Texto estilo="titulo">{perfil.alias ?? 'Sin nombre'}</Texto>
               {perfil.descripcion ? (
                 <Texto estilo="apoyo" className="text-center">

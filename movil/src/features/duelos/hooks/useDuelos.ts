@@ -331,6 +331,7 @@ export function useAmigos() {
     responder: responder.mutateAsync,
     respondiendo: responder.isPending,
     quitar: quitar.mutateAsync,
+    quitando: quitar.isPending,
   };
 }
 

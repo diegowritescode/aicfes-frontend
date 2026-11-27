@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { colorDe, inicialesDe } from './avatar';
+import { colorDe, inicialesDe, ranuraDe } from './color-de-avatar';
 
 /**
  * Avatars drawn from the alias.

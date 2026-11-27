@@ -16,24 +16,12 @@
  * Pure, so the colour assignment can be tested without rendering.
  */
 
-/**
- * The palette avatars draw from.
- *
- * Fixed hex rather than theme tokens: an avatar has to stay the same
- * colour when the app switches to dark mode, or the person a learner
- * recognises at a glance changes every evening. These are chosen to
- * carry white text at the weight the initials use.
- */
-const COLORES = [
-  '#6366F1', // índigo
-  '#0891B2', // cian
-  '#059669', // esmeralda
-  '#D97706', // ámbar
-  '#DC2626', // rojo
-  '#7C3AED', // violeta
-  '#DB2777', // rosa
-  '#2563EB', // azul
-] as const;
+/* The palette lives in `tokens.ts`, which is the only file in
+   `shared/ui` allowed to write a hex — `tokens.test.ts` fails the
+   build otherwise, and it is right to: a colour defined twice is a
+   colour that will be changed once. See `colorAvatar` there for why
+   these sit outside the themed palette. */
+import { colorAvatar, colorAvatarSinNombre } from '../tokens';
 
 /**
  * A small stable hash of a string.
@@ -69,13 +57,34 @@ export function inicialesDe(alias: string | null | undefined): string {
   return letras.join('').toUpperCase() || '?';
 }
 
-/** The colour for an alias. Stable: the same name is always the same. */
-export function colorDe(alias: string | null | undefined): string {
+/**
+ * Which of the colours an alias gets. Stable: same name, same slot.
+ *
+ * Returns an index and not a hex string, so the component can name a
+ * written-out class instead of passing a colour through `style`.
+ * NativeWind compiles the classes it can see in the source, and an
+ * inline `style` can also beat a compiled class — which once shipped
+ * a button with no fill at all. `tokens.test.ts` guards both, and an
+ * index is what lets this obey it.
+ *
+ * `null` means nobody yet, which is its own slot rather than a hash
+ * of the empty string: everyone without an alias sharing one colour
+ * looks like they are all the same person.
+ */
+export function ranuraDe(alias: string | null | undefined): number | null {
   const limpio = (alias ?? '').trim().toLowerCase();
-  /* No alias yet is its own case rather than hashing the empty
-     string: everyone without one would share a colour, which looks
-     like they are all the same person. */
-  if (!limpio) return '#64748B';
+  if (!limpio) return null;
 
-  return COLORES[huella(limpio) % COLORES.length]!;
+  return huella(limpio) % colorAvatar.length;
+}
+
+/**
+ * The hex for an alias.
+ *
+ * Kept for the places that genuinely need a value rather than a
+ * class — a chart, a notification icon. Screens use `ranuraDe`.
+ */
+export function colorDe(alias: string | null | undefined): string {
+  const ranura = ranuraDe(alias);
+  return ranura === null ? colorAvatarSinNombre : colorAvatar[ranura]!;
 }
