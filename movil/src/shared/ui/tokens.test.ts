@@ -365,3 +365,95 @@ describe('el teclado no se maneja con el KeyboardAvoidingView de React Native', 
     ).toEqual([]);
   });
 });
+
+describe('una etiqueta de botón en fila cabe sin cortarse', () => {
+  /* Measured, not guessed. A 1080×2392 phone at density 450 is 384dp
+     wide. A row inside the usual `px-5` has 344dp, less an 8dp gap:
+     168dp per half. A `contorno` keeps `px-6`, so 120dp are left for
+     the text, and Nunito 700 at 16px averages 7,5dp a character.
+
+     Sixteen characters is the ceiling that follows, and fourteen is
+     the limit here so a larger font setting still fits. «Volver a
+     intentar» measured 125dp against 120 and shipped truncated to
+     «Volver a inte…», which the learner read before any test did: a
+     button nobody can read is worse than one that is too wide.
+
+     The fix is a shorter word, never a narrower button. `etiqueta`
+     carries the full sentence for a screen reader. */
+  const LIMITE = 14;
+
+  it('ninguna pasa de 14 caracteres', () => {
+    const culpables: string[] = [];
+
+    for (const archivo of archivosDeInterfaz()) {
+      const fuente = readFileSync(archivo, 'utf8');
+      const sinComentarios = fuente
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+        .replace(/^\s*\/\/.*$/gm, '')
+        .replace(/\{\/\*[\s\S]*?\*\/\}/g, '');
+
+      const pila: Array<{ fila: boolean; flex1: boolean }> = [];
+
+      for (const t of sinComentarios.matchAll(
+        /<View\b([^>]*)>|<\/View>|<Boton\b/g,
+      )) {
+        const texto = t[0];
+
+        if (texto === '</View>') {
+          pila.pop();
+          continue;
+        }
+
+        if (texto === '<Boton') {
+          /* The props end at the `>` that closes the tag, which is
+             not the first one: an arrow function in `alTocar` carries
+             its own. Counting braces is what tells them apart. */
+          let i = (t.index ?? 0) + texto.length;
+          let llaves = 0;
+          for (; i < sinComentarios.length; i += 1) {
+            const c = sinComentarios[i];
+            if (c === '{') llaves += 1;
+            else if (c === '}') llaves -= 1;
+            else if (c === '>' && llaves === 0) break;
+          }
+          const cierre = sinComentarios.indexOf('</Boton>', i);
+          const etiqueta = cierre === -1 ? '' : sinComentarios.slice(i + 1, cierre).trim();
+          const dentro = pila[pila.length - 1];
+          const abuelo = pila[pila.length - 2];
+
+          /* Either directly in a row, or in the `flex-1` wrapper that
+             a row uses to split its width evenly. */
+          const enFila = Boolean(
+            dentro?.fila || (dentro?.flex1 && abuelo?.fila),
+          );
+
+          /* Only a literal label can be counted. One built from an
+             expression is the screen's business. */
+          const literal = !etiqueta.includes('{') && !etiqueta.includes('<');
+
+          if (enFila && literal && etiqueta.length > LIMITE) {
+            culpables.push(
+              `${path.relative(RAIZ_SRC, archivo)}: «${etiqueta}» (${etiqueta.length})`,
+            );
+          }
+          continue;
+        }
+
+        const props = t[1] ?? '';
+        if (props.trimEnd().endsWith('/')) continue;
+        pila.push({
+          fila: /\bflex-row\b/.test(props),
+          flex1: /\bflex-1\b/.test(props),
+        });
+      }
+    }
+
+    expect(
+      culpables,
+      `estas etiquetas no caben en media fila: ${culpables.join('; ')}. ` +
+        `Media fila son 120dp de texto en un teléfono de 384dp, y Nunito 700 a 16px ` +
+        `gasta unos 7,5dp por carácter. Acorta la palabra y pon la frase entera en ` +
+        `la prop etiqueta: así se cortó «Volver a intentar» en «Volver a inte…».`,
+    ).toEqual([]);
+  });
+});

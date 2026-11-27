@@ -269,21 +269,39 @@ export function ModalTutoria({
               </View>
             )}
 
-            {/* Both halves, not natural width. «Seguir sin repasar»
-                and «Volver a intentar» together ask for more than the
-                row has, and a row shares nothing it was not told to:
-                the second one ran off the right edge on a real phone,
-                clipped mid-word. `flex-1` on each makes the row the
-                constraint instead of the labels. */}
+            {/* Two short labels, because the row is 384dp wide on a
+                common phone and «Seguir sin repasar» beside «Volver a
+                intentar» asked for more than that. The first fix was
+                to let them shrink, which truncated them to «Seguir sin
+                re…» and «Volver a inte…» — a button nobody can read is
+                worse than one that is too wide, and the learner caught
+                it on the phone. Shortening the words is the fix; the
+                shrink underneath is only the safety net for a bigger
+                font size.
+
+                Measured rather than guessed, in Nunito 700 at 16px
+                against the 168dp each half gets on a 384dp screen:
+                «Volver a intentar» is 125dp inside 120dp of room and
+                «Intentar otra vez» is 123dp, so both still overflow.
+                «Otra vez» is 63dp and «Seguir» 48dp, which leaves room
+                for a wider font setting too.
+
+                `etiqueta` carries the full sentence, so a screen
+                reader still says «Intentar la pregunta otra vez» while
+                the button shows two words. */}
             <View className="flex-row gap-2">
               <View className="flex-1">
-                <Boton variante="plano" alTocar={intentarSalir}>
-                  Seguir sin repasar
+                <Boton variante="plano" alTocar={intentarSalir} etiqueta="Seguir sin repasar">
+                  Seguir
                 </Boton>
               </View>
               <View className="flex-1">
-                <Boton variante="contorno" alTocar={onReintentar}>
-                  Volver a intentar
+                <Boton
+                  variante="contorno"
+                  alTocar={onReintentar}
+                  etiqueta="Intentar la pregunta otra vez"
+                >
+                  Otra vez
                 </Boton>
               </View>
             </View>
