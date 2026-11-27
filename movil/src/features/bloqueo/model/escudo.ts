@@ -1,3 +1,9 @@
+/* From `tokens` and not from the `shared/ui` barrel: that barrel
+   pulls in every component, and so react-native, which the test
+   runner cannot parse. A model file has no business importing
+   components anyway — it needs the numbers, not the views. */
+import { color } from '@/shared/ui/tokens';
+
 /**
  * What the shield says and does when a blocked app is opened.
  *
@@ -44,19 +50,67 @@ export const ACCION_PRINCIPAL = { type: 'openApp' } as const;
  */
 export const ACCION_SECUNDARIA = { type: 'openApp' } as const;
 
+/**
+ * How the shield looks.
+ *
+ * The shield is drawn by Android, not by React, so none of the app's
+ * styling reaches it. Left unconfigured it paints itself in the
+ * platform's own palette — a Material blue pill on white — which is
+ * the one screen of this product that looked like it belonged to a
+ * different app. And it is not a minor screen: it is the first thing
+ * a learner sees at the moment they reached for Instagram.
+ *
+ * The native side accepts a colour for the background, each line of
+ * text and each button, so every one of them is a token from
+ * `shared/ui` rather than a value chosen here. The shield cannot
+ * import the stylesheet, but it can be handed the same numbers.
+ *
+ * Measured against the tokens, all four pass AA:
+ * white on `acento` 5,18:1 · `texto` on `fondo` 16,06:1 ·
+ * `textoApagado` on `fondo` 5,00:1 · `acentoTexto` on `fondo` 5,88:1.
+ *
+ * The icon is deliberately left alone. Android falls back to the
+ * blocked app's own icon, and Instagram's face is the right one here:
+ * it says what is paused without a word, and swapping in our own mark
+ * would turn a pause notice into a brand placing itself in front of
+ * something the learner opened.
+ */
 export const TEXTOS_DEL_ESCUDO = {
-  /* Second person, informal, no scolding. A learner who feels judged
-     by the shield uninstalls the app rather than answering five
-     questions. */
-  title: 'Esta app está en pausa',
-  /* No scolding and no cheerleading. A learner who feels judged by
-     the shield uninstalls rather than answering five questions, and
-     one who feels patronised does the same. */
-  subtitle: 'Cinco preguntas y entras.',
-  primaryButtonLabel: 'Resolverlas',
-  /* Named for what it does now: it opens the choices, rather than
-     declining on the learner's behalf. */
-  secondaryButtonLabel: 'Ver opciones',
+  backgroundColor: color.fondo,
+
+  title: {
+    /* Second person, informal, no scolding. A learner who feels
+       judged by the shield uninstalls the app rather than answering
+       five questions. */
+    text: 'Esta app está en pausa',
+    color: color.texto,
+  },
+
+  subtitle: {
+    /* No scolding and no cheerleading. A learner who feels judged by
+       the shield uninstalls rather than answering five questions, and
+       one who feels patronised does the same. */
+    text: 'Cinco preguntas y entras.',
+    color: color.textoApagado,
+  },
+
+  primaryButton: {
+    text: 'Resolverlas',
+    backgroundColor: color.acento,
+    /* Pure white, not `capa`: this is text on a saturated fill, where
+       the tinted white reads as grubby. */
+    color: '#ffffff',
+  },
+
+  secondaryButton: {
+    /* Named for what it does now: it opens the choices, rather than
+       declining on the learner's behalf. */
+    text: 'Ver opciones',
+    /* Flat, like the app's `plano` button. The exercises are the
+       answer; a second filled button beside the first makes neither
+       of them it. */
+    color: color.acentoTexto,
+  },
 } as const;
 
 /**
