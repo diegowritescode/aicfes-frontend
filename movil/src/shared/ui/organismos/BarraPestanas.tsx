@@ -35,7 +35,10 @@ import { color } from '../tokens';
 const ICONOS = {
   casa: 'M3 11l9-8 9 8M5 10v10h14V10',
   pesa: 'M4 9v6M20 9v6M7 7v10M17 7v10M7 12h10',
-  espadas: 'M5 3l9 9-2 2-9-9zM19 3l-9 9 2 2 9-9',
+  /* A game controller, not the crossed swords duels used to carry:
+     the tab now holds contrarreloj too, and a clock is not a duel.
+     What the two share is that you play them. */
+  mando: 'M7 12h4M9 10v4M15.5 11.5h.01M18 13.5h.01M8 7h8a5 5 0 0 1 5 5v1a4 4 0 0 1-7 2.8L13 15h-2l-1 .8A4 4 0 0 1 3 13v-1a5 5 0 0 1 5-5Z',
   reloj: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18M12 7v5l3 2',
   yo: 'M12 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8M4 21a8 8 0 0 1 16 0',
 } as const;
@@ -49,7 +52,7 @@ export interface Pestana {
 export const PESTANAS: readonly Pestana[] = [
   { ruta: '/inicio', icono: 'casa', nombre: 'Inicio' },
   { ruta: '/entrenar', icono: 'pesa', nombre: 'Entrenar' },
-  { ruta: '/duelos', icono: 'espadas', nombre: 'Duelos' },
+  { ruta: '/jugar', icono: 'mando', nombre: 'Jugar' },
   { ruta: '/repaso', icono: 'reloj', nombre: 'Repaso' },
   { ruta: '/yo', icono: 'yo', nombre: 'Yo' },
 ];

@@ -198,6 +198,10 @@ export default function RutaInicio() {
             <Boton
               variante="contorno"
               ancho={false}
+              /* Straight to the duels list, not to Jugar: this card
+                 already names the rival and the round, so stopping at
+                 the hub first would be a step that asks the learner
+                 to choose what they just chose. */
               alTocar={() => router.push('/duelos')}
               etiqueta={
                 dueloUnico.contra?.alias

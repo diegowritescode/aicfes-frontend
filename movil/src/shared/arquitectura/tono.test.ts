@@ -37,7 +37,8 @@ const VIGILADAS = [
   'app/(pestanas)/inicio.tsx',
   'app/(pestanas)/yo.tsx',
   'app/(pestanas)/repaso.tsx',
-  'app/(pestanas)/duelos.tsx',
+  'app/duelos.tsx',
+  'app/(pestanas)/jugar.tsx',
   'app/(pestanas)/entrenar.tsx',
   'app/simulacro',
   'features/repaso',
@@ -76,7 +77,21 @@ const FORMALES = [
 
 function archivos(ruta: string): string[] {
   const completa = join(RAIZ, ruta);
-  if (statSync(completa).isFile()) return [completa];
+
+  /* A missing path returns nothing instead of throwing. It threw
+     once, when a watched screen moved out of the tab group, and the
+     whole file stopped collecting: the suite reported a test file
+     that would not load, which says nothing about which path broke.
+     «cada ruta vigilada sigue existiendo» names it instead, and it
+     can only run if this function lets the module finish loading. */
+  let estado;
+  try {
+    estado = statSync(completa);
+  } catch {
+    return [];
+  }
+
+  if (estado.isFile()) return [completa];
   return readdirSync(completa, { withFileTypes: true }).flatMap((e) =>
     e.isDirectory()
       ? archivos(join(ruta, e.name))
@@ -116,6 +131,29 @@ describe('el peaje tutea', () => {
     /* A list that comes back empty would make the assertion below
        pass without reading anything. */
     expect(encontrados.length).toBeGreaterThan(5);
+  });
+
+  it('cada ruta vigilada sigue existiendo', () => {
+    /* Moving a screen used to break this file by hand: the list held
+       `app/(pestanas)/duelos.tsx`, the route moved out of the group,
+       and `archivos()` threw on the missing path — the suite reported
+       one file that would not collect, not a watched screen that had
+       silently stopped being read. Named here instead, so the failure
+       says which path to fix. */
+    const perdidas = VIGILADAS.filter((ruta) => {
+      try {
+        statSync(join(RAIZ, ruta));
+        return false;
+      } catch {
+        return true;
+      }
+    });
+
+    expect(
+      perdidas,
+      `estas rutas vigiladas ya no existen: ${perdidas.join(', ')}. ` +
+        `Si moviste la pantalla, actualiza VIGILADAS; si la borraste, quítala de la lista.`,
+    ).toEqual([]);
   });
 
   const sospechosos = encontrados.flatMap((f) =>

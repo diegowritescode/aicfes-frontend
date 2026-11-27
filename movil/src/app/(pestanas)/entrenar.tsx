@@ -33,25 +33,19 @@ type Seleccion = Area | 'MIXTO';
 const CANTIDADES = [5, 10, 15] as const;
 
 /**
- * The practice modes that are not this drill.
+ * The other way to study, which is not this drill.
  *
- * The drawer used to be the only way in and the tab bar does not have
- * room for them — five tabs is the ceiling. So they live here, below
- * the drill, in the order the old menu argued for: practice first,
- * and the drill itself stays at the top of the screen because it is
- * the path almost everyone takes.
+ * Only the simulacro now. Contrarreloj used to sit above it and moved
+ * to Jugar: you answer against a clock there, not against a syllabus,
+ * and a learner looking for a timed run was looking in the wrong
+ * place for the duel beside it. What is left here is study — pick an
+ * area, answer, find out — and the simulacro is the long version of
+ * exactly that.
  *
- * Each one carries the fact that decides whether you want it today —
- * how fast, how long — rather than a pitch.
+ * It carries the fact that decides whether you want it today — how
+ * long — rather than a pitch.
  */
 const MODOS = [
-  {
-    ruta: '/contrarreloj',
-    titulo: 'Contrarreloj',
-    dato: 'Escalera de 5 niveles',
-    descripcion:
-      'Respondes con el reloj corriendo. En el examen real tienes 64 segundos por pregunta, y la escalera te lleva hasta ahí.',
-  },
   {
     ruta: '/simulacro',
     titulo: 'Simulacro',
@@ -214,7 +208,7 @@ export default function RutaEntrenar() {
         </View>
 
         <View className="gap-3">
-          <Encabezado rotulo="Otras formas de practicar" />
+          <Encabezado rotulo="La versión larga" />
           {MODOS.map((m) => (
             <TarjetaModo
               key={m.ruta}

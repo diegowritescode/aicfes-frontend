@@ -39,19 +39,14 @@ export const ENTRADAS: readonly EntradaDeMenu[] = [
     descripcion: 'Lo que fallaste y sigue sin salirte.',
   },
   {
-    ruta: '/contrarreloj',
-    titulo: 'Contrarreloj',
-    descripcion: 'Con el reloj corriendo, como el examen.',
+    ruta: '/jugar',
+    titulo: 'Jugar',
+    descripcion: 'Contra alguien o contra el reloj.',
   },
   {
     ruta: '/simulacro',
     titulo: 'Simulacro',
     descripcion: 'El examen completo, con su nota al final.',
-  },
-  {
-    ruta: '/duelos',
-    titulo: 'Duelos',
-    descripcion: 'Rete a un compañero a las mismas 5 preguntas.',
   },
   {
     ruta: '/bloqueo',
