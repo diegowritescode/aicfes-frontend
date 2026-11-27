@@ -1,9 +1,11 @@
+import { z } from 'zod';
 import { pedir } from '@/core/http/cliente';
 import {
   denunciaRecibida,
   entregaHecha,
   estadoDeAmistad,
   misAmigos,
+  perfilDeAmigo,
   estadoDeBloqueo,
   listaDeBloqueados,
   listaDeDuelos,
@@ -139,6 +141,24 @@ export function denunciarJugador(params: {
     metodo: 'POST',
     cuerpo: params,
     esquema: denunciaRecibida,
+  });
+}
+
+/** Someone else's profile. Only answers between accepted friends. */
+export function leerPerfilDeAmigo(usuarioId: string) {
+  return pedir({
+    ruta: `/api/duelos/amigos/${usuarioId}/perfil`,
+    esquema: perfilDeAmigo,
+  });
+}
+
+/** Writes or clears the learner's own one-line description. */
+export function ponerDescripcion(descripcion: string) {
+  return pedir({
+    ruta: '/api/duelos/descripcion',
+    metodo: 'POST',
+    cuerpo: { descripcion },
+    esquema: z.object({ descripcion: z.string().nullable() }),
   });
 }
 

@@ -19,6 +19,10 @@ export const perfilDeDuelos = z.object({
   tutorAutorizoEn: z.string().nullable(),
   /** The server's own answer on whether this account can be found. */
   visible: z.boolean(),
+  /* Optional for the same reason `esModerador` is: an app built
+     against a server that predates the column must still parse its
+     own profile rather than failing sign-in over a missing bio. */
+  descripcion: z.string().nullable().optional(),
   /* Whether this account moderates. Optional so an app built against
      a server without the role still parses — the field arrived after
      the screens did, and a schema that refuses an older server turns
@@ -137,3 +141,31 @@ export const misAmigos = z.object({
 
 export type Amistad = z.infer<typeof amistad>;
 export type MisAmigos = z.infer<typeof misAmigos>;
+
+/**
+ * Another learner's profile, as a friend sees it.
+ *
+ * Alias and description only. The server refuses this for anyone who
+ * is not an accepted friend, and refuses it identically for an
+ * account that does not exist — so a stranger cannot use it to find
+ * out who is registered.
+ */
+export const perfilDeAmigo = z.object({
+  id: z.string(),
+  alias: z.string().nullable(),
+  descripcion: z.string().nullable(),
+  /** When the friendship was accepted. */
+  amigosDesde: z.string(),
+  racha: z.object({
+    /** Consecutive weeks with at least one duel between the two. */
+    semanas: z.number(),
+    /** Finished duels between them, ever. */
+    duelos: z.number(),
+    /** Whether this week already has one. */
+    estaSemanaYa: z.boolean(),
+  }),
+  ganados: z.number(),
+  perdidos: z.number(),
+});
+
+export type PerfilDeAmigo = z.infer<typeof perfilDeAmigo>;

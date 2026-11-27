@@ -10,6 +10,8 @@ import {
   denunciarJugador,
   desbloquearJugador,
   leerAmigos,
+  leerPerfilDeAmigo,
+  ponerDescripcion,
   leerBloqueados,
   leerMisDuelos,
   leerPerfilDeDuelos,
@@ -330,4 +332,53 @@ export function useAmigos() {
     respondiendo: responder.isPending,
     quitar: quitar.mutateAsync,
   };
+}
+
+/**
+ * Another learner's profile, opened from the friend list.
+ *
+ * Enabled only with an id, so the hook can sit in a screen that
+ * renders before one is chosen without firing a request for
+ * `undefined`.
+ */
+export function usePerfilDeAmigo(usuarioId: string | null) {
+  const consulta = useQuery({
+    queryKey: ['duelos', 'perfil-amigo', usuarioId],
+    queryFn: async () => {
+      const r = await leerPerfilDeAmigo(usuarioId!);
+      if (!r.ok) throw r.fallo;
+      return r.datos;
+    },
+    enabled: Boolean(usuarioId),
+    /* Short: the streak changes when they duel, and seeing a stale
+       «3 semanas» right after finishing the fourth is the one moment
+       this screen is being looked at. */
+    staleTime: 30_000,
+  });
+
+  return {
+    perfil: consulta.data ?? null,
+    cargando: consulta.isLoading,
+    fallo: (consulta.error as Fallo | null) ?? null,
+  };
+}
+
+/** Writing the learner's own one-line description. */
+export function useDescripcion() {
+  const cliente = useQueryClient();
+
+  const guardar = useMutation({
+    mutationFn: async (texto: string) => {
+      const r = await ponerDescripcion(texto);
+      if (!r.ok) throw r.fallo;
+      return r.datos;
+    },
+    /* The profile query holds the description, and the friend list
+       shows it to the other side. */
+    onSuccess: () => {
+      void cliente.invalidateQueries({ queryKey: ['duelos'] });
+    },
+  });
+
+  return { guardar };
 }

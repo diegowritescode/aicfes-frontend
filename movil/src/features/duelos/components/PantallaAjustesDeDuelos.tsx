@@ -4,7 +4,7 @@ import { Boton, Tarjeta, Texto } from '@/shared/ui';
 import { Aviso } from '@/shared/ui/Aviso';
 import { EsqueletoLista } from '@/shared/ui/Esqueleto';
 import { useRouter } from 'expo-router';
-import { useModeracion, usePerfilDeDuelos } from '../hooks/useDuelos';
+import { useDescripcion, useModeracion, usePerfilDeDuelos } from '../hooks/useDuelos';
 
 /**
  * Name, privacy and blocked list.
@@ -21,6 +21,14 @@ export function PantallaAjustesDeDuelos({ onVolver }: { onVolver: () => void }) 
   const [borrador, setBorrador] = useState('');
   const [guardado, setGuardado] = useState(false);
 
+  const { guardar: guardarDescripcion } = useDescripcion();
+  /* Seeded from the server once it answers, then owned by the field.
+     Binding it straight to `perfil.perfil?.descripcion` would wipe
+     what the learner is typing the moment any query in the `duelos`
+     tree refetches. */
+  const [descripcion, setDescripcion] = useState<string | null>(null);
+  const [guardadaDescripcion, setGuardadaDescripcion] = useState(false);
+
   if (perfil.cargando) {
     return (
       <View className="flex-1 px-5 py-6">
@@ -30,6 +38,10 @@ export function PantallaAjustesDeDuelos({ onVolver }: { onVolver: () => void }) 
   }
 
   const actual = perfil.perfil;
+
+  /* Decided after the loading guard, so the first value seen is the
+     stored one rather than the empty string shown while loading. */
+  if (descripcion === null && actual) setDescripcion(actual.descripcion ?? '');
 
   return (
     <ScrollView className="flex-1" contentContainerClassName="gap-7 px-5 py-6">
@@ -72,6 +84,46 @@ export function PantallaAjustesDeDuelos({ onVolver }: { onVolver: () => void }) 
           }}
         >
           Guardar nombre
+        </Boton>
+      </View>
+
+      {/* Right after the name, because the two together are what a
+          friend sees when they open a profile. */}
+      <View className="gap-3">
+        <Texto estilo="rotulo">Una línea sobre mí</Texto>
+        <Texto estilo="apoyo">
+          La ven sus amigos cuando abren su perfil. No escriba su teléfono,
+          su dirección ni su colegio.
+        </Texto>
+        <TextInput
+          value={descripcion ?? ''}
+          onChangeText={(t) => {
+            setDescripcion(t);
+            setGuardadaDescripcion(false);
+          }}
+          placeholder="Me falta física y me sobra lectura"
+          /* Capped at the same 120 the column and the request schema
+             use. Free text written by minors and read by minors: the
+             length is part of what keeps it from holding a phone
+             number and a plea. */
+          maxLength={120}
+          multiline
+          style={{ fontFamily: 'Inter_400Regular', minHeight: 72 }}
+          className="rounded-medio border-[1.5px] border-borde-control bg-capa px-4 py-3 text-[15px] text-texto"
+        />
+        {guardadaDescripcion ? (
+          <Texto estilo="apoyo" className="text-ganado">Descripción guardada.</Texto>
+        ) : null}
+        <Boton
+          variante="contorno"
+          cargando={guardarDescripcion.isPending}
+          deshabilitado={guardarDescripcion.isPending}
+          alTocar={async () => {
+            await guardarDescripcion.mutateAsync(descripcion ?? '').catch(() => null);
+            setGuardadaDescripcion(true);
+          }}
+        >
+          Guardar descripción
         </Boton>
       </View>
 

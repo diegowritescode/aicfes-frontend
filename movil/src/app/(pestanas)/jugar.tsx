@@ -3,7 +3,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Redirect, useRouter } from 'expo-router';
 import { Boton, Chip, Tarjeta, Texto } from '@/shared/ui';
 import { useSesion } from '@/features/sesion/hooks/useSesion';
-import { useMisDuelos } from '@/features/duelos/hooks/useDuelos';
+import { useAmigos, useMisDuelos } from '@/features/duelos/hooks/useDuelos';
 
 /**
  * The two modes where answering is a game rather than a session.
@@ -85,6 +85,8 @@ export default function RutaJugar() {
      nobody accepted yet and a duel waiting to be played read the same
      to a learner — «alguien te está esperando». */
   const esperando = duelos.porAceptar.length + duelos.enCurso.length;
+  const amigos = useAmigos();
+  const porResponder = amigos.porResponder.length;
 
   /* The accent goes to whichever card has something waiting, because
      that is what the learner came for. With nothing waiting it goes
@@ -121,6 +123,23 @@ export default function RutaJugar() {
             etiquetaBoton="Abrir"
             variante="contorno"
             alTocar={() => router.push('/contrarreloj')}
+          />
+
+          {/* Here and not in Yo: friends exist so there is somebody to
+              duel, and this is the screen a learner opens looking for
+              one. The requests waiting on them show in the figure, so
+              the card itself says when it needs attention. */}
+          <TarjetaJuego
+            titulo="Amigos"
+            dato={
+              porResponder > 0
+                ? `${porResponder} por responder`
+                : `${amigos.amigos.length} ${amigos.amigos.length === 1 ? 'amigo' : 'amigos'}`
+            }
+            descripcion="Quién te retó, a quién invitaste, y cuántas semanas seguidas llevan jugando juntos."
+            etiquetaBoton="Abrir"
+            variante="contorno"
+            alTocar={() => router.push('/amigos')}
           />
         </View>
       </ScrollView>
