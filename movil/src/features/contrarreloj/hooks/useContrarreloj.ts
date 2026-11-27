@@ -12,7 +12,7 @@ import {
   resumirExamen,
   type RespuestaDada,
 } from '@/shared/pregunta/model/reglas';
-import { iniciarContrarreloj, leerModos } from '../api/peticiones';
+import { iniciarContrarreloj, leerModos, type PedidoDeRonda } from '../api/peticiones';
 
 /**
  * The ladder of modes, and the clock.
@@ -101,13 +101,16 @@ export function useContrarrelojRun() {
     useCallback(() => terminar(true), [terminar]),
   );
 
+  /* Takes a request rather than a mode id, so a round can be aimed at
+     one topic. The plan's «practicar esto» is the caller that needs
+     it; the mode list still passes `{ modeId }` and is unchanged. */
   const empezar = useMutation<
     { items: ItemGenerado[]; sessionId: string; segundos: number },
     Fallo,
-    string
+    PedidoDeRonda
   >({
-    mutationFn: async (modeId) => {
-      const r = await iniciarContrarreloj(modeId);
+    mutationFn: async (pedido) => {
+      const r = await iniciarContrarreloj(pedido);
       if (!r.ok) throw r.fallo;
       return {
         items: r.datos.items,

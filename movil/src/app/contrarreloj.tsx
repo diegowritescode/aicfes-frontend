@@ -1,7 +1,7 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Redirect, useRouter } from 'expo-router';
+import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 import {
   BarraRespuesta,
   Boton,
@@ -33,13 +33,47 @@ const LETRAS: readonly Letra[] = ['A', 'B', 'C', 'D'];
  * that gives 30 is not "hard mode", it is a different skill. Each rung
  * says what it is training.
  */
+/** A round aimed at one topic: five questions at the real exam's pace. */
+const PREGUNTAS_DEL_PLAN = 5;
+const SEGUNDOS_DEL_PLAN = PREGUNTAS_DEL_PLAN * 64;
+
 export default function RutaContrarreloj() {
   const router = useRouter();
   const { cargando: cargandoSesion, autenticado } = useSesion();
   const { modos, fallo } = useModosContrarreloj();
   const run = useContrarrelojRun();
 
+  /* Arriving from the weekly plan: the action's own area and topic.
+     Before this the plan could only point at an area, so «practicar
+     ángulos» opened a drill on mixed Matemáticas — the topic died
+     between the plan and the request and every layer looked right. */
+  const { area: areaPedida, tema: temaPedido } = useLocalSearchParams<{
+    area?: string;
+    tema?: string;
+  }>();
+
   const [elegida, setElegida] = useState<Letra | null>(null);
+
+  /* Started once per arrival. Without the ref a re-render during the
+     request would fire a second round, and each round is generated
+     and paid for. */
+  const yaArranco = useRef(false);
+
+  useEffect(() => {
+    if (yaArranco.current) return;
+    if (!autenticado || !areaPedida || !temaPedido) return;
+
+    yaArranco.current = true;
+    run.empezar.mutate({
+      area: areaPedida,
+      tema: temaPedido,
+      preguntas: PREGUNTAS_DEL_PLAN,
+      segundos: SEGUNDOS_DEL_PLAN,
+    });
+    /* `run.empezar` is stable enough for this to run on arrival only;
+       the ref is what actually guarantees it. */
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autenticado, areaPedida, temaPedido]);
 
   const terminar = useCallback(() => run.terminar(), [run]);
   const segundos = run.segundos;
@@ -182,8 +216,17 @@ export default function RutaContrarreloj() {
             <View className="mt-1">
               <Boton
                 variante="contorno"
-                alTocar={() => run.empezar.mutate(m.id)}
-                cargando={run.empezar.isPending && run.empezar.variables === m.id}
+                alTocar={() => run.empezar.mutate({ modeId: m.id })}
+                /* `variables` is the whole request now, so the
+                   spinner matches on the mode id inside it. Comparing
+                   the object to a string compiled before only because
+                   the mutation took a bare id. */
+                cargando={
+                  run.empezar.isPending &&
+                  run.empezar.variables !== undefined &&
+                  'modeId' in run.empezar.variables &&
+                  run.empezar.variables.modeId === m.id
+                }
                 deshabilitado={run.empezar.isPending}
               >
                 Empezar

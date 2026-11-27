@@ -3,7 +3,12 @@ import { useRouter } from 'expo-router';
 import { Boton, Chip, Tarjeta, Texto } from '@/shared/ui';
 import { NOMBRE_AREA } from '@/shared/model/icfes';
 import { useInformeSemanal } from '../hooks/useInformeSemanal';
-import type { AccionDelPlan, TemaDebil } from '../api/esquemas';
+import type {
+  AccionDelPlan,
+  SeguimientoDelPlan,
+  TemaDebil,
+  TemaDeLaSemana,
+} from '../api/esquemas';
 
 /**
  * Where this learner stands, once a week.
@@ -66,6 +71,43 @@ export function TarjetaInforme() {
         ) : null}
       </Tarjeta>
 
+      {/* Last week's plan first: it is the only part that asks «did you
+          do what we agreed», and burying it under new findings is how
+          a plan stops being something the learner is held to. */}
+      {datos.planAnterior.length > 0 ? (
+        <View className="gap-2">
+          <Texto estilo="rotulo">Lo que quedó de la semana pasada</Texto>
+          {datos.planAnterior.map((accion) => (
+            <FilaSeguimiento key={`${accion.area}:${accion.tema}`} accion={accion} />
+          ))}
+        </View>
+      ) : null}
+
+      {/* The window. Strengths per topic live here and nowhere else:
+          `temasDebiles` only returns what goes badly, so before this
+          a strength could only ever be «vas bien en Matemáticas». */}
+      {datos.semana7dias && datos.semana7dias.fuertes.length > 0 ? (
+        <View className="gap-2">
+          <Texto estilo="rotulo">Lo que te salió bien</Texto>
+          {datos.semana7dias.fuertes.map((t) => (
+            <FilaTemaSemana key={`${t.area}:${t.tema}`} tema={t} tono="ganado" />
+          ))}
+        </View>
+      ) : null}
+
+      {/* Slow is its own section because it is its own problem: the
+          exam gives 64 seconds a question, and a topic answered right
+          but at triple the pace is a topic that will run out of time.
+          An accuracy percentage cannot show it. */}
+      {datos.semana7dias && datos.semana7dias.lentos.length > 0 ? (
+        <View className="gap-2">
+          <Texto estilo="rotulo">Donde te demoras</Texto>
+          {datos.semana7dias.lentos.map((t) => (
+            <FilaTemaSemana key={`${t.area}:${t.tema}`} tema={t} tono="fallo" />
+          ))}
+        </View>
+      ) : null}
+
       {datos.temasDebiles.length > 0 ? (
         <View className="gap-2">
           <Texto estilo="rotulo">Lo que te viene costando</Texto>
@@ -120,16 +162,17 @@ function FilaTema({ tema }: { tema: TemaDebil }) {
 /**
  * One action, and the way to start it.
  *
- * The area travels as a query parameter so the drill opens already
- * pointed at it. The topic does not, yet: `POST /api/items/generate`
- * accepts a `tema` and nothing on this side passes one, so sending it
- * in the URL would be a parameter the drill silently drops — the
- * learner would tap «practicar ángulos» and get mixed questions from
- * Matemáticas.
+ * Both the area AND the topic travel, which is what makes the plan
+ * worth its keys. The topic used to stop here: it reached the request
+ * and died in `ItemBankService.draw`, which filtered on area and
+ * difficulty only and answers before the generator — so «practicar
+ * ángulos» served mixed Matemáticas while every layer in between
+ * looked correct.
  *
- * That is the one thing left to make the plan fully worth its keys.
- * It runs from the bank's draw through the generator to this screen,
- * so it is its own piece of work rather than a line here.
+ * Aimed at contrarreloj rather than at entrenar. A plan action is one
+ * specific topic, and five questions against the clock is a round the
+ * learner finishes; entrenar is the long form and the place to go
+ * when they choose their own subject.
  */
 function FilaDelPlan({ accion }: { accion: AccionDelPlan }) {
   const router = useRouter();
@@ -143,12 +186,82 @@ function FilaDelPlan({ accion }: { accion: AccionDelPlan }) {
       <View className="mt-1">
         <Boton
           variante="contorno"
-          alTocar={() => router.push(`/entrenar?area=${accion.area}`)}
-          etiqueta={`Practicar ${NOMBRE_AREA[accion.area]}`}
+          alTocar={() =>
+            router.push(
+              `/contrarreloj?area=${accion.area}&tema=${encodeURIComponent(accion.tema)}`,
+            )
+          }
+          etiqueta={`Practicar ${accion.tema.replace(/-/g, ' ')}`}
         >
           Practicar
         </Boton>
       </View>
+    </Tarjeta>
+  );
+}
+
+/**
+ * One topic as it went this week, with its pace.
+ *
+ * The seconds are the figure that was being thrown away:
+ * `Answer.tiempoMs` is written on every answer and was read by
+ * nobody, so every «seconds per question» in the product came from
+ * dividing a session's duration by its question count — which counts
+ * reading, pauses and the phone face down on a desk. This is the
+ * median of the real per-answer times on this topic.
+ */
+function FilaTemaSemana({
+  tema,
+  tono,
+}: {
+  tema: TemaDeLaSemana;
+  tono: 'ganado' | 'fallo';
+}) {
+  return (
+    <Tarjeta variante="plana" className="gap-1">
+      <View className="flex-row items-baseline justify-between gap-3">
+        <Texto estilo="cuerpo" style={{ fontFamily: 'Inter_600SemiBold' }}>
+          {tema.tema.replace(/-/g, ' ')}
+        </Texto>
+        <Chip tono={tono}>{tema.aciertoPorcentaje}%</Chip>
+      </View>
+      <Texto estilo="apoyo">
+        {NOMBRE_AREA[tema.area]} · {tema.respondidas} esta semana
+        {tema.segundosMediana !== null ? ` · ${tema.segundosMediana}s cada una` : ''}
+      </Texto>
+    </Tarjeta>
+  );
+}
+
+/**
+ * One action from last week's plan, and what became of it.
+ *
+ * Three states, said plainly. «No lo tocaste» is the one worth
+ * showing rather than hiding: dropping it would pretend the action
+ * never existed, and the learner knows it did.
+ */
+function FilaSeguimiento({ accion }: { accion: SeguimientoDelPlan }) {
+  const texto = accion.sinTocar
+    ? 'No lo practicaste esta semana.'
+    : accion.aciertoPorcentaje === null
+      ? `Lo tocaste ${accion.respondidas} ${accion.respondidas === 1 ? 'vez' : 'veces'}: muy poco para medir.`
+      : `${accion.respondidas} preguntas, ${accion.aciertoPorcentaje}% de acierto.`;
+
+  return (
+    <Tarjeta variante="plana" className="gap-1">
+      <View className="flex-row items-baseline justify-between gap-3">
+        <Texto estilo="cuerpo" style={{ fontFamily: 'Inter_600SemiBold' }}>
+          {accion.titulo}
+        </Texto>
+        {accion.sinTocar ? (
+          <Chip tono="neutro">pendiente</Chip>
+        ) : accion.aciertoPorcentaje !== null ? (
+          <Chip tono={accion.aciertoPorcentaje >= 70 ? 'ganado' : 'fallo'}>
+            {accion.aciertoPorcentaje}%
+          </Chip>
+        ) : null}
+      </View>
+      <Texto estilo="apoyo">{texto}</Texto>
     </Tarjeta>
   );
 }
