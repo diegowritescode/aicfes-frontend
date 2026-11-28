@@ -96,6 +96,22 @@ export const colorAvatar = [
 /** Nobody yet. Its own colour, so they do not all look like one person. */
 export const colorAvatarSinNombre = '#64748B';
 
+/**
+ * The ink on an avatar, for the one caller that needs a value.
+ *
+ * The initials use the `text-white` class, which is correct and what
+ * every other text in this app does. A picked figure cannot: an SVG
+ * `Path` takes `stroke` as a value and has no `className`, so the
+ * colour has to come from somewhere nameable. Here, because
+ * `tokens.ts` is the only file in `shared/ui` allowed to write a hex
+ * and `tokens.test.ts` fails the build over it anywhere else.
+ *
+ * Not themed, for the same reason the eight backgrounds are not: the
+ * palette was chosen to carry white, and a figure that went dark in
+ * dark mode would vanish into índigo.
+ */
+export const colorTintaDeAvatar = '#FFFFFF';
+
 export const espacio = {
   1: 4,
   2: 8,

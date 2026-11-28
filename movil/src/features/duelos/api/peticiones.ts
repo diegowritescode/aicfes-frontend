@@ -194,6 +194,29 @@ export function ponerDescripcion(descripcion: string) {
   });
 }
 
+/**
+ * Stores the figure and colour the learner picked.
+ *
+ * Both fields go in one request because they are one decision made on
+ * one screen. Two requests would let the colour land and the figure
+ * fail, and the learner would see a change they did not ask for.
+ *
+ * The response is what the server stored, not what we sent: the
+ * screen renders from that, so a rejected slug cannot leave the UI
+ * showing an avatar the account does not have.
+ */
+export function ponerAvatar(entrada: { avatar: string | null; color: number | null }) {
+  return pedir({
+    ruta: '/api/duelos/avatar',
+    metodo: 'POST',
+    cuerpo: { avatar: entrada.avatar, color: entrada.color },
+    esquema: z.object({
+      avatar: z.string().nullable(),
+      avatarColor: z.number().int().nullable(),
+    }),
+  });
+}
+
 export function leerAmigos() {
   return pedir({ ruta: '/api/duelos/amigos', esquema: misAmigos });
 }

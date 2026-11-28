@@ -22,6 +22,7 @@ import {
   quitarAmigo,
   rechazarDuelo,
   responderAmistad,
+  ponerAvatar,
   retar,
 } from '../api/peticiones';
 import type { MotivoDenuncia } from '../api/esquemas';
@@ -103,10 +104,32 @@ export function usePerfilDeDuelos() {
     },
   });
 
+  const avatar = useMutation({
+    mutationFn: async (entrada: { avatar: string | null; color: number | null }) => {
+      const r = await ponerAvatar(entrada);
+      if (!r.ok) throw r.fallo;
+      return r.datos;
+    },
+    /* Same two steps as `progreso`, for a different reason: the
+       avatar is drawn on every screen that names this learner, and
+       the cached profiles of other people carry THEIR avatars, not
+       this one's. What has to go is any list where this learner
+       appears — friends and duels — because those rows were fetched
+       with the old figure. */
+    onSuccess: (datos) => {
+      guardarPerfil(datos);
+      void cliente.invalidateQueries({ queryKey: ['duelos', 'amigos'] });
+      void cliente.invalidateQueries({ queryKey: ['duelos', 'mios'] });
+    },
+  });
+
   return {
     perfil: consulta.data ?? null,
     cargando: consulta.isLoading,
     fallo: (consulta.error as Fallo | null) ?? null,
+    ponerAvatar: avatar.mutateAsync,
+    guardandoAvatar: avatar.isPending,
+    falloDeAvatar: (avatar.error as Fallo | null) ?? null,
     ponerAlias: alias.mutateAsync,
     guardandoAlias: alias.isPending,
     falloDeAlias: (alias.error as Fallo | null) ?? null,

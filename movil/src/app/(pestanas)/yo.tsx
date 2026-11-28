@@ -13,6 +13,7 @@ import {
 } from '@/shared/ui';
 import { EsqueletoPanel } from '@/shared/ui/Esqueleto';
 import { useAmigos, usePerfilDeDuelos } from '@/features/duelos/hooks/useDuelos';
+import { NOMBRE_DE_FIGURA, esFigura } from '@/shared/ui/atomos/figuras-de-avatar';
 import { useSesion } from '@/features/sesion/hooks/useSesion';
 import { useLogros, usePanel } from '@/features/panel/hooks/usePanel';
 import {
@@ -99,6 +100,13 @@ export default function RutaYo() {
         <CabeceraDePerfil
           alias={perfil?.alias ?? null}
           descripcion={perfil?.descripcion}
+          figura={perfil?.avatar}
+          color={perfil?.avatarColor}
+          /* The avatar is the obvious thing to tap to change it, and
+             it is also the thing a learner looks for first. The row
+             below is the discoverable path; this is the one somebody
+             tries without being told. */
+          alTocarAvatar={() => router.push('/avatar')}
           nota={
             perfil?.alias
               ? perfil.visible
@@ -231,8 +239,25 @@ export default function RutaYo() {
         <View className="gap-3">
           <Texto estilo="rotulo">Social</Texto>
           <GrupoDeFilas>
+            {/* The discoverable path to the picker. Tapping the avatar
+                above works too, but a tile with no affordance is not
+                a thing a learner knows to try — and «no veo mi
+                perfil, dónde está» is exactly what happens when the
+                only way in is one somebody has to guess. */}
             <FilaEnlace
               primera
+              icono="gente"
+              titulo="Mi avatar"
+              detalle="Escoge una figura y su color"
+              /* `esFigura` and not a cast: a slug from a newer server
+                 is a word this build cannot draw, and the avatar
+                 above already falls back to initials for it. Saying
+                 «Tus iniciales» here keeps the row honest about what
+                 the learner is actually looking at. */
+              valor={esFigura(perfil?.avatar) ? NOMBRE_DE_FIGURA[perfil.avatar] : 'Tus iniciales'}
+              alTocar={() => router.push('/avatar')}
+            />
+            <FilaEnlace
               ultima
               icono="gente"
               tono={porResponder !== null && porResponder > 0 ? 'fallo' : 'acento'}

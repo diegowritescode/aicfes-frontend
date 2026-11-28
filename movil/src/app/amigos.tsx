@@ -91,7 +91,11 @@ export default function RutaAmigos() {
             {amigos.porResponder.map((a) => (
               <Tarjeta key={a.id} className="gap-3">
                 <View className="flex-row items-center gap-3">
-                  <Avatar nombre={a.amigo.alias ?? ""} />
+                  <Avatar
+                    nombre={a.amigo.alias ?? ""}
+                    figura={a.amigo.avatar}
+                    color={a.amigo.avatarColor}
+                  />
                   <Texto estilo="cuerpo" style={{ fontFamily: 'Inter_600SemiBold' }}>
                     {a.amigo.alias ?? 'Sin nombre'}
                   </Texto>
@@ -252,7 +256,11 @@ function FilaDeAmigo({
       {({ pressed }) => (
         <Tarjeta className="gap-3" style={{ opacity: pressed ? 0.7 : 1 }}>
           <View className="flex-row items-center gap-3">
-            <Avatar nombre={amistad.amigo.alias ?? ""} />
+            <Avatar
+              nombre={amistad.amigo.alias ?? ""}
+              figura={amistad.amigo.avatar}
+              color={amistad.amigo.avatarColor}
+            />
             <View className="flex-1">
               <Texto estilo="cuerpo" style={{ fontFamily: 'Inter_600SemiBold' }}>
                 {nombre}

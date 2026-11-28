@@ -12,6 +12,23 @@ import { area } from '@/shared/model/icfes';
  * be findable.
  */
 
+/**
+ * The two avatar fields, written once.
+ *
+ * Spread into every schema that carries somebody the app draws. A
+ * second copy would drift: one screen would show the picked fox and
+ * the next would show initials for the same person, and that reads
+ * as two accounts rather than as a bug.
+ *
+ * Both optional and nullable — optional because a server that
+ * predates the columns must still parse, nullable because null is
+ * the real value meaning «my initials».
+ */
+export const camposDeAvatar = {
+  avatar: z.string().nullable().optional(),
+  avatarColor: z.number().int().nullable().optional(),
+} as const;
+
 export const perfilDeDuelos = z.object({
   alias: z.string().nullable(),
   aliasBuscable: z.boolean(),
@@ -34,6 +51,12 @@ export const perfilDeDuelos = z.object({
      the safe answer, so an older server never makes the switch read
      as «on». */
   progresoPublico: z.boolean().optional().default(false),
+  /* The figure the learner picked and the colour behind it. Optional
+     for the reason every field above is: an app built against a
+     server that predates these columns must still parse its own
+     profile. `nullable` on top of that, because null is a real value
+     here — it means «my initials», not «the server forgot». */
+  ...camposDeAvatar,
 });
 
 export const resultadoDuelo = z.object({
@@ -44,6 +67,7 @@ export const resultadoDuelo = z.object({
 export const jugador = z.object({
   id: z.string(),
   alias: z.string().nullable(),
+  ...camposDeAvatar,
 });
 
 export const duelo = z.object({
@@ -81,6 +105,7 @@ export const jugadorEncontrado = z.object({
   id: z.string(),
   alias: z.string().nullable(),
   descripcion: z.string().nullable(),
+  ...camposDeAvatar,
 });
 
 export const resultadoBusqueda = z.array(jugadorEncontrado);
@@ -160,7 +185,11 @@ export const entregaHecha = z.object({
 });
 
 export const bloqueado = z.object({
-  bloqueado: z.object({ id: z.string(), alias: z.string().nullable() }),
+  bloqueado: z.object({
+    id: z.string(),
+    alias: z.string().nullable(),
+    ...camposDeAvatar,
+  }),
   creadoEn: z.string(),
 });
 
@@ -295,6 +324,7 @@ export const perfilPublico = z.object({
   id: z.string(),
   alias: z.string().nullable(),
   descripcion: z.string().nullable(),
+  ...camposDeAvatar,
   relacion,
   amigosDesde: z.string().nullable(),
   progreso: progresoDePerfil.nullable(),

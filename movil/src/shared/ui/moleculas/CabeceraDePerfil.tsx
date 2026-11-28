@@ -1,4 +1,4 @@
-import { View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import type { ReactNode } from 'react';
 import { Avatar } from '../atomos/Avatar';
 import { Texto } from '../atomos/Texto';
@@ -26,17 +26,44 @@ export function CabeceraDePerfil({
   /** «Tú», «Amigos desde marzo» — one short line of status. */
   nota,
   accion,
+  figura,
+  color,
+  alTocarAvatar,
 }: {
   alias: string | null;
   descripcion?: string | null;
   nota?: string | null;
   accion?: ReactNode;
+  /** The figure this person picked. Null falls back to initials. */
+  figura?: string | null;
+  /** Which background, 0-7. Null derives it from the alias. */
+  color?: number | null;
+  /**
+   * Makes the avatar itself open the picker. Only passed on the
+   * learner's own profile: tapping a stranger's avatar must do
+   * nothing, and a component that always looked tappable would
+   * promise something somebody else's profile cannot deliver.
+   */
+  alTocarAvatar?: () => void;
 }) {
   const nombre = alias ?? '';
 
+  const retrato = <Avatar nombre={nombre} tamano="grande" figura={figura} color={color} />;
+
   return (
     <Tarjeta className="items-center gap-3 py-5">
-      <Avatar nombre={nombre} tamano="grande" />
+      {alTocarAvatar ? (
+        <Pressable
+          onPress={alTocarAvatar}
+          accessibilityRole="button"
+          accessibilityLabel="Cambiar mi avatar"
+          className="min-h-control items-center justify-center"
+        >
+          {({ pressed }) => <View style={{ opacity: pressed ? 0.6 : 1 }}>{retrato}</View>}
+        </Pressable>
+      ) : (
+        retrato
+      )}
 
       <View className="items-center gap-1">
         <Texto estilo="titulo">{alias ?? 'Sin nombre todavía'}</Texto>
