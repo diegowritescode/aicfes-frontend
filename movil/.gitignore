@@ -12,3 +12,15 @@ dist/
 # Contraseña del usuario de demo del informe. Local, nunca versionada.
 .demo-clave-informe.txt
 .clave-sofia-prueba.txt
+
+# APK builds.
+#
+# Two of these reached the history at ~101 MB each and GitHub refused
+# the whole branch: the limit is 100 MB per file. They were stripped
+# with filter-branch, and this line is what stops the next one.
+#
+# Builds go to a GitHub release (diegowritescode/LanguageLock), not
+# into the repo — an APK is an artefact of the source beside it, so
+# versioning it stores the same thing twice.
+*.apk
+*.aab
