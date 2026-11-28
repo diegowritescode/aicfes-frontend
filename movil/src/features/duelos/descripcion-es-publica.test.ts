@@ -31,7 +31,31 @@ describe('la descripción se declara pública', () => {
      The signpost that replaced the old screen is checked too: it is
      the last thing a learner reads before opening the form, so it
      carries the same promise. */
-  const CAMPO = readFileSync(join(RAIZ, 'app', 'perfil-publico.tsx'), 'utf8');
+  /* The screen plus the reminder it renders, concatenated.
+
+     The warning used to be written inline on this screen. It moved
+     into `seguridad-en-linea.ts` when Play's Families policy turned
+     it into a compliance surface — it needs the real-world risk named
+     and a way out, which is more text than belongs in a JSX literal,
+     and wording under test has to be reachable without a renderer.
+
+     So the promise is still made to the learner on this screen; it is
+     just assembled from two files now. Reading only one of them would
+     have this guard pass while the field said nothing, or — what
+     actually happened — fail while the screen was more compliant than
+     before. Both files, one string. */
+  const CAMPO = [
+    join(RAIZ, 'app', 'perfil-publico.tsx'),
+    /* The wording. */
+    join(RAIZ, 'features', 'duelos', 'model', 'seguridad-en-linea.ts'),
+    /* The headings around it — «Nunca escribas aquí» is written here
+       rather than in the model, because it labels the list instead of
+       being part of it. Three files, and leaving any one out makes
+       this guard answer a question nobody asked. */
+    join(RAIZ, 'features', 'duelos', 'components', 'RecordatorioDeSeguridad.tsx'),
+  ]
+    .map((ruta) => readFileSync(ruta, 'utf8'))
+    .join('\n');
   const SEÑAL = readFileSync(
     join(RAIZ, 'features', 'duelos', 'components', 'PantallaAjustesDeDuelos.tsx'),
     'utf8',
@@ -47,8 +71,13 @@ describe('la descripción se declara pública', () => {
   });
 
   it('el campo dice que la ve quien lo busque', () => {
+    /* Two accepted spellings of one promise. The original was
+       «cualquiera que te encuentre»; the reminder now says «cualquier
+       estudiante que busque tu nombre en la app ve esta línea», which
+       is the same statement made concrete. What is pinned is that the
+       learner is told a stranger reads it — not which words do it. */
     expect(
-      /cualquiera que te encuentre/.test(CAMPO),
+      /cualquiera que te encuentre|[Cc]ualquier estudiante que busque/.test(CAMPO),
       'sin esa frase, el estudiante escribe para sus amigos y lo lee cualquiera',
     ).toBe(true);
     expect(
@@ -66,8 +95,18 @@ describe('la descripción se declara pública', () => {
        that fires on rewrapping is a guard somebody deletes. */
     const texto = CAMPO.replace(/\s+/g, ' ');
 
-    expect(/No escribas tu .*teléfono/.test(texto)).toBe(true);
+    /* The old copy was one sentence: «No escribas tu nombre
+       completo, tu teléfono, tu dirección ni tu colegio». It is now a
+       list of four items under «Nunca escribas aquí», so the match is
+       on the things themselves rather than on the sentence that used
+       to hold them. `seguridad-en-linea.test.ts` pins the list. */
+    expect(/teléfono/.test(texto)).toBe(true);
     expect(/colegio/.test(texto)).toBe(true);
+    expect(/direcci/.test(texto)).toBe(true);
+    expect(
+      /Nunca escribas|No escribas/.test(texto),
+      'desapareció la advertencia de qué no escribir',
+    ).toBe(true);
   });
 });
 

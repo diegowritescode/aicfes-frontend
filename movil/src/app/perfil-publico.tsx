@@ -7,6 +7,7 @@ import { Aviso } from '@/shared/ui/Aviso';
 import { EsqueletoLista } from '@/shared/ui/Esqueleto';
 import { useSesion } from '@/features/sesion/hooks/useSesion';
 import { useDescripcion, usePerfilDeDuelos } from '@/features/duelos/hooks/useDuelos';
+import { RecordatorioDeSeguridad } from '@/features/duelos/components/RecordatorioDeSeguridad';
 
 /**
  * Editing what other learners see of you.
@@ -93,16 +94,17 @@ export default function RutaPerfilPublico() {
 
         {/* Said once, here, rather than as a line of small print
             under each field. A learner who reads one thing on this
-            screen should read this. */}
-        <Tarjeta variante="plana" className="gap-1">
-          <Texto estilo="cuerpo" style={{ fontFamily: 'Inter_600SemiBold' }}>
-            Esto lo ve cualquiera que te encuentre
-          </Texto>
-          <Texto estilo="apoyo">
-            No escribas tu nombre completo, tu teléfono, tu dirección ni tu
-            colegio.
-          </Texto>
-        </Tarjeta>
+            screen should read this.
+
+            This replaced a shorter card that said «no escribas tu
+            nombre completo, tu teléfono, tu dirección ni tu colegio».
+            Right instinct, and it was already in the right place —
+            but Play's Families policy asks for two things that
+            sentence did not have: the «real world risk of online
+            interaction» named rather than implied, and a way out when
+            something goes wrong. The text lives in
+            `seguridad-en-linea.ts` so the wording is under test. */}
+        <RecordatorioDeSeguridad />
 
         <View className="gap-3">
           <Texto estilo="rotulo">Mi nombre en la app</Texto>
