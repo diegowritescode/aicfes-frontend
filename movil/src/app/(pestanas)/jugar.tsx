@@ -77,6 +77,16 @@ export default function RutaJugar() {
      a card that says «Duelos» and nothing else is a card nobody
      taps. */
   const duelos = useMisDuelos();
+  /* Above the early returns, with every other hook.
+     It sat below them, after `if (cargando) return`, which means the
+     render that shows the spinner calls four hooks and the next one
+     calls five. React matches hooks by call order, so the state of
+     one silently becomes the state of another — the class of bug
+     that shows up as a screen displaying somebody else's data. It
+     was not caught locally because eslint cannot run here (the root
+     config needs `@eslint/js`, which is not installed); CI caught
+     it. */
+  const amigos = useAmigos();
 
   if (cargando) return <SafeAreaView className="flex-1 bg-fondo" />;
   if (!autenticado) return <Redirect href="/entrar" />;
@@ -85,7 +95,6 @@ export default function RutaJugar() {
      nobody accepted yet and a duel waiting to be played read the same
      to a learner — «alguien te está esperando». */
   const esperando = duelos.porAceptar.length + duelos.enCurso.length;
-  const amigos = useAmigos();
   const porResponder = amigos.porResponder.length;
 
   /* The accent goes to whichever card has something waiting, because

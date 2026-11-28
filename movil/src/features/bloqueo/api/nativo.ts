@@ -19,12 +19,23 @@ export type ResultadoNativo<T> =
 
 let cache: Promise<unknown> | null = null;
 
+/**
+ * Anything callable on the native module.
+ *
+ * `Function` would say the same thing and say it worse: it accepts
+ * any function-like value and gives back `any`, so a typo in a
+ * method name type-checks and fails on the phone. This at least
+ * keeps the arguments and the return unknown, which is honest —
+ * nothing here knows the native signatures.
+ */
+type MetodoNativo = (...args: unknown[]) => unknown;
+
 /** The module, or null where it cannot exist. */
-async function modulo(): Promise<Record<string, Function> | null> {
+async function modulo(): Promise<Record<string, MetodoNativo> | null> {
   if (Platform.OS === 'web') return null;
   if (!cache) cache = import('expo-screen-time').then((m) => m.default ?? m);
   try {
-    return (await cache) as Record<string, Function>;
+    return (await cache) as Record<string, MetodoNativo>;
   } catch {
     /* A build without the native side compiled in — Expo Go, or a
        preview APK built before the plugin was declared. Reported as

@@ -23,4 +23,26 @@ export default tseslint.config(
       "@typescript-eslint/no-unused-vars": "off",
     },
   },
+  {
+    /* The React Native app, which this config reached by accident:
+       the block above declares `globals.browser` and a files glob
+       over every .ts and .tsx in the repo, so it has been linting
+       Metro code with web rules since movil/ was created.
+
+       One rule actually conflicts. `require()` is how Metro resolves
+       a static asset: it returns an asset id the bundler rewrites,
+       and an `import` does not do the same thing. The rule is right
+       about web code and wrong here, so it is off for this directory
+       rather than worked around in the four places that load a
+       sound.
+
+       The rest of the recommended set still applies, including
+       react-hooks/rules-of-hooks — which is what caught a
+       conditional `useAmigos()` in jugar.tsx that no local check
+       would have found. */
+    files: ["movil/**/*.{ts,tsx}"],
+    rules: {
+      "@typescript-eslint/no-require-imports": "off",
+    },
+  },
 );
