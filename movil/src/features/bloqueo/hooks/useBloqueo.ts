@@ -5,6 +5,7 @@ import { nativo } from '../api/nativo';
 import { almacenPeaje } from '@/core/almacenamiento/peaje';
 import {
   aLegible,
+  permitidos,
   listoParaBloquear,
   sePuedeOmitir,
   siguientePendiente,
@@ -54,7 +55,11 @@ export function useBloqueo() {
 
     if (permisos.ok) {
       const crudos = (permisos.valor as { steps?: PasoNativo[] }).steps ?? [];
-      setPasos(crudos.map(aLegible));
+      /* `permitidos` first: `deviceAdmin` must never reach the
+         screen, whatever the module reports. See `PASOS_PROHIBIDOS`
+         — preventing uninstall is the one thing Play does not allow
+         a self-control app to do. */
+      setPasos(permitidos(crudos).map(aLegible));
       /* An empty list from a call that worked is not a failure — it
          is a platform with no steps to grant. Said out loud anyway,
          because an empty section with a heading over it looks like a
