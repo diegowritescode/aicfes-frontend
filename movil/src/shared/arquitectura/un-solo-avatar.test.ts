@@ -51,13 +51,25 @@ describe('un solo Avatar', () => {
       /* An import of something named Avatar from anywhere that is
          not the shared barrel or the atom itself.
 
-         `../atomos/Avatar` is allowed too: a molecule inside
-         `shared/ui` cannot import from the barrel it is part of —
-         that is a cycle — so it reaches the atom by relative path.
-         `CabeceraDePerfil` is the first molecule to need the avatar,
-         and the first version of this test failed it for doing the
-         only correct thing available. */
-      return /import\s+\{[^}]*\bAvatar\b[^}]*\}\s+from\s+'(?!@\/shared\/ui'|\.\/Avatar'|\.\.\/atomos\/Avatar')/.test(
+         Four spellings are allowed, and all four name the same file:
+
+         - `@/shared/ui` — the barrel, what a screen should use.
+         - `@/shared/ui/atomos/Avatar` — the atom by absolute path.
+           A screen needs this when it passes a prop the barrel's
+           re-export does not carry, which is how the avatar picker
+           reaches it.
+         - `./Avatar` — inside the atoms folder.
+         - `../atomos/Avatar` — a molecule inside `shared/ui` cannot
+           import from the barrel it is part of, because that is a
+           cycle, so it reaches the atom by relative path.
+           `CabeceraDePerfil` is the first molecule to need the
+           avatar, and the first version of this test failed it for
+           doing the only correct thing available.
+
+         What stays forbidden is the thing that actually happened: a
+         SECOND Avatar component somewhere else, imported by name. The
+         test above catches the file; this catches the import. */
+      return /import\s+\{[^}]*\bAvatar\b[^}]*\}\s+from\s+'(?!@\/shared\/ui'|@\/shared\/ui\/atomos\/Avatar'|\.\/Avatar'|\.\.\/atomos\/Avatar')/.test(
         fuente,
       );
     });

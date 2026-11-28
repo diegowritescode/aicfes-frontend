@@ -176,7 +176,12 @@ export function PantallaDuelos({
       {amigos.porResponder.length > 0 ? (
         <Seccion rotulo="Te quieren agregar">
           {amigos.porResponder.map((a) => (
-            <FilaDePersona key={a.id} nombre={a.amigo.alias ?? 'Alguien'}>
+            <FilaDePersona
+              key={a.id}
+              nombre={a.amigo.alias ?? 'Alguien'}
+              figura={a.amigo.avatar}
+              color={a.amigo.avatarColor}
+            >
               <Boton
                 variante="plano"
                 ancho={false}
@@ -205,7 +210,12 @@ export function PantallaDuelos({
       {amigos.amigos.length > 0 ? (
         <Seccion rotulo="Tus amigos">
           {amigos.amigos.map((a) => (
-            <FilaDePersona key={a.id} nombre={a.amigo.alias ?? 'Rival'}>
+            <FilaDePersona
+              key={a.id}
+              nombre={a.amigo.alias ?? 'Rival'}
+              figura={a.amigo.avatar}
+              color={a.amigo.avatarColor}
+            >
               <Boton
                 variante="plano"
                 ancho={false}
@@ -417,6 +427,8 @@ function Buscador({
           key={j.id}
           nombre={j.alias ?? 'Rival'}
           descripcion={j.descripcion}
+          figura={j.avatar}
+          color={j.avatarColor}
           alAbrir={() => onVerPerfil(j.id)}
         >
           {/* Adding is offered beside challenging, because after one
@@ -497,7 +509,11 @@ function FilaDeDuelo({
     <Tarjeta variante={plana ? 'plana' : 'alzada'}>
       <View className="flex-row items-center justify-between gap-3">
         <View className="flex-1 flex-row items-center gap-3">
-          <Avatar nombre={nombre} />
+          <Avatar
+            nombre={nombre}
+            figura={duelo.contra?.avatar}
+            color={duelo.contra?.avatarColor}
+          />
           <View className="flex-1 gap-0.5">
             {/* 14px semibold Inter, the artifact's name size. Not a
                 `Texto` style, because the scale has no 14px semibold
@@ -524,10 +540,16 @@ function FilaDeDuelo({
 function FilaDePersona({
   nombre,
   descripcion,
+  figura,
+  color,
   alAbrir,
   children,
 }: {
   nombre: string;
+  /** The figure this person picked; null falls back to initials. */
+  figura?: string | null;
+  /** Their background colour, 0-7; null derives it from the alias. */
+  color?: number | null;
   /**
    * Only search results pass this.
    *
@@ -554,7 +576,7 @@ function FilaDePersona({
 }) {
   const identidad = (
     <View className="flex-1 flex-row items-center gap-3">
-      <Avatar nombre={nombre} />
+      <Avatar nombre={nombre} figura={figura} color={color} />
       <View className="flex-1 gap-0.5">
         <Text
           style={{ fontFamily: 'Inter_600SemiBold' }}
@@ -630,7 +652,11 @@ function Invitacion({
   return (
     <Tarjeta className="gap-3">
       <View className="flex-row items-center gap-3">
-        <Avatar nombre={nombre} />
+        <Avatar
+          nombre={nombre}
+          figura={duelo.contra?.avatar}
+          color={duelo.contra?.avatarColor}
+        />
         <View className="flex-1 gap-0.5">
           <Text style={{ fontFamily: 'Inter_600SemiBold' }} className="text-[14px] text-texto">
             {nombre} lo retó

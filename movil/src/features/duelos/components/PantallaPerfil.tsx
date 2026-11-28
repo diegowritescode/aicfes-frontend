@@ -115,6 +115,11 @@ function Cuerpo({
       <CabeceraDePerfil
         alias={perfil.alias}
         descripcion={perfil.descripcion}
+        figura={perfil.avatar}
+        color={perfil.avatarColor}
+        /* No `alTocarAvatar`: this is somebody else's avatar, and a
+           tappable one would promise an edit that is not theirs to
+           make. */
         nota={
           esAmigo && perfil.amigosDesde
             ? `Amigos desde ${desdeCuando(perfil.amigosDesde)}`

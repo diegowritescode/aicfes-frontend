@@ -55,10 +55,23 @@ export function PantallaExamen({
     if (!elegida || respondida) return;
     examen.responder(elegida);
     setRespondida(true);
-    /* The panel opens on a wrong answer, while the reasoning is still
-       in the learner's head. Half an hour later they no longer
-       remember what they were thinking on question 4. */
-    if (debeAbrirTutoria(item, elegida)) setTutoriaAbierta(true);
+    /* The panel does NOT open by itself.
+    
+       It used to, on every wrong answer, and the reasoning was that
+       the learner's thinking is still fresh. That reasoning is right
+       about WHEN tutoring works and wrong about what the screen owes
+       them first: the modal covered the result it was reacting to.
+       Diego answered, and before he could see which option was
+       correct or read the explanation underneath, a panel asked him
+       what he had been thinking — about a question whose outcome he
+       had not been shown.
+    
+       So the screen resolves the question first: the options colour
+       in, the explanation appears, and «No entiendo por qué» sits
+       below it for whoever wants more. That button is the one the
+       ADR 17 flow was always written for — opening a thread is free
+       and returns the stored explanation, and a learner who taps it
+       has already decided the explanation was not enough. */
   };
 
   const siguiente = () => {
@@ -124,7 +137,13 @@ export function PantallaExamen({
             <Explicacion acerto={acerto}>
               {elegida ? explicacionDe(item, elegida) : (item.justificacion ?? '')}
             </Explicacion>
-            {!acerto ? (
+            {/* `debeAbrirTutoria` still decides, just not when to
+                open the panel — now whether to offer it. It answers
+                «can this item say anything useful about the option
+                they picked?», and a button that opens a thread whose
+                first message is empty teaches the learner that the
+                panel is noise. */}
+            {elegida && debeAbrirTutoria(item, elegida) ? (
               <Boton variante="contorno" alTocar={() => setTutoriaAbierta(true)}>
                 No entiendo por qué
               </Boton>

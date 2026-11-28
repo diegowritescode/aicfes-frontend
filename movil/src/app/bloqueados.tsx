@@ -66,7 +66,11 @@ export default function RutaBloqueados() {
 
         {moderacion.bloqueados.map((b) => (
           <Tarjeta key={b.bloqueado.id} className="flex-row items-center gap-3">
-            <Avatar nombre={b.bloqueado.alias ?? ''} />
+            <Avatar
+              nombre={b.bloqueado.alias ?? ''}
+              figura={b.bloqueado.avatar}
+              color={b.bloqueado.avatarColor}
+            />
             <View className="flex-1">
               <Texto estilo="cuerpo" style={{ fontFamily: 'Inter_600SemiBold' }}>
                 {b.bloqueado.alias ?? 'Sin nombre'}

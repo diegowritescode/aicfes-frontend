@@ -219,7 +219,12 @@ export default function RutaInicio() {
              is context for the day, not the day's work. */
           <Tarjeta variante="plana" className="flex-row items-center gap-3">
             {dueloUnico.contra?.alias ? (
-              <Avatar nombre={dueloUnico.contra.alias} tamano="chico" />
+              <Avatar
+                nombre={dueloUnico.contra.alias}
+                tamano="chico"
+                figura={dueloUnico.contra.avatar}
+                color={dueloUnico.contra.avatarColor}
+              />
             ) : null}
             <View className="flex-1 gap-0.5">
               {/* Named rather than counted. «Camilo» is a person; «1
