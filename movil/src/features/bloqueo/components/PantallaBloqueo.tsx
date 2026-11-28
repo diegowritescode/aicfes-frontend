@@ -1,5 +1,7 @@
 import { Linking, Pressable, ScrollView, View } from 'react-native';
 import { Boton, Chip, Encabezado, Tarjeta, Texto } from '@/shared/ui';
+import { ModalDivulgacion } from './ModalDivulgacion';
+import { DIVULGACION_USO_DE_APPS } from '../model/divulgacion';
 import { Aviso } from '@/shared/ui/Aviso';
 import { EsqueletoLista } from '@/shared/ui/Esqueleto';
 import { ChipDePermiso } from './ChipDePermiso';
@@ -62,7 +64,19 @@ export function PantallaBloqueo({
     !bloqueo.siguiente && bloqueo.pasos.some((p) => !p.concedido);
 
   return (
-    <ScrollView className="flex-1" contentContainerClassName="gap-6 px-5 py-6">
+    <>
+      {/* Opens from the permission button, never on its own: Play
+          requires the disclosure «immediately preceded by» the
+          request. Rendered here rather than inside the button so the
+          back gesture reaches `onRequestClose`. */}
+      <ModalDivulgacion
+        texto={DIVULGACION_USO_DE_APPS}
+        visible={bloqueo.divulgando !== null}
+        onAceptar={() => void bloqueo.aceptarDivulgacion()}
+        onRechazar={bloqueo.rechazarDivulgacion}
+      />
+
+      <ScrollView className="flex-1" contentContainerClassName="gap-6 px-5 py-6">
       <View className="gap-2">
         <Texto estilo="titulo-grande">Bloquear apps</Texto>
         <Texto estilo="apoyo">
@@ -244,6 +258,7 @@ export function PantallaBloqueo({
       <Boton variante="plano" alTocar={alVolver}>
         Volver
       </Boton>
-    </ScrollView>
+      </ScrollView>
+    </>
   );
 }

@@ -26,6 +26,12 @@ const CLAVE_SALDOS = 'aicfes.peaje.saldos';
    a skip that is forgotten on restart is not a skip: the step the
    phone will not report would wall the setup again on every launch. */
 const CLAVE_OMITIDOS = 'aicfes.bloqueo.permisosOmitidos';
+/* Which permissions the learner agreed to AFTER reading the
+   disclosure. Separate from the granted state: the OS owns whether a
+   permission is on, and this owns whether they were told first. A
+   learner who revokes it in Settings has withdrawn the agreement
+   too, so the screen re-asks. */
+const CLAVE_CONSENTIDOS = 'aicfes.bloqueo.permisosConsentidos';
 
 async function leerJson<T>(clave: string): Promise<T | null> {
   try {
@@ -57,6 +63,11 @@ export const almacenPeaje = {
 
   guardarPermisosOmitidos: (ids: readonly string[]) =>
     escribirJson(CLAVE_OMITIDOS, ids),
+
+  leerPermisosConsentidos: () => leerJson<string[]>(CLAVE_CONSENTIDOS),
+
+  guardarPermisosConsentidos: (ids: readonly string[]) =>
+    escribirJson(CLAVE_CONSENTIDOS, ids),
 
   guardarSesion: (sesion: unknown) => escribirJson(CLAVE_SESION, sesion),
 

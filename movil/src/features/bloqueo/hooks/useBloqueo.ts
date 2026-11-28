@@ -3,6 +3,7 @@ import { AppState } from 'react-native';
 import { objetivosParaDesbloquear, type AppConSaldo } from '../model/saldos';
 import { nativo } from '../api/nativo';
 import { almacenPeaje } from '@/core/almacenamiento/peaje';
+import { necesitaDivulgacion, yaConsintio } from '../model/divulgacion';
 import {
   aLegible,
   permitidos,
@@ -100,10 +101,20 @@ export function useBloqueo() {
    */
   const [omitidos, setOmitidos] = useState<readonly string[]>([]);
 
+  /* Which data-reading permissions the learner has agreed to after
+     reading the disclosure, and which one is on screen right now.
+     Separate from `omitidos`: skipping a step is «not now», and
+     consent is «I read what you collect and I agree». */
+  const [consentidos, setConsentidos] = useState<readonly string[]>([]);
+  const [divulgando, setDivulgando] = useState<string | null>(null);
+
   useEffect(() => {
     let vivo = true;
     void almacenPeaje.leerPermisosOmitidos().then((guardados) => {
       if (vivo && guardados) setOmitidos(guardados);
+    });
+    void almacenPeaje.leerPermisosConsentidos().then((guardados) => {
+      if (vivo && guardados) setConsentidos(guardados);
     });
     return () => {
       vivo = false;
@@ -133,15 +144,71 @@ export function useBloqueo() {
     await almacenPeaje.guardarPermisosOmitidos(nuevos);
   }, [siguiente, omitidos]);
 
+  /* Sends the learner to the system screen. Private on purpose: for
+     a step that reads data, nothing may call this before the
+     disclosure has been accepted. `pedirSiguiente` is the door. */
+  const abrirAjustesDelPaso = useCallback(
+    async (pasoId: string) => {
+      setFallo(null);
+      const r = await nativo.pedirPermiso(pasoId);
+      if (!r.ok) setFallo(r.motivo);
+      /* Not refreshed here: the system screen is now in front, and the
+         status only settles once the learner comes back — which the
+         AppState listener already handles. */
+    },
+    [],
+  );
+
+  /**
+   * Asks for the next permission, showing the disclosure first when
+   * the step reads data about the learner.
+   *
+   * Play's User Data policy wants the disclosure «immediately
+   * preceded by» the request, so it is interposed here rather than
+   * on a settings page somebody has to find. Steps that collect
+   * nothing — the overlay, notifications — go straight through:
+   * «Cannot be included with other disclosures unrelated to personal
+   * and sensitive user data collection» cuts both ways, and a
+   * consent screen in front of a harmless permission teaches the
+   * learner to tap past the one that matters.
+   */
   const pedirSiguiente = useCallback(async () => {
     if (!siguiente) return;
-    setFallo(null);
-    const r = await nativo.pedirPermiso(siguiente.id);
-    if (!r.ok) setFallo(r.motivo);
-    /* Not refreshed here: the system screen is now in front, and the
-       status only settles once the learner comes back — which the
-       AppState listener already handles. */
-  }, [siguiente]);
+
+    if (necesitaDivulgacion(siguiente.id) && !yaConsintio(consentidos, siguiente.id)) {
+      setDivulgando(siguiente.id);
+      return;
+    }
+
+    await abrirAjustesDelPaso(siguiente.id);
+  }, [siguiente, consentidos, abrirAjustesDelPaso]);
+
+  /** The learner read the disclosure and agreed. Only then, Settings. */
+  const aceptarDivulgacion = useCallback(async () => {
+    const paso = divulgando;
+    if (!paso) return;
+
+    const nuevos = consentidos.includes(paso) ? consentidos : [...consentidos, paso];
+    setConsentidos(nuevos);
+    setDivulgando(null);
+    /* Stored before opening Settings, so a learner who grants the
+       permission and never returns to this screen is not asked
+       again for something they already agreed to. */
+    await almacenPeaje.guardarPermisosConsentidos(nuevos);
+
+    await abrirAjustesDelPaso(paso);
+  }, [divulgando, consentidos, abrirAjustesDelPaso]);
+
+  /**
+   * «Ahora no», the back button, or anything else that is not a yes.
+   *
+   * Records nothing. Play: navigating away from the disclosure is
+   * not consent, so refusing has to leave the state exactly as it
+   * was — the next tap on the button shows the disclosure again.
+   */
+  const rechazarDivulgacion = useCallback(() => {
+    setDivulgando(null);
+  }, []);
 
   const leerSaldos = useCallback(async (): Promise<AppConSaldo[]> => {
     const guardados = await almacenPeaje.leerSaldos<
@@ -370,6 +437,10 @@ export function useBloqueo() {
     refrescar,
     pedirSiguiente,
     omitirSiguiente,
+    /** The step whose disclosure is on screen, or null. */
+    divulgando,
+    aceptarDivulgacion,
+    rechazarDivulgacion,
     /** True when this step can be passed over: recommended, not required. */
     sePuedeOmitirSiguiente: siguiente ? sePuedeOmitir(siguiente) : false,
     aplicar,
