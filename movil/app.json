@@ -35,7 +35,7 @@
           "color": "#605ccb"
         }
       ],
-      "./plugins/sin-device-admin",
+      "./plugins/sin-lo-que-no-usamos",
       "expo-screen-time",
       [
         "expo-splash-screen",

@@ -100,10 +100,10 @@ describe('el manifest no trae el receptor', () => {
       typeof x === 'string' ? x : (x as string[])[0],
     );
 
-    const mio = nombres.indexOf('./plugins/sin-device-admin');
+    const mio = nombres.indexOf('./plugins/sin-lo-que-no-usamos');
     const libreria = nombres.indexOf('expo-screen-time');
 
-    expect(mio, 'falta ./plugins/sin-device-admin en app.json').toBeGreaterThan(-1);
+    expect(mio, 'falta ./plugins/sin-lo-que-no-usamos en app.json').toBeGreaterThan(-1);
     expect(libreria).toBeGreaterThan(-1);
 
     /* Expo applies mods in REVERSE registration order, so running
