@@ -43,10 +43,6 @@ const NOMBRES: Record<string, { nombre: string; porQue: string }> = {
     nombre: 'Notificaciones',
     porQue: 'Para avisarte cuando se acaben tus minutos.',
   },
-  deviceAdmin: {
-    nombre: 'Evitar que la cierren a la fuerza',
-    porQue: 'Opcional. Hace más difícil saltarse el bloqueo en un mal momento.',
-  },
   batteryOptimization: {
     nombre: 'Seguir viva en segundo plano',
     porQue: 'Opcional. Sin esto Android puede apagarnos y el bloqueo falla.',
@@ -60,6 +56,39 @@ const NOMBRES: Record<string, { nombre: string; porQue: string }> = {
     porQue: 'El permiso de Apple para poder bloquear apps.',
   },
 };
+
+/**
+ * Steps this app must never offer, whatever the module reports.
+ *
+ * `deviceAdmin` makes the app impossible to uninstall until it is
+ * deactivated. Google Play allows that only when "authorized by a
+ * parent or guardian through a parental control app or by authorized
+ * administrators through enterprise management software". This is a
+ * learner restricting themselves, so there is no exception that
+ * covers it, and offering it is grounds for removal.
+ *
+ * Blocking ACCESS to an app is allowed. Preventing UNINSTALL is not.
+ * That line is the whole reason this list exists.
+ *
+ * Two layers, deliberately. `app.json` lists the Android features
+ * this app uses and leaves out `appRemovalProtection`, so the plugin
+ * writes `tools:node="remove"` for the receiver and it never reaches
+ * the merged manifest. This filter is the second: a module update, a
+ * changed default or a plugin that stops gating would otherwise put
+ * the step back in front of a 16-year-old, with a friendly label.
+ */
+export const PASOS_PROHIBIDOS: readonly string[] = ['deviceAdmin'];
+
+/**
+ * The steps this app is willing to ask for.
+ *
+ * Applied where the steps enter the model, so nothing downstream —
+ * the list, the queue, the «everything ready» check — can reach a
+ * forbidden one by a path somebody forgot to guard.
+ */
+export function permitidos(pasos: readonly PasoNativo[]): readonly PasoNativo[] {
+  return pasos.filter((p) => !PASOS_PROHIBIDOS.includes(p.id));
+}
 
 export function aLegible(paso: PasoNativo): PasoLegible {
   const texto = NOMBRES[paso.id] ?? {
