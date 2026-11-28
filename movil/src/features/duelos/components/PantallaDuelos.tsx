@@ -23,9 +23,12 @@ import type { Duelo } from '../api/esquemas';
 export function PantallaDuelos({
   onJugar,
   onAjustes,
+  onVerPerfil,
 }: {
   onJugar: (dueloId: string, contra: string, rivalId: string | null) => void;
   onAjustes: () => void;
+  /** Opens a search result's profile before deciding anything. */
+  onVerPerfil: (usuarioId: string) => void;
 }) {
   const { perfil, cargando: cargandoPerfil } = usePerfilDeDuelos();
   const duelos = useMisDuelos();
@@ -258,6 +261,7 @@ export function PantallaDuelos({
           fallo={duelos.falloAlRetar}
           onAgregar={amigos.pedir}
           agregando={amigos.pidiendo}
+          onVerPerfil={onVerPerfil}
         />
       ) : (
         <Boton ancho={false} variante={vacio ? 'principal' : 'contorno'} alTocar={() => setBuscando(true)}>
@@ -372,12 +376,14 @@ function Buscador({
   fallo,
   onAgregar,
   agregando,
+  onVerPerfil,
 }: {
   onRetar: (rivalId: string) => Promise<unknown>;
   retando: boolean;
   fallo: { mensaje: string } | null;
   onAgregar: (usuarioId: string) => Promise<unknown>;
   agregando: boolean;
+  onVerPerfil: (usuarioId: string) => void;
 }) {
   const busqueda = useBuscarJugadores();
   const [retado, setRetado] = useState<string | null>(null);
@@ -411,6 +417,7 @@ function Buscador({
           key={j.id}
           nombre={j.alias ?? 'Rival'}
           descripcion={j.descripcion}
+          alAbrir={() => onVerPerfil(j.id)}
         >
           {/* Adding is offered beside challenging, because after one
               duel with someone you will want the second without
@@ -517,6 +524,7 @@ function FilaDeDuelo({
 function FilaDePersona({
   nombre,
   descripcion,
+  alAbrir,
   children,
 }: {
   nombre: string;
@@ -525,36 +533,69 @@ function FilaDePersona({
    *
    * A name alone cannot answer «is this the Sofía I know?», which is
    * the question somebody about to send a friend request is actually
-   * asking — and getting it wrong means a request to a stranger. The
-   * streak and the win-loss record stay behind an accepted
-   * friendship: those are a record of how somebody plays, not
-   * something they wrote to be found by.
+   * asking — and getting it wrong means a request to a stranger.
    */
   descripcion?: string | null;
+  /**
+   * Opens this person's profile. Only search results pass it.
+   *
+   * Diego asked for this by name: «me gustaría poder ver el perfil de
+   * un usuario aunque no sea mi amigo pues, buscar y verlo, y si me
+   * gusta lo que veo pues le envío la soli, como en Facebook». A
+   * search result that can only be challenged or befriended forces
+   * both decisions on two lines of text.
+   *
+   * The name and the avatar are the target, not the whole row: the
+   * row's right-hand side already holds «Agregar» and «Retar», and a
+   * press surface underneath them would swallow taps meant for those.
+   */
+  alAbrir?: () => void;
   children: React.ReactNode;
 }) {
+  const identidad = (
+    <View className="flex-1 flex-row items-center gap-3">
+      <Avatar nombre={nombre} />
+      <View className="flex-1 gap-0.5">
+        <Text
+          style={{ fontFamily: 'Inter_600SemiBold' }}
+          className="text-[14px] text-texto"
+        >
+          {nombre}
+        </Text>
+        {descripcion ? (
+          /* Two lines at most. A 120-character description is short,
+             but a row that grows with its text makes a list of
+             results impossible to scan. */
+          <Texto estilo="apoyo" numberOfLines={2}>
+            {descripcion}
+          </Texto>
+        ) : null}
+      </View>
+    </View>
+  );
+
   return (
     <Tarjeta variante="plana">
       <View className="flex-row items-center justify-between gap-3">
-        <View className="flex-1 flex-row items-center gap-3">
-          <Avatar nombre={nombre} />
-          <View className="flex-1 gap-0.5">
-            <Text
-              style={{ fontFamily: 'Inter_600SemiBold' }}
-              className="text-[14px] text-texto"
-            >
-              {nombre}
-            </Text>
-            {descripcion ? (
-              /* Two lines at most. A 120-character description is
-                 short, but a row that grows with its text makes a
-                 list of results impossible to scan. */
-              <Texto estilo="apoyo" numberOfLines={2}>
-                {descripcion}
-              </Texto>
-            ) : null}
-          </View>
-        </View>
+        {alAbrir ? (
+          <Pressable
+            onPress={alAbrir}
+            accessibilityRole="button"
+            accessibilityLabel={`Ver el perfil de ${nombre}`}
+            className="flex-1"
+          >
+            {({ pressed }) => (
+              /* Only the opacity is inline. A fill here would beat
+                 the compiled class, which `tokens.test.ts` fails the
+                 build over. */
+              <View className="flex-1" style={{ opacity: pressed ? 0.6 : 1 }}>
+                {identidad}
+              </View>
+            )}
+          </Pressable>
+        ) : (
+          identidad
+        )}
         <View className="flex-row items-center gap-1">{children}</View>
       </View>
     </Tarjeta>

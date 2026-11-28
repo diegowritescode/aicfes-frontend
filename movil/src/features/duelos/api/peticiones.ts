@@ -10,6 +10,7 @@ import {
   listaDeBloqueados,
   listaDeDuelos,
   perfilDeDuelos,
+  perfilPublico,
   preguntasDeDuelo,
   resultadoBusqueda,
   retoCreado,
@@ -51,6 +52,37 @@ export function declararAutorizacionDeTutor() {
     metodo: 'POST',
     cuerpo: {},
     esquema: perfilDeDuelos,
+  });
+}
+
+/**
+ * Turns the public progress on or off.
+ *
+ * Its own request rather than a flag on `cambiarBuscable`: a learner
+ * may want to be findable and still keep their numbers private, and
+ * two consents sharing one endpoint is how one of them gets flipped
+ * by accident.
+ */
+export function cambiarProgresoPublico(publico: boolean) {
+  return pedir({
+    ruta: '/api/duelos/progreso-publico',
+    metodo: 'POST',
+    cuerpo: { publico },
+    esquema: perfilDeDuelos,
+  });
+}
+
+/**
+ * Anybody's profile, friend or not.
+ *
+ * The server answers «no disponible» identically for blocked,
+ * unfindable and nonexistent, so a refusal here never confirms that
+ * an account exists.
+ */
+export function leerPerfilPublico(usuarioId: string) {
+  return pedir({
+    ruta: `/api/duelos/perfil/${encodeURIComponent(usuarioId)}`,
+    esquema: perfilPublico,
   });
 }
 

@@ -304,6 +304,15 @@ describe('una pregunta en pantalla no se recarga sola', () => {
        tightened without noticing it closed the last door. */
     const ajustes = leer('features/duelos/components/PantallaAjustesDeDuelos.tsx');
     expect(ajustes).toMatch(/router\.push\('\/moderacion'\)/);
+
+    /* And the second way in, which arrived when settings became a
+       screen of their own: there it is gated on `esModerador`, so
+       whoever already holds the role reaches the queue without
+       going through the duels tab. Both doors are asserted because
+       the first one is the only one that works before the role is
+       granted. */
+    const pantalla = leer('app/ajustes.tsx');
+    expect(pantalla).toMatch(/router\.push\('\/moderacion'\)/);
   });
 
   it('la moderación no se asoma a un estudiante cualquiera', () => {

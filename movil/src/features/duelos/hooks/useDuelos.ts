@@ -6,11 +6,13 @@ import {
   bloquearJugador,
   buscarJugadores,
   cambiarBuscable,
+  cambiarProgresoPublico,
   declararAutorizacionDeTutor,
   denunciarJugador,
   desbloquearJugador,
   leerAmigos,
   leerPerfilDeAmigo,
+  leerPerfilPublico,
   ponerDescripcion,
   leerBloqueados,
   leerMisDuelos,
@@ -38,12 +40,24 @@ export function usePerfilDeDuelos() {
     staleTime: 60_000,
   });
 
-  /* Written straight into the cache rather than invalidated. Every one
-     of these calls returns the whole profile, so a refetch would ask
-     the server for what it just sent — and the alias screen would
-     flicker back to the old value while it waited. */
+  /* Merged into the cache rather than replacing it, and not
+     invalidated. These calls return the profile, so a refetch would
+     ask the server for what it just sent and the alias screen would
+     flicker back to the old value while it waited.
+
+     The merge is the part that was wrong. `cambiarBuscable`,
+     `ponerAlias` and `cambiarProgresoPublico` each return a NARROWER
+     profile than `GET perfil` does — no `esModerador`, no
+     `descripcion` — so a plain `setQueryData(perfil)` dropped both.
+     Flipping «Mostrar mi progreso» made a moderator's «Moderación»
+     row disappear from Ajustes and blanked their description until
+     the 60s staleTime expired. Spreading over the previous value
+     keeps whatever the response did not carry. */
   const guardarPerfil = useCallback(
-    (perfil: unknown) => cliente.setQueryData(['duelos', 'perfil'], perfil),
+    (perfil: object) =>
+      cliente.setQueryData(['duelos', 'perfil'], (previo: object | undefined) =>
+        previo ? { ...previo, ...perfil } : perfil,
+      ),
     [cliente],
   );
 
@@ -74,6 +88,21 @@ export function usePerfilDeDuelos() {
     onSuccess: guardarPerfil,
   });
 
+  const progreso = useMutation({
+    mutationFn: async (valor: boolean) => {
+      const r = await cambiarProgresoPublico(valor);
+      if (!r.ok) throw r.fallo;
+      return r.datos;
+    },
+    /* Also drops any profile this learner has open of somebody else:
+       nothing about them changed, but the cache holds profiles keyed
+       by id and the cheapest correct thing is to let them refetch. */
+    onSuccess: (perfil) => {
+      guardarPerfil(perfil);
+      void cliente.invalidateQueries({ queryKey: ['duelos', 'perfil-publico'] });
+    },
+  });
+
   return {
     perfil: consulta.data ?? null,
     cargando: consulta.isLoading,
@@ -82,6 +111,8 @@ export function usePerfilDeDuelos() {
     guardandoAlias: alias.isPending,
     falloDeAlias: (alias.error as Fallo | null) ?? null,
     cambiarBuscable: buscable.mutateAsync,
+    cambiarProgresoPublico: progreso.mutateAsync,
+    guardandoProgresoPublico: progreso.isPending,
     declararAutorizacion: autorizacion.mutateAsync,
     guardandoAutorizacion: autorizacion.isPending,
   };
@@ -361,6 +392,40 @@ export function usePerfilDeAmigo(usuarioId: string | null) {
     perfil: consulta.data ?? null,
     cargando: consulta.isLoading,
     fallo: (consulta.error as Fallo | null) ?? null,
+  };
+}
+
+/**
+ * Anybody's profile, friend or stranger.
+ *
+ * Separate from `usePerfilDeAmigo`, which stays for the duel-streak
+ * card: that one answers «how are we doing against each other» and
+ * refuses outright for a non-friend. This one answers «who is this
+ * person» and is the only profile a stranger can open.
+ *
+ * Enabled only with an id, so a screen can mount before one is
+ * chosen without firing a request for `undefined`.
+ */
+export function usePerfilPublico(usuarioId: string | null) {
+  const consulta = useQuery({
+    queryKey: ['duelos', 'perfil-publico', usuarioId],
+    queryFn: async () => {
+      const r = await leerPerfilPublico(usuarioId!);
+      if (!r.ok) throw r.fallo;
+      return r.datos;
+    },
+    enabled: Boolean(usuarioId),
+    /* Short, because the button at the bottom depends on `relacion`:
+       somebody who sends a request and comes back to a cached
+       «Enviar solicitud» will send it twice. */
+    staleTime: 30_000,
+  });
+
+  return {
+    perfil: consulta.data ?? null,
+    cargando: consulta.isLoading,
+    fallo: (consulta.error as Fallo | null) ?? null,
+    recargar: consulta.refetch,
   };
 }
 

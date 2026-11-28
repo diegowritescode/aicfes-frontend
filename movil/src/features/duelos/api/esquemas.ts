@@ -28,6 +28,12 @@ export const perfilDeDuelos = z.object({
      the screens did, and a schema that refuses an older server turns
      a missing feature into a broken sign-in. */
   esModerador: z.boolean().optional(),
+  /* Whether strangers may read this learner's level, streak and
+     subjects. Separate from `aliasBuscable`: being findable is not
+     the same consent as being measured. Optional, and defaulted to
+     the safe answer, so an older server never makes the switch read
+     as «on». */
+  progresoPublico: z.boolean().optional().default(false),
 });
 
 export const resultadoDuelo = z.object({
@@ -228,3 +234,77 @@ export const perfilDeAmigo = z.object({
 });
 
 export type PerfilDeAmigo = z.infer<typeof perfilDeAmigo>;
+
+/** How this learner stands with the person whose profile is open. */
+export const relacion = z.enum([
+  'amigos',
+  'solicitud-enviada',
+  'solicitud-recibida',
+  'ninguna',
+]);
+
+export type Relacion = z.infer<typeof relacion>;
+
+/** One subject's lifetime accuracy, as shown on somebody's profile. */
+export const areaDePerfil = z.object({
+  area,
+  accuracy: z.number(),
+  questions: z.number(),
+});
+
+/**
+ * The numbers on a profile: level, streak, subjects, achievements.
+ *
+ * Null when they are not shared, which is not the same as zero. The
+ * screen has to say «no comparte su progreso» rather than render a
+ * level 0 that would libel the learner.
+ */
+export const progresoDePerfil = z.object({
+  nivel: z.number(),
+  xpDelNivel: z.number(),
+  xpParaSubir: z.number(),
+  racha: z.number(),
+  rachaMasLarga: z.number(),
+  areas: z.array(areaDePerfil),
+  /* Only the earned ones, by title. The locked half of the list is a
+     record of what somebody has not managed to do, and that is theirs
+     alone to look at. */
+  logros: z.array(z.string()),
+});
+
+/** Wins and losses between these two. Friends only. */
+export const caraACara = z.object({
+  jugados: z.number(),
+  ganados: z.number(),
+  perdidos: z.number(),
+  empatados: z.number(),
+});
+
+/**
+ * Anybody's profile, as this learner is allowed to see it.
+ *
+ * One schema for friends and strangers alike, because the server
+ * decides who sees what and the screen should not have a second
+ * opinion. What changes between the two is which fields are null.
+ *
+ * Replaces nothing: `perfilDeAmigo` stays for the duel-streak card,
+ * which is a different question («how are we doing against each
+ * other») from the one this answers («who is this person»).
+ */
+export const perfilPublico = z.object({
+  id: z.string(),
+  alias: z.string().nullable(),
+  descripcion: z.string().nullable(),
+  relacion,
+  amigosDesde: z.string().nullable(),
+  progreso: progresoDePerfil.nullable(),
+  /* Said by the server rather than inferred from `progreso === null`,
+     so the screen can tell «they keep this private» apart from «this
+     failed to load». */
+  progresoOculto: z.boolean(),
+  caraACara: caraACara.nullable(),
+});
+
+export type PerfilPublico = z.infer<typeof perfilPublico>;
+export type ProgresoDePerfil = z.infer<typeof progresoDePerfil>;
+export type AreaDePerfil = z.infer<typeof areaDePerfil>;

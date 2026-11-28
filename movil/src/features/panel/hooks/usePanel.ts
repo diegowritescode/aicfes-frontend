@@ -44,8 +44,18 @@ export function useErrorDelDia() {
     queryKey: ['error-del-dia'],
     queryFn: async () => {
       const r = await leerErrorDelDia();
-      // Null is a real answer here: no honest question to show.
-      return r.ok ? r.datos : null;
+      /* Null IS a real answer here — «no honest question to show
+         today» — which is why this one looked fine. The bug is that
+         a failed request produced the same null and got cached as
+         that answer for five minutes.
+
+         So: a successful null stays null, and a failure throws.
+         The dashboard still shows nothing either way, because the
+         card renders on data alone; what changes is that the
+         failure retries instead of being remembered as «no hay
+         pregunta hoy». */
+      if (!r.ok) throw r.fallo;
+      return r.datos;
     },
     staleTime: 5 * 60_000,
     retry: 1,
@@ -138,7 +148,16 @@ export function useLogros() {
     queryKey: ['logros'],
     queryFn: async () => {
       const r = await leerLogros();
-      return r.ok ? r.datos : null;
+      /* Throws rather than returning null on failure.
+         Returning null cached the failure AS A SUCCESS for the full
+         ten minutes, and the screen cannot tell «no achievements
+         yet» from «this did not load» — so `/logros` showed
+         «Todavía no hay logros» to somebody with three of them, and
+         kept showing it for ten minutes. Quiet failure was the right
+         call when this was one section among eight on «Yo»; it stops
+         being right once the list has a screen of its own. */
+      if (!r.ok) throw r.fallo;
+      return r.datos;
     },
     staleTime: 10 * 60_000,
     retry: 1,
@@ -147,6 +166,9 @@ export function useLogros() {
   return {
     logros: consulta.data ?? null,
     cargando: consulta.isPending,
+    /* Exposed so a screen can say «no pudimos cargar» instead of
+       «no hay». Callers that ignore it behave exactly as before. */
+    fallo: (consulta.error as Fallo | null) ?? null,
   };
 }
 
@@ -164,11 +186,21 @@ export function useDesgloseXp() {
     queryKey: ['xp-desglose'],
     queryFn: async () => {
       const r = await leerDesgloseXp();
-      return r.ok ? r.datos : null;
+      if (!r.ok) throw r.fallo;
+      return r.datos;
     },
     staleTime: 10 * 60_000,
     retry: 1,
   });
 
-  return { desglose: consulta.data ?? null, cargando: consulta.isPending };
+  /* This one still fails quietly on screen, and that is still
+     right: it explains a number shown beside it, so losing it costs
+     the explanation and not the number. What changed is that the
+     failure is no longer cached as a success — a ten-minute hole
+     after one bad request was the actual bug. */
+  return {
+    desglose: consulta.data ?? null,
+    cargando: consulta.isPending,
+    fallo: (consulta.error as Fallo | null) ?? null,
+  };
 }

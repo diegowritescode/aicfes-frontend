@@ -78,12 +78,28 @@ describe('las pestañas usan un solo tamaño de título', () => {
 });
 
 describe('la jerarquía dentro de una pantalla se mantiene', () => {
-  it('Yo usa un tamaño menor para el número del nivel', () => {
-    /* Guarding against a careless find-and-replace: the level number
-       sits inside a card and is not a page title. An earlier pass at
-       this nearly changed it. */
+  it('Yo tiene un solo titulo-grande, y no es un número', () => {
+    /* Guarding against a careless find-and-replace: the level is a
+       figure inside a card, not a page title. An earlier pass at
+       this nearly changed it.
+
+       Asserted as «one page title on the screen» rather than against
+       the exact line the level used to be written on. That earlier
+       version matched `<Texto estilo="titulo">{panel.level.level}`
+       literally, and it failed the moment the level moved into
+       `TiraDeCifras` — which was a layout change that broke nothing
+       it was protecting. A guard that fires on a correct refactor
+       gets deleted, so it tests the rule instead of the spelling. */
     const yo = leer('yo.tsx');
 
-    expect(yo).toMatch(/<Texto estilo="titulo">\{panel\.level\.level\}<\/Texto>/);
+    const grandes = yo.match(/estilo="titulo-grande"/g) ?? [];
+    expect(
+      grandes.length,
+      'hay más de un título de pantalla en «Yo»: el nivel o una cifra se volvió titular',
+    ).toBe(1);
+
+    /* And the one that exists is the word, not a value read off the
+       panel. */
+    expect(yo).toMatch(/<Texto estilo="titulo-grande">Yo<\/Texto>/);
   });
 });

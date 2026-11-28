@@ -4,10 +4,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Redirect, useRouter } from 'expo-router';
 import { Texto } from '@/shared/ui';
 import { useSesion } from '@/features/sesion/hooks/useSesion';
-import { useMisDuelos } from '@/features/duelos/hooks/useDuelos';
+import { useAmigos, useMisDuelos } from '@/features/duelos/hooks/useDuelos';
 import { PantallaDuelos } from '@/features/duelos/components/PantallaDuelos';
 import { PantallaRondaDeDuelo } from '@/features/duelos/components/PantallaRondaDeDuelo';
 import { PantallaAjustesDeDuelos } from '@/features/duelos/components/PantallaAjustesDeDuelos';
+import { PantallaPerfil } from '@/features/duelos/components/PantallaPerfil';
 
 /**
  * Duels.
@@ -36,13 +37,25 @@ type Vista =
          again — which is how rematches stop happening. */
       readonly rivalId: string | null;
     }
-  | { readonly tipo: 'ajustes' };
+  | { readonly tipo: 'ajustes' }
+  /* Somebody found by searching, before deciding anything about
+     them. Diego asked for exactly this: «buscar y verlo, y si me
+     gusta lo que veo pues le envío la soli, como en Facebook».
+
+     A view and not a route, like the friend profile on `amigos`: a
+     URL for it would make a minor's profile a link that can be
+     shared outside the app. */
+  | { readonly tipo: 'perfil'; readonly usuarioId: string };
 
 export default function RutaDuelos() {
   const router = useRouter();
   const { cargando, autenticado } = useSesion();
   const [vista, setVista] = useState<Vista>({ tipo: 'lista' });
   const duelos = useMisDuelos();
+  /* Read here rather than inside the profile view, so sending a
+     request from a profile invalidates the same cache the search
+     and the friends list read. */
+  const amigos = useAmigos();
 
   if (cargando) {
     return <SafeAreaView className="flex-1 bg-fondo" />;
@@ -86,6 +99,7 @@ export default function RutaDuelos() {
             setVista({ tipo: 'ronda', dueloId, contra, rivalId })
           }
           onAjustes={() => setVista({ tipo: 'ajustes' })}
+          onVerPerfil={(usuarioId) => setVista({ tipo: 'perfil', usuarioId })}
         />
       ) : vista.tipo === 'ronda' ? (
         <PantallaRondaDeDuelo
@@ -105,6 +119,20 @@ export default function RutaDuelos() {
               : undefined
           }
           retando={duelos.retando}
+        />
+      ) : vista.tipo === 'perfil' ? (
+        <PantallaPerfil
+          usuarioId={vista.usuarioId}
+          alCerrar={() => setVista({ tipo: 'lista' })}
+          alPedirAmistad={(id) => void amigos.pedir(id)}
+          pidiendoAmistad={amigos.pidiendo}
+          alRetar={async (id) => {
+            await duelos.retar(id).catch(() => null);
+            /* Back to the list either way: on success the new duel is
+               waiting there, and on failure that is where the reason
+               shows. */
+            setVista({ tipo: 'lista' });
+          }}
         />
       ) : (
         <PantallaAjustesDeDuelos onVolver={() => setVista({ tipo: 'lista' })} />

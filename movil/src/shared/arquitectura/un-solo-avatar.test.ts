@@ -48,9 +48,16 @@ describe('un solo Avatar', () => {
   it('nadie importa un Avatar que no sea el de shared/ui', () => {
     const malos = archivos(RAIZ).filter((f) => {
       const fuente = readFileSync(f, 'utf8');
-      /* An import of something named Avatar from anywhere that is not
-         the shared barrel or the atom itself. */
-      return /import\s+\{[^}]*\bAvatar\b[^}]*\}\s+from\s+'(?!@\/shared\/ui'|\.\/Avatar')/.test(
+      /* An import of something named Avatar from anywhere that is
+         not the shared barrel or the atom itself.
+
+         `../atomos/Avatar` is allowed too: a molecule inside
+         `shared/ui` cannot import from the barrel it is part of —
+         that is a cycle — so it reaches the atom by relative path.
+         `CabeceraDePerfil` is the first molecule to need the avatar,
+         and the first version of this test failed it for doing the
+         only correct thing available. */
+      return /import\s+\{[^}]*\bAvatar\b[^}]*\}\s+from\s+'(?!@\/shared\/ui'|\.\/Avatar'|\.\.\/atomos\/Avatar')/.test(
         fuente,
       );
     });

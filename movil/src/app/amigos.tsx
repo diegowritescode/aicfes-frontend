@@ -5,8 +5,10 @@ import { Redirect, useRouter } from 'expo-router';
 import { Avatar, Boton, Chip, Tarjeta, Texto } from '@/shared/ui';
 import { Aviso } from '@/shared/ui/Aviso';
 import { useSesion } from '@/features/sesion/hooks/useSesion';
-import { useAmigos, usePerfilDeAmigo } from '@/features/duelos/hooks/useDuelos';
+import { useAmigos, useMisDuelos } from '@/features/duelos/hooks/useDuelos';
+import { PantallaPerfil } from '@/features/duelos/components/PantallaPerfil';
 import type { Amistad } from '@/features/duelos/api/esquemas';
+import { desdeCuando } from '@/features/duelos/model/fechas';
 
 /**
  * Friends, and the requests waiting on somebody.
@@ -23,6 +25,9 @@ export default function RutaAmigos() {
   const router = useRouter();
   const { cargando: cargandoSesion, autenticado } = useSesion();
   const amigos = useAmigos();
+  /* Only for «Retar» on an open profile. Shares the query the duels
+     screen reads, so it costs no extra request. */
+  const duelos = useMisDuelos();
 
   /* Which friend's profile is open, if any. A screen rather than a
      route because it is a preview of a person already on this list —
@@ -34,7 +39,30 @@ export default function RutaAmigos() {
   if (!autenticado) return <Redirect href="/entrar" />;
 
   if (viendo) {
-    return <PerfilDeAmigo usuarioId={viendo} alCerrar={() => setViendo(null)} />;
+    return (
+      /* The same profile a stranger gets, which is the point: one
+         screen, and the server decides which fields it carries.
+         What this replaced showed an alias, a description and the
+         weeks-in-a-row card — the level, the subjects and the
+         achievements were never on it, and Diego's word for that was
+         «pobre». The together-streak was kept and now sits under the
+         head-to-head. */
+      <SafeAreaView className="flex-1 bg-fondo" edges={['top', 'bottom']}>
+        <PantallaPerfil
+          usuarioId={viendo}
+          alCerrar={() => setViendo(null)}
+          /* Actually sends the challenge, then lands on the duels
+             list where the new duel is waiting. An earlier version
+             of this just navigated and dropped the id, which is a
+             button that says «Retar» and does not. */
+          alRetar={async (id) => {
+            await duelos.retar(id).catch(() => null);
+            setViendo(null);
+            router.push('/duelos');
+          }}
+        />
+      </SafeAreaView>
+    );
   }
 
   const nadie =
@@ -193,24 +221,6 @@ function FilaEnviada({
   );
 }
 
-/**
- * How long ago, in words rather than a date.
- *
- * «hace 3 días» answers the question somebody staring at a pending
- * request is actually asking. A timestamp makes them do the
- * subtraction.
- */
-function desdeCuando(iso: string): string {
-  const cuando = new Date(iso).getTime();
-  if (!Number.isFinite(cuando)) return 'hace un rato';
-
-  const dias = Math.floor((Date.now() - cuando) / 86400000);
-  if (dias < 1) return 'hoy';
-  if (dias === 1) return 'ayer';
-  if (dias < 30) return `hace ${dias} días`;
-  return 'hace más de un mes';
-}
-
 /** One friend, tappable to see their profile. */
 function FilaDeAmigo({
   amistad,
@@ -259,87 +269,5 @@ function FilaDeAmigo({
         </Tarjeta>
       )}
     </Pressable>
-  );
-}
-
-/**
- * A friend's profile: who they are and what the two have played.
- *
- * The streak is the point of this screen. A win-loss record alone
- * invites one of them to stop playing while ahead; weeks in a row is
- * a number both of them own and both of them lose.
- */
-function PerfilDeAmigo({
-  usuarioId,
-  alCerrar,
-}: {
-  usuarioId: string;
-  alCerrar: () => void;
-}) {
-  const { perfil, cargando, fallo } = usePerfilDeAmigo(usuarioId);
-
-  return (
-    <SafeAreaView className="flex-1 bg-fondo" edges={['top', 'bottom']}>
-      <ScrollView contentContainerClassName="gap-5 px-5 py-5">
-        <View className="flex-row items-center justify-between gap-3">
-          <Texto estilo="titulo-grande">Perfil</Texto>
-          <Boton variante="plano" ancho={false} alTocar={alCerrar}>
-            Atrás
-          </Boton>
-        </View>
-
-        {fallo ? <Aviso mensaje={fallo.mensaje} detalle={fallo.detalle} /> : null}
-        {cargando ? <Texto estilo="apoyo">Cargando…</Texto> : null}
-
-        {perfil ? (
-          <>
-            <View className="items-center gap-3">
-              <Avatar nombre={perfil.alias ?? ""} tamano="grande" />
-              <Texto estilo="titulo">{perfil.alias ?? 'Sin nombre'}</Texto>
-              {perfil.descripcion ? (
-                <Texto estilo="apoyo" className="text-center">
-                  {perfil.descripcion}
-                </Texto>
-              ) : null}
-            </View>
-
-            <Tarjeta className="gap-3">
-              <Texto estilo="rotulo">Jugando juntos</Texto>
-
-              {perfil.racha.semanas > 0 ? (
-                <View className="gap-1">
-                  <Texto estilo="cuerpo" style={{ fontFamily: 'Inter_600SemiBold' }}>
-                    {perfil.racha.semanas}{' '}
-                    {perfil.racha.semanas === 1 ? 'semana' : 'semanas'} seguidas
-                  </Texto>
-                  {/* Said plainly rather than with a warning colour:
-                      the streak has a week of grace, so «falta esta
-                      semana» is information, not an alarm. */}
-                  {!perfil.racha.estaSemanaYa ? (
-                    <Texto estilo="apoyo">
-                      Esta semana todavía no han jugado.
-                    </Texto>
-                  ) : null}
-                </View>
-              ) : (
-                <Texto estilo="apoyo">
-                  {perfil.racha.duelos > 0
-                    ? 'La racha se cortó. Un duelo esta semana la empieza otra vez.'
-                    : 'Todavía no han jugado un duelo juntos.'}
-                </Texto>
-              )}
-
-              {perfil.racha.duelos > 0 ? (
-                <View className="flex-row flex-wrap items-center gap-2">
-                  <Chip tono="ganado">{perfil.ganados} ganados</Chip>
-                  <Chip tono="fallo">{perfil.perdidos} perdidos</Chip>
-                  <Texto estilo="apoyo">de {perfil.racha.duelos}</Texto>
-                </View>
-              ) : null}
-            </Tarjeta>
-          </>
-        ) : null}
-      </ScrollView>
-    </SafeAreaView>
   );
 }
