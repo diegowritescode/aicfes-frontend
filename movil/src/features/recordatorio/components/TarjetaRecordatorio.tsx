@@ -1,0 +1,131 @@
+import { useState } from 'react';
+import { Pressable, ScrollView, Text, View } from 'react-native';
+import { Boton } from '@/shared/ui';
+import { legible, recordatorioDeHoy } from '../model/mensaje';
+import type { TemaParaHoy } from '../model/mensaje';
+
+/**
+ * Turning the daily reminder on, and seeing what it will say.
+ *
+ * The preview is the point of showing anything here. A learner
+ * deciding whether to let an app notify them should see the actual
+ * message, not a promise — and this one is about their weakest topic
+ * rather than about a streak, which is worth seeing before agreeing.
+ */
+
+/* Every hour the model accepts, not four chips. Four presets is a
+   guess about when a learner studies, and the one person who tried it
+   said so: "no me dio para escoger una hora personalizada". */
+const HORAS: readonly number[] = Array.from({ length: 17 }, (_, i) => i + 6);
+
+export function TarjetaRecordatorio({
+  activo,
+  hora,
+  permiso,
+  temaDeHoy,
+  onActivar,
+  onCancelar,
+}: {
+  activo: boolean;
+  hora: number;
+  permiso: 'concedido' | 'negado' | 'sin-pedir';
+  temaDeHoy: TemaParaHoy | null;
+  onActivar: (hora: number) => void;
+  onCancelar: () => void;
+}) {
+  const [eligiendo, setEligiendo] = useState(false);
+  const previo = recordatorioDeHoy(temaDeHoy, 0);
+
+  if (activo) {
+    return (
+      <View className="gap-3 rounded-2xl border border-linea bg-capa p-5">
+        <View className="gap-1">
+          <Text className="text-[14.5px] font-semibold text-texto">
+            Te avisamos a las {hora}:00
+          </Text>
+          <Text className="text-[13px] leading-5 text-texto-apagado">
+            {temaDeHoy
+              ? `Hoy sería sobre ${legible(temaDeHoy.tema)}.`
+              : 'Cuando tengamos de qué, te decimos el tema.'}
+          </Text>
+        </View>
+        <Pressable onPress={onCancelar} hitSlop={8}>
+          <Text className="text-[12.5px] font-semibold uppercase tracking-wide text-texto-apagado">
+            Quitar el recordatorio
+          </Text>
+        </Pressable>
+      </View>
+    );
+  }
+
+  /* Denied is its own state, because the app cannot ask again on iOS
+     and pretending otherwise leaves the learner tapping a button that
+     does nothing. */
+  if (permiso === 'negado') {
+    return (
+      <View className="gap-2 rounded-2xl border border-linea bg-capa p-5">
+        <Text className="text-[14.5px] font-semibold text-texto">
+          Las notificaciones están apagadas
+        </Text>
+        <Text className="text-[13px] leading-5 text-texto-apagado">
+          Se activan en los ajustes del teléfono. Desde aquí ya no podemos
+          volver a preguntarte.
+        </Text>
+      </View>
+    );
+  }
+
+  return (
+    <View className="gap-3 rounded-2xl border border-linea bg-capa p-5">
+      <View className="gap-1">
+        <Text className="text-[14.5px] font-semibold text-texto">
+          Un recordatorio al día
+        </Text>
+        <Text className="text-[13px] leading-5 text-texto-apagado">
+          Te decimos qué tema te toca. Nada de rachas ni de presión.
+        </Text>
+      </View>
+
+      {/* What it will actually say. */}
+      <View className="gap-0.5 rounded-xl bg-capa-alta px-3.5 py-3">
+        <Text className="text-[13px] font-semibold text-texto">{previo.titulo}</Text>
+        <Text className="text-[12.5px] leading-5 text-texto-apagado">{previo.cuerpo}</Text>
+      </View>
+
+      {eligiendo ? (
+        <View className="gap-2">
+          <Text className="text-[12.5px] font-semibold uppercase tracking-wide text-texto-apagado">
+            ¿A qué hora?
+          </Text>
+          {/* Horizontal rather than a wrapped grid: seventeen hours in
+              rows is a wall, and scrolling past the ones that are
+              obviously wrong is faster than reading them. */}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerClassName="gap-2 pr-2"
+          >
+            {HORAS.map((h) => (
+              <Pressable
+                key={h}
+                onPress={() => onActivar(h)}
+                accessibilityRole="button"
+                accessibilityLabel={`Avisarme a las ${h}:00`}
+                className="min-w-[66px] items-center rounded-xl border border-linea px-3 py-2.5"
+              >
+                <Text className="text-[14px] font-semibold text-texto">{h}:00</Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+          <Text className="text-[11.5px] text-texto-apagado">
+            De 6 de la mañana a 10 de la noche.
+          </Text>
+        </View>
+      ) : (
+        <Boton alTocar={() => setEligiendo(true)}>
+          Activar
+        </Boton>
+      )}
+    </View>
+  );
+}

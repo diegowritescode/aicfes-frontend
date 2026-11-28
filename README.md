@@ -1,5 +1,16 @@
 # AICFES Frontend
 
+> **Dos proyectos, dos ramas.**
+>
+> - **`main`** — la web de Vite. Es lo que describe este README.
+> - **`movil`** — la app de React Native / Expo, en
+>   [`movil/`](movil/). Tiene su propio
+>   [README](movil/README.md) y su
+>   [ARQUITECTURA](movil/ARQUITECTURA.md).
+>
+> Estás leyendo el README de la web. Si buscas la app, los comandos y
+> la estructura son otros: `cd movil`.
+
 Modern web client for the AICFES exam prep platform. Built to support gamified study flows, real metrics, realtime dashboard updates, and AI feedback.
 
 ## Features
@@ -24,7 +35,8 @@ Modern web client for the AICFES exam prep platform. Built to support gamified s
 - Axios
 
 ## Local Setup
-Requirements: Node 18+ and npm.
+Requirements: Node 22 and npm. (CI builds on 22; the previous "18+"
+here was never what was tested.)
 
 ```bash
 npm install

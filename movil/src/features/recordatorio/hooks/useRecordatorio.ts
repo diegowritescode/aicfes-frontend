@@ -1,0 +1,167 @@
+import { useCallback, useEffect, useState } from 'react';
+import { AppState } from 'react-native';
+import * as Notifications from 'expo-notifications';
+import {
+  horaValida,
+  recordatorioDeHoy,
+  valeLaPenaRecordar,
+  type TemaParaHoy,
+} from '../model/mensaje';
+import { color } from '@/shared/ui';
+
+/**
+ * A daily nudge, scheduled on the device.
+ *
+ * Local rather than pushed from a server, and that is the right trade
+ * here: a local notification needs no token registry, no push
+ * credentials for two platforms, and it fires with the radio off — on
+ * a prepaid line that runs out mid-month, a server push is the one
+ * that does not arrive.
+ *
+ * The cost is that the text is decided when the reminder is scheduled
+ * rather than when it fires, so it can be a day stale. Worth it:
+ * "logaritmos, que fallaste tres veces" is still true tomorrow.
+ */
+
+const CLAVE_PREFERENCIA = 'recordatorio';
+
+/* Android needs a channel before anything shows. Without one the
+   notification is accepted, scheduled, and silently never appears. */
+const CANAL = 'recordatorio-diario';
+
+/* The weak topic arrives as data rather than being read here. A
+   feature importing another feature is the rule `capas.test.ts`
+   enforces, and it caught this: the route already has the dashboard,
+   so passing the topic down costs nothing and keeps the dependency
+   pointing one way. */
+export function useRecordatorio(temaDeHoy: TemaParaHoy | null = null) {
+  const [permiso, setPermiso] = useState<'concedido' | 'negado' | 'sin-pedir'>(
+    'sin-pedir',
+  );
+  const [activo, setActivo] = useState(false);
+  const [hora, setHora] = useState(horaValida(19));
+
+  /* Read the current state without asking. Asking is a one-shot on
+     iOS — a declined prompt cannot be shown again from inside the app
+     — so it only happens when the learner turns the reminder on.
+     
+     Re-read whenever the app comes back to the foreground, not only on
+     mount. Granting the permission happens in system settings, which
+     means leaving the app: reading once left it convinced the
+     permission was still denied until the whole app was restarted,
+     which is exactly what was reported from a phone. */
+  useEffect(() => {
+    let vivo = true;
+
+    const leer = async () => {
+      const { status, canAskAgain } = await Notifications.getPermissionsAsync();
+      if (!vivo) return;
+      /* `denied` does not mean the learner said no. On Android it is
+         also what a permission that has never been asked for reads as,
+         and treating the two the same sent someone to system settings
+         for a prompt the app had never shown them. `canAskAgain` is
+         what tells them apart: while it is true there is still a
+         prompt to show, whatever the status says. */
+      setPermiso(
+        status === 'granted' ? 'concedido' : canAskAgain ? 'sin-pedir' : 'negado',
+      );
+      const programadas = await Notifications.getAllScheduledNotificationsAsync();
+      if (!vivo) return;
+      setActivo(programadas.some((n) => n.identifier.startsWith(CLAVE_PREFERENCIA)));
+    };
+
+    void leer();
+
+    const suscripcion = AppState.addEventListener('change', (estado) => {
+      if (estado === 'active') void leer();
+    });
+
+    return () => {
+      vivo = false;
+      suscripcion.remove();
+    };
+  }, []);
+
+  /** Turn the reminder on, asking for permission only now. */
+  const activar = useCallback(
+    async (horaElegida: number) => {
+      const h = horaValida(horaElegida);
+
+      const actual = await Notifications.getPermissionsAsync();
+      let concedido = actual.status === 'granted';
+      if (!concedido && actual.canAskAgain) {
+        const pedido = await Notifications.requestPermissionsAsync();
+        concedido = pedido.status === 'granted';
+      }
+
+      if (!concedido) {
+        /* Only now is "go to settings" the honest message: the prompt
+           was shown and refused, or the system will not show it
+           again. */
+        const tras = await Notifications.getPermissionsAsync();
+        setPermiso(tras.canAskAgain ? 'sin-pedir' : 'negado');
+        return { ok: false as const, motivo: 'sin-permiso' as const };
+      }
+      setPermiso('concedido');
+
+      await Notifications.setNotificationChannelAsync(CANAL, {
+        name: 'Recordatorio de estudio',
+        importance: Notifications.AndroidImportance.DEFAULT,
+        /* The brand purple, matching the icon tint set in app.json.
+           Android tints the small icon per channel, so leaving this
+           out let the system pick its own accent and the notification
+           came out a different colour from the app.
+
+           From the token, not a literal: this was `#605ccb`, the
+           purple from before the palette was validated, so the one
+           notification the app sends was the only surface still
+           painted in the old colour. */
+        lightColor: color.acento,
+      });
+
+      /* Replace rather than add. Scheduling without cancelling first
+         is how a learner who changes the hour twice ends up with three
+         notifications a day. */
+      await cancelar();
+
+      const { titulo, cuerpo } = recordatorioDeHoy(temaDeHoy, 0);
+      await Notifications.scheduleNotificationAsync({
+        identifier: `${CLAVE_PREFERENCIA}-diario`,
+        content: { title: titulo, body: cuerpo },
+        trigger: {
+          type: Notifications.SchedulableTriggerInputTypes.DAILY,
+          hour: h,
+          minute: 0,
+          channelId: CANAL,
+        },
+      });
+
+      setHora(h);
+      setActivo(true);
+      return { ok: true as const };
+    },
+    [temaDeHoy],
+  );
+
+  const cancelar = useCallback(async () => {
+    const programadas = await Notifications.getAllScheduledNotificationsAsync();
+    await Promise.all(
+      programadas
+        .filter((n) => n.identifier.startsWith(CLAVE_PREFERENCIA))
+        .map((n) => Notifications.cancelScheduledNotificationAsync(n.identifier)),
+    );
+    setActivo(false);
+  }, []);
+
+  return {
+    permiso,
+    activo,
+    hora,
+    /* Whether a reminder is worth having at all right now, which the
+       screen uses to avoid offering something pointless. */
+    tieneSentido: valeLaPenaRecordar({ estudioHoy: false, activado: true }),
+    temaDeHoy,
+    activar,
+    cancelar,
+  };
+}

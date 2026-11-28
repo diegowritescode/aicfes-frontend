@@ -1,0 +1,134 @@
+import '@/app/global.css';
+import { useEffect, useState } from 'react';
+import { Stack, useRouter } from 'expo-router';
+import { useLlegadaDelEscudo } from '@/features/bloqueo/hooks/useLlegadaDelEscudo';
+import { almacenPeaje } from '@/core/almacenamiento/peaje';
+import { StatusBar } from 'expo-status-bar';
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { KeyboardProvider } from 'react-native-keyboard-controller';
+import { crearClienteConsultas } from '@/core/http/consultas';
+import { opcionesDePersistencia } from '@/core/http/persistencia';
+import { conectarRenovacion } from '@/features/sesion/api/peticiones';
+import { useFonts } from 'expo-font';
+import {
+  Nunito_600SemiBold,
+  Nunito_700Bold,
+  Nunito_800ExtraBold,
+} from '@expo-google-fonts/nunito';
+import {
+  Inter_400Regular,
+  Inter_500Medium,
+  Inter_600SemiBold,
+  Inter_700Bold,
+} from '@expo-google-fonts/inter';
+
+/**
+ * The shell every screen sits in.
+ *
+ * The query client is created in state rather than at module scope:
+ * on web a module-level client is shared between requests during
+ * server rendering, which leaks one user's cached data into another's
+ * page. It costs nothing to be correct here.
+ */
+/* Done at module scope, once: it only stores a function, and doing it
+   in an effect would leave the first requests of a cold start unable
+   to renew — which is exactly when a stale token is most likely. */
+conectarRenovacion();
+
+export default function Layout() {
+  const [cliente] = useState(crearClienteConsultas);
+
+  /* The two brand faces. Without them `font-marca` and `font-texto`
+     resolve to nothing and every screen falls back to the system
+     face — which is why the first build of the redesign looked
+     nothing like the mockup even though the colours were right.
+     Nunito carries numbers and headings; Inter carries everything a
+     learner reads at length. */
+  const [fuentesListas] = useFonts({
+    Nunito_600SemiBold,
+    Nunito_700Bold,
+    Nunito_800ExtraBold,
+    Inter_400Regular,
+    Inter_500Medium,
+    Inter_600SemiBold,
+    Inter_700Bold,
+  });
+
+  /* Nothing renders until they are in. A flash of system type
+     followed by the real one is worse than a beat of splash screen,
+     and the splash is already purple. */
+  if (!fuentesListas) return null;
+
+  /* Persisting rather than plain: without this the cache dies with the
+     process, so the app is blank with no connection. The provider
+     holds children until the stored cache is read, which is a few
+     milliseconds and avoids a flash of empty screen followed by data. */
+  return (
+    <PersistQueryClientProvider client={cliente} persistOptions={opcionesDePersistencia}>
+      <SafeAreaProvider>
+        {/* Every text field in the app sits above this.
+
+            Android resizes the window for the keyboard through
+            `windowSoftInputMode="adjustResize"`, and from Expo 58 the
+            app is edge-to-edge, where that mode no longer resizes
+            anything — it only reports an inset. So the keyboard opened
+            over the field the learner was typing into and they had to
+            dismiss it to read their own words: «escribo pero no veo lo
+            que escribo».
+
+            `KeyboardAvoidingView` from React Native cannot rescue it:
+            on Android it has no behaviour to apply, and inside a
+            `<Modal>` it is worse, because a modal is a separate window
+            that never inherited the activity's soft-input mode at all.
+            That is why the tutor was the worst of the three.
+
+            This provider reads the real inset and the views from the
+            same package act on it, modal or not. */}
+        <KeyboardProvider>
+          <StatusBar style="dark" />
+          <LlevarAlPeaje />
+          <Stack screenOptions={{ headerShown: false }} />
+        </KeyboardProvider>
+      </SafeAreaProvider>
+    </PersistQueryClientProvider>
+  );
+}
+
+/**
+ * Sends the learner to the toll when the shield is what opened the app.
+ *
+ * Here, at the root, rather than in a screen: Android usually resumes
+ * the existing process, so whichever screen was last open is the one
+ * that mounts. A check living in Inicio would miss every launch that
+ * resumed somewhere else.
+ *
+ * Renders nothing. It exists for the effect.
+ */
+function LlevarAlPeaje() {
+  const router = useRouter();
+  const { llego, boton, appBloqueada, atendido } = useLlegadaDelEscudo();
+
+  useEffect(() => {
+    if (!llego) return;
+
+    /* Written before navigating: the toll reads it when the block is
+       cleared, which is a different component and minutes later. */
+    if (appBloqueada) void almacenPeaje.guardarAppBloqueada(appBloqueada);
+
+    /* `replace`, not `push`: the toll is where this launch belongs,
+       and leaving Inicio underneath would make the back gesture —
+       which the toll blocks — the one way out of a block. */
+    /* Each button to its own screen. Sending someone who asked for
+       the choices into the exercises is the opposite of what they
+       tapped. */
+    router.replace(boton === 'secondary' ? '/salida' : '/peaje');
+
+    /* Released once the trip is made, so the next block routes too.
+       Without this the second time a learner opened Instagram in a
+       session left them wherever they were. */
+    atendido();
+  }, [llego, boton, appBloqueada, atendido, router]);
+
+  return null;
+}

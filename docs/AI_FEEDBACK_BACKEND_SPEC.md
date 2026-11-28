@@ -1,5 +1,13 @@
 # Retroalimentación IA Personalizada – Backend Contract (AICFES)
 
+> **✅ Implementado. Verificado el 22 nov 2026.**
+>
+> Esta especificación se construyó. El backend sirve
+> `POST /api/feedback/generate` y `GET /api/feedback/:sessionId`.
+>
+> Se conserva por el razonamiento del diseño. Para el contrato vigente:
+> `/api/docs` del backend, o `aicfes-backend/docs/FEEDBACK.md`.
+
 Este documento define el contrato completo del backend para generar, almacenar y consultar retroalimentación IA de forma profesional y costo‑eficiente.
 
 ---

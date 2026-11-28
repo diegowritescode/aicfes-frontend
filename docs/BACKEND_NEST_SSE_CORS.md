@@ -1,5 +1,14 @@
 # Backend Nest.js: SSE + CORS + Cookies (Localhost)
 
+> **✅ Implementado. Verificado el 22 nov 2026.**
+>
+> El backend tiene `GET /api/dashboard/stream`, CORS configurado en
+> `src/main.ts` y cookies de sesión con `REFRESH_COOKIE_NAME`.
+>
+> Nota: el móvil **no** usa cookies. Un cliente nativo recibe su token
+> de renovación en el cuerpo, porque no hay cookies fiables en un
+> teléfono — ver ADR 7 del backend.
+
 Este documento describe qué ajustar en el backend (Nest.js) para que el **SSE** del dashboard funcione en local con frontend en `http://localhost:8080` y backend en `http://localhost:3000`.
 
 ---

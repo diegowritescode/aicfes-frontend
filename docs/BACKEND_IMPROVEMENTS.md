@@ -1,5 +1,15 @@
 # Backend Improvements Proposal (AICFES)
 
+> **⚠️ Desactualizado. Verificado el 22 nov 2026.**
+>
+> Propone `POST /api/sessions/sync`, que **no existe** en el backend ni
+> se llama desde la app. No se construyó así.
+>
+> Lo que sí existe de lo que esta página propone: XP con multiplicador
+> por dificultad (fácil 1, media 1,3, alta 1,7), niveles cada 500 XP,
+> racha con hitos, y cinco misiones diarias. Todo en
+> `aicfes-backend/src/dashboard/`.
+
 Este documento propone mejoras concretas para el backend con impacto directo en métricas, gamificación y consistencia de datos.
 
 ---

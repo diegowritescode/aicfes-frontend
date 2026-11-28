@@ -1,0 +1,67 @@
+{
+  "expo": {
+    "name": "AICFES",
+    "slug": "aicfes",
+    "owner": "diegowritescode",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "xyz.deviego.aicfes"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#605ccb",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "package": "xyz.deviego.aicfes"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#605ccb"
+        }
+      ],
+      "expo-screen-time",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#605ccb",
+          "dark": {
+            "backgroundColor": "#605ccb"
+          }
+        }
+      ],
+      "expo-font",
+      "expo-audio"
+    ],
+    "scheme": "aicfes",
+    "extra": {
+      "apiUrl": "https://aicfes-backend.deviego.xyz",
+      "router": {
+        "asyncRoutes": {
+          "web": true
+        }
+      },
+      "eas": {
+        "projectId": "906c0723-4993-4f4f-b834-8d114e7bd1e6"
+      }
+    }
+  }
+}

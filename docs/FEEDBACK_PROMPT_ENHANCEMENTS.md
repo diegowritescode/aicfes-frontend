@@ -1,5 +1,11 @@
 # Feedback Prompt Enhancements (AICFES)
 
+> **⚠️ Estado desconocido. Revisado el 22 nov 2026.**
+>
+> Son sugerencias para el prompt de retroalimentación. No se verificó
+> cuáles se aplicaron. Los prompts vigentes están en
+> `aicfes-backend/prompts/`.
+
 Este documento sugiere mejoras concretas al prompt y al contrato del backend para enriquecer la retroalimentación con métricas accionables y insights de desempeño.
 
 ## Objetivo
