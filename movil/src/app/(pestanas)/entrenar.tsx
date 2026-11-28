@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
@@ -142,14 +142,29 @@ export default function RutaEntrenar() {
   const { cargando, autenticado } = useSesion();
   const examen = useExamen();
 
-  /* The weekly report links here with the area its plan points at, so
-     «practicar» opens already aimed instead of on the mixed default.
-     Read once as the initial state and not watched: re-applying it on
-     every render would undo a learner who then picked another area. */
+  /* Inicio, «Mis materias» and the weekly report all link here with
+     the area they named, so «Practicar Ciencias Naturales» opens
+     already aimed instead of on the mixed default.
+     
+     Applied in an effect keyed on the parameter, NOT as the initial
+     state. This is a TAB: it mounts once and stays mounted, so a
+     `useState` initialiser runs the first time the learner opens
+     «Entrenar» and never again. Diego tapped «Practicar Ciencias
+     Naturales», landed on Entrenar, and found MIXTO still selected —
+     the screen was already mounted and the initialiser had run long
+     before, with no parameter at all.
+     
+     Keyed on `areaPedida` and not run on every render, which is the
+     reason the initialiser was chosen in the first place: a learner
+     who arrives aimed at CN and then taps «Matemáticas» must keep
+     Matemáticas. The effect fires when the parameter CHANGES, so
+     their pick survives every render after it. */
   const { area: areaPedida } = useLocalSearchParams<{ area?: string }>();
-  const [area, setArea] = useState<Seleccion>(() =>
-    AREAS.includes(areaPedida as Area) ? (areaPedida as Area) : 'MIXTO',
-  );
+  const [area, setArea] = useState<Seleccion>('MIXTO');
+
+  useEffect(() => {
+    if (AREAS.includes(areaPedida as Area)) setArea(areaPedida as Area);
+  }, [areaPedida]);
   const [dificultad] = useState<Dificultad>('media');
   const [cantidad, setCantidad] = useState<number>(5);
 
